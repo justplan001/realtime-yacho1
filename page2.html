@@ -36,7 +36,7 @@
       padding: 10px;
       overflow-y: auto;
     }
-    /* 入力ボックスと全画面化ボタンを横並び */
+    /* 入力ボックスと全画面化ボタンの順序入れ替え */
     .input-fullscreen {
       display: flex;
       gap: 5px;
@@ -44,27 +44,16 @@
       width: 100%;
       justify-content: center;
     }
-    #text-input {
-      width: 90px; /* 半分の幅 */
-      font-size: 16px;
-    }
-    #fullscreenPageButton {
-      font-size: 14px;
-      padding: 5px 8px;
-      cursor: pointer;
-      background-color: #eee;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    /* ボタン行 */
-    .button-row {
-      display: flex;
+    /* ここでは HTML 上の並び順でボタンが表示されるので、順序を入れ替えます */
+    /* 文字入力ボタングリッド（左・右共通） */
+    #left-text-buttons, #right-text-buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
       gap: 10px;
       margin-bottom: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
+      width: 100%;
     }
-    .button-row button {
+    #left-text-buttons button, #right-text-buttons button {
       cursor: pointer;
       font-size: 16px;
       padding: 5px 8px;
@@ -88,6 +77,13 @@
       font-size: 18px;
       cursor: pointer;
     }
+    /* 下部固定エリア */
+    .bottom-keys {
+      margin-top: auto;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
     /* 中央カラム：表と図を左右に分割 */
     #center-column {
       flex: 1;
@@ -109,7 +105,6 @@
       padding: 5px;
       text-align: center;
       min-width: 50px;
-      /* user-select を残すかどうかはお好みで */
       user-select: none;
     }
     /* 選択中セルのハイライト */
@@ -157,25 +152,7 @@
       padding: 10px;
       overflow-y: auto;
     }
-    /* 右カラムの文字入力ボタンテーブル */
-    #right-button-table {
-      border-collapse: collapse;
-      margin-bottom: 10px;
-    }
-    #right-button-table td {
-      padding: 4px;
-      text-align: center;
-    }
-    #right-button-table button {
-      cursor: pointer;
-      font-size: 16px;
-      padding: 5px 8px;
-      background-color: #eee;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      white-space: nowrap;
-    }
-    /* テンキー */
+    /* テンキー（右下固定） */
     #numpad {
       display: grid;
       grid-template-columns: repeat(3, 50px);
@@ -193,54 +170,51 @@
 <div id="container">
   <!-- 左カラム -->
   <div id="left-column">
-    <!-- 入力ボックスと全画面化ボタン -->
+    <!-- 入力ボックスと全画面化ボタン（全画面化ボタンと入力ボックスの順序を入れ替え） -->
     <div class="input-fullscreen">
-      <input type="text" id="text-input" placeholder="セルの文字を入力" />
       <button id="fullscreenPageButton">全画面化</button>
+      <input type="text" id="text-input" placeholder="セルの文字を入力" />
     </div>
-    <!-- 左枡, 左境 -->
-    <div class="button-row">
+    <!-- 左側の文字入力ボタン（4×4グリッド） -->
+    <div id="left-text-buttons">
       <button class="insertable-button">左枡</button>
       <button class="insertable-button">左境</button>
-    </div>
-    <!-- D, S, SS, E -->
-    <div class="button-row">
       <button class="insertable-button">D</button>
       <button class="insertable-button">S</button>
       <button class="insertable-button">SS</button>
       <button class="insertable-button">E</button>
-    </div>
-    <!-- F, SV, W, T -->
-    <div class="button-row">
       <button class="insertable-button">F</button>
       <button class="insertable-button">SV</button>
       <button class="insertable-button">W</button>
       <button class="insertable-button">T</button>
+      <button class="insertable-button">+</button>
+      <button class="insertable-button">-</button>
+      <button class="insertable-button">***</button>
+      <!-- 空セルで埋める -->
+      <button class="insertable-button"></button>
+      <button class="insertable-button"></button>
+      <button class="insertable-button"></button>
     </div>
-    <!-- +, -, *** -->
-    <div class="button-row">
-      <button id="plus-button">+</button>
-      <button id="minus-button">-</button>
-      <button id="asterisk-button">***</button>
+    <!-- 十字キーを下部に配置 -->
+    <div class="bottom-keys">
+      <table id="arrow-keys">
+        <tr>
+          <td></td>
+          <td><button id="arrow-up">↑</button></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><button id="arrow-left">←</button></td>
+          <td></td>
+          <td><button id="arrow-right">→</button></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><button id="arrow-down">↓</button></td>
+          <td></td>
+        </tr>
+      </table>
     </div>
-    <!-- 十字キー -->
-    <table id="arrow-keys">
-      <tr>
-        <td></td>
-        <td><button id="arrow-up">↑</button></td>
-        <td></td>
-      </tr>
-      <tr>
-        <td><button id="arrow-left">←</button></td>
-        <td></td>
-        <td><button id="arrow-right">→</button></td>
-      </tr>
-      <tr>
-        <td></td>
-        <td><button id="arrow-down">↓</button></td>
-        <td></td>
-      </tr>
-    </table>
   </div>
 
   <!-- 中央カラム（表＋図） -->
@@ -278,45 +252,42 @@
 
   <!-- 右カラム -->
   <div id="right-column">
-    <!-- 右側の文字入力ボタンテーブル（指定の順番） -->
-    <table id="right-button-table">
-      <tr>
-        <td><button class="insertable-button">右桝</button></td>
-        <td><button class="insertable-button">右境</button></td>
-      </tr>
-      <tr>
-        <td><button class="insertable-button">車止</button></td>
-        <td><button class="insertable-button">支線</button></td>
-        <td><button class="insertable-button">電柱</button></td>
-        <td><button class="insertable-button">標識</button></td>
-      </tr>
-      <tr>
-        <td><button class="insertable-button">杭</button></td>
-        <td><button class="insertable-button">都</button></td>
-        <td><button class="insertable-button">市</button></td>
-        <td><button class="insertable-button">民</button></td>
-      </tr>
-      <tr>
-        <td><button class="insertable-button">EP</button></td>
-        <td><button class="insertable-button">H</button></td>
-        <td><button class="insertable-button">他</button></td>
-        <td><button class="insertable-button">桝</button></td>
-      </tr>
-    </table>
-    <!-- テンキー -->
-    <div id="numpad">
-      <button>7</button>
-      <button>8</button>
-      <button>9</button>
-      <button>4</button>
-      <button>5</button>
-      <button>6</button>
-      <button>1</button>
-      <button>2</button>
-      <button>3</button>
-      <button>0</button>
-      <button>.</button>
-      <button>⌫</button>
+    <!-- 右側の文字入力ボタン（4×4グリッド） -->
+    <div id="right-text-buttons">
+      <button class="insertable-button">右桝</button>
+      <button class="insertable-button">右境</button>
+      <button class="insertable-button">車止</button>
+      <button class="insertable-button">支線</button>
+      <button class="insertable-button">電柱</button>
+      <button class="insertable-button">標識</button>
+      <button class="insertable-button">杭</button>
+      <button class="insertable-button">都</button>
+      <button class="insertable-button">市</button>
+      <button class="insertable-button">民</button>
+      <button class="insertable-button">EP</button>
+      <button class="insertable-button">H</button>
+      <button class="insertable-button">他</button>
+      <button class="insertable-button">桝</button>
+      <!-- 空セルで埋める -->
+      <button class="insertable-button"></button>
+      <button class="insertable-button"></button>
+    </div>
+    <!-- テンキーを下部に配置 -->
+    <div class="bottom-keys">
+      <div id="numpad">
+        <button>7</button>
+        <button>8</button>
+        <button>9</button>
+        <button>4</button>
+        <button>5</button>
+        <button>6</button>
+        <button>1</button>
+        <button>2</button>
+        <button>3</button>
+        <button>0</button>
+        <button>.</button>
+        <button>⌫</button>
+      </div>
     </div>
   </div>
 </div>
@@ -378,7 +349,6 @@
     renderTable();
     updateCanvas();
     saveTableState();
-    // 表側のスクロール追従
     const container = document.getElementById('left-side');
     const cell = container.querySelector(`td[data-row="${currentRow}"][data-col="${currentCol}"]`);
     if (cell) cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
@@ -567,18 +537,12 @@
 
     textInput.addEventListener("input", handleTextInputChange);
 
+    // すべての挿入ボタンにクリックイベントを設定
     document.querySelectorAll(".insertable-button").forEach(btn => {
       btn.addEventListener("click", () => {
         insertStringIntoInput(btn.innerText);
       });
     });
-
-    document.getElementById("plus-button")
-      .addEventListener("click", () => insertStringIntoInput("+"));
-    document.getElementById("minus-button")
-      .addEventListener("click", () => insertStringIntoInput("-"));
-    document.getElementById("asterisk-button")
-      .addEventListener("click", () => insertStringIntoInput("***"));
 
     document.getElementById("arrow-up")
       .addEventListener("click", () => moveFocus(-1, 0));
