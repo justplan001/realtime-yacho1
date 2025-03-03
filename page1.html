@@ -31,13 +31,12 @@
     #table-container, #diagram-container {
       flex: 1;
       padding: 5px;
-      overflow: auto;
       -webkit-overflow-scrolling: touch;
     }
     #table-container {
       border-right: 1px solid #ccc;
     }
-    /* 表のスタイル（参考ファイルに近い） */
+    /* 表のスタイル */
     #table-container table {
       border-collapse: collapse;
       width: 100%;
@@ -51,7 +50,6 @@
       min-height: 24px; /* 空行でも高さを確保 */
       user-select: none;
     }
-    /* セルはフォーカス可能（tabindex で実現）だが直接編集は無効 */
     td {
       cursor: pointer;
       outline: none;
@@ -60,15 +58,15 @@
       background-color: #caf;
     }
     /* 図（キャンバス）のスタイル */
+    /* キャンバスは描画サイズで管理し、CSS上は自動サイズ（自然サイズ）に */
     #diagram-container {
       position: relative;
+      overflow: auto;  /* コンテナ内でスクロール可能に */
     }
     #diagram-container canvas {
-      width: 100%;
-      height: 100%;
       background-color: #000;
       display: block;
-      pointer-events: none;
+      /* CSSでの幅・高さ指定を削除し、updateCanvas()の描画サイズをそのまま表示 */
     }
     /* 図内操作ボタン */
     .topButton {
@@ -93,7 +91,6 @@
       bottom: 40px;
       right: 10px;
     }
-    /* Full ボタン：図部分のみ全画面表示 */
     #fullscreenButton {
       bottom: 10px;
       right: 10px;
@@ -127,7 +124,7 @@
       display: grid;
       grid-template-columns: repeat(8, 1fr);
       gap: 5px;
-      margin-bottom: 80px; /* 下部コントロール領域分の余白 */
+      margin-bottom: 80px;
     }
     #insertable-buttons button {
       padding: 8px;
@@ -216,12 +213,10 @@
   </div>
   <!-- 下部エリア：操作エリア -->
   <div id="bottom-area">
-    <!-- 上段：全画面表示ボタン＋文字入力ボックス -->
     <div id="input-row">
       <button id="fullscreenPageButton">全画面表示</button>
       <input type="text" id="text-input" placeholder="セルの文字を入力">
     </div>
-    <!-- 中段：32個の文字入力ボタン -->
     <div id="insertable-buttons">
       <button class="insertable-button">左枡</button>
       <button class="insertable-button">D</button>
@@ -259,7 +254,6 @@
       <button class="insertable-button">追加8</button>
       <button class="insertable-button">追加9</button>
     </div>
-    <!-- 下部固定：十字キー（左下）とテンキー（右下） -->
     <div id="arrowKeysContainer">
       <div id="arrow-keys">
         <button id="arrow-up">↑</button>
@@ -418,7 +412,8 @@
       if (!isNaN(d) && d > maxDistance) maxDistance = d;
     }
     if (maxDistance === 0) maxDistance = 100;
-    canvas.width = container.clientWidth;
+    // canvas の自然サイズを設定（このサイズが大きければ、containerはスクロール表示になります）
+    canvas.width = container.clientWidth;  // containerの幅に合わせる
     canvas.height = (maxDistance + 5) * scale + 50;
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -510,7 +505,7 @@
       let textX = (xPos >= roadCenterX) ? xPos + pointRadius + 2 : xPos - pointRadius - 2 - textWidth;
       ctx.fillText(displayText, textX, yPos);
     }
-    // スクロールを一番下に
+    // コンテナ内でスクロールできるようにするため、container自体のscrollTopを利用
     container.scrollTop = container.scrollHeight;
   }
 
@@ -530,7 +525,6 @@
   document.getElementById("arrow-right")
       .addEventListener("click", () => moveFocus(0, 1));
 
-  // moveFocus の定義
   function moveFocus(dRow, dCol) {
     let newRow = currentRow + dRow;
     let newCol = currentCol + dCol;
@@ -553,20 +547,23 @@
     });
   });
 
-  // 簡易なリセット処理
+  // reset ボタンの処理（renderTable と updateCanvas を明示的に呼ぶ）
   function resetTable() {
     if(confirm("本当にリセットしますか？")){
       localStorage.removeItem("tableState");
       generateTable();
+      renderTable();
+      updateCanvas();
       setSelectedCell(0,0);
     }
   }
-  
-  // 簡易なExcelエクスポート処理
+  document.getElementById("resetButton").addEventListener("click", resetTable);
+
   function exportToExcel() {
     alert("Excelエクスポート機能はまだ実装されていません。");
   }
-  
+  document.getElementById("exportButton").addEventListener("click", exportToExcel);
+
   // 全画面表示（キャンバスのみ）の処理
   document.getElementById("fullscreenButton").addEventListener("click", () => {
     const drawingArea = document.getElementById("diagram-container");
