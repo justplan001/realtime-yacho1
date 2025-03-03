@@ -2,9 +2,8 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" 
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>縦画面レイアウト（機能付き・32個ボタン・下部固定配置）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>縦画面レイアウト（機能付き・統合版）</title>
   <!-- Excelエクスポート用ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
@@ -22,7 +21,7 @@
       flex-direction: column;
       height: 100vh;
     }
-    /* 上部エリア：表と図（左右） */
+    /* 上部エリア：表と図を左右に分割（20vh） */
     #top-area {
       flex: 0 0 20vh;
       display: flex;
@@ -33,24 +32,26 @@
       flex: 1;
       padding: 5px;
       overflow: auto;
+      -webkit-overflow-scrolling: touch;
     }
     #table-container {
       border-right: 1px solid #ccc;
     }
-    /* 表のスタイル（元のスタイルに近い） */
+    /* 表のスタイル（参考ファイルに近い） */
     #table-container table {
       border-collapse: collapse;
       width: 100%;
     }
-    #table-container th, 
+    #table-container th,
     #table-container td {
       border: 1px solid #ccc;
       padding: 5px;
       text-align: center;
       min-width: 50px;
+      min-height: 24px; /* 空行でも高さを確保 */
       user-select: none;
     }
-    /* セルはフォーカス可能（tabindexで設定）だが直接編集は無効 */
+    /* セルはフォーカス可能（tabindex で実現）だが直接編集は無効 */
     td {
       cursor: pointer;
       outline: none;
@@ -92,7 +93,7 @@
       bottom: 40px;
       right: 10px;
     }
-    /* Full ボタン：図部分のみ全画面表示（対象は #diagram-container） */
+    /* Full ボタン：図部分のみ全画面表示 */
     #fullscreenButton {
       bottom: 10px;
       right: 10px;
@@ -180,337 +181,438 @@
   </style>
 </head>
 <body>
-  <div id="container">
-    <!-- 上部エリア：表と図 -->
-    <div id="top-area">
-      <div id="table-container">
-        <table id="excelTable">
-          <thead>
-            <tr>
-              <th>名称</th>
-              <th>距離</th>
-              <th>X座標</th>
-              <th>直径</th>
-              <th>コメント</th>
-              <th>歩道(L)</th>
-              <th>L側溝</th>
-              <th>幅員</th>
-              <th>R側溝</th>
-              <th>歩道(R)</th>
-            </tr>
-          </thead>
-          <tbody id="table-body">
-            <!-- 表データはJSで自動生成 -->
-          </tbody>
-        </table>
-      </div>
-      <div id="diagram-container">
-        <canvas id="drawingCanvas"></canvas>
-        <!-- 図内操作ボタン -->
-        <button id="resetButton" class="topButton">Reset</button>
-        <button id="toggleInputButton" class="topButton">Hide Input</button>
-        <button id="exportButton" class="topButton">Export</button>
-        <button id="fullscreenButton" class="topButton">Full</button>
+<div id="container">
+  <!-- 上部エリア：表と図 -->
+  <div id="top-area">
+    <div id="table-container">
+      <table id="excelTable">
+        <thead>
+          <tr>
+            <th>名称</th>
+            <th>距離</th>
+            <th>X座標</th>
+            <th>直径</th>
+            <th>コメント</th>
+            <th>歩道(L)</th>
+            <th>L側溝</th>
+            <th>幅員</th>
+            <th>R側溝</th>
+            <th>歩道(R)</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <!-- 表データはJSで自動生成 -->
+        </tbody>
+      </table>
+    </div>
+    <div id="diagram-container">
+      <canvas id="drawingCanvas"></canvas>
+      <!-- 図内操作ボタン -->
+      <button id="resetButton" class="topButton">Reset</button>
+      <button id="toggleInputButton" class="topButton">Hide Input</button>
+      <button id="exportButton" class="topButton">Export</button>
+      <button id="fullscreenButton" class="topButton">Full</button>
+    </div>
+  </div>
+  <!-- 下部エリア：操作エリア -->
+  <div id="bottom-area">
+    <!-- 上段：全画面表示ボタン＋文字入力ボックス -->
+    <div id="input-row">
+      <button id="fullscreenPageButton">全画面表示</button>
+      <input type="text" id="text-input" placeholder="セルの文字を入力">
+    </div>
+    <!-- 中段：32個の文字入力ボタン -->
+    <div id="insertable-buttons">
+      <button class="insertable-button">左枡</button>
+      <button class="insertable-button">D</button>
+      <button class="insertable-button">S</button>
+      <button class="insertable-button">SS</button>
+      <button class="insertable-button">E</button>
+      <button class="insertable-button">電柱</button>
+      <button class="insertable-button">標</button>
+      <button class="insertable-button">EP</button>
+      
+      <button class="insertable-button">H</button>
+      <button class="insertable-button">車止</button>
+      <button class="insertable-button">支線</button>
+      <button class="insertable-button">桝</button>
+      <button class="insertable-button">右枡</button>
+      <button class="insertable-button">左境</button>
+      <button class="insertable-button">F</button>
+      <button class="insertable-button">SV</button>
+      
+      <button class="insertable-button">W</button>
+      <button class="insertable-button">T</button>
+      <button class="insertable-button">市</button>
+      <button class="insertable-button">民</button>
+      <button class="insertable-button">都</button>
+      <button class="insertable-button">他</button>
+      <button class="insertable-button">右境</button>
+      <button class="insertable-button">追加1</button>
+      
+      <button class="insertable-button">追加2</button>
+      <button class="insertable-button">追加3</button>
+      <button class="insertable-button">追加4</button>
+      <button class="insertable-button">追加5</button>
+      <button class="insertable-button">追加6</button>
+      <button class="insertable-button">追加7</button>
+      <button class="insertable-button">追加8</button>
+      <button class="insertable-button">追加9</button>
+    </div>
+    <!-- 下部固定：十字キー（左下）とテンキー（右下） -->
+    <div id="arrowKeysContainer">
+      <div id="arrow-keys">
+        <button id="arrow-up">↑</button>
+        <button id="arrow-left">←</button>
+        <button id="arrow-right">→</button>
+        <button id="arrow-down">↓</button>
       </div>
     </div>
-    <!-- 下部エリア：操作エリア -->
-    <div id="bottom-area">
-      <!-- 上段：全画面表示ボタン＋文字入力ボックス -->
-      <div id="input-row">
-        <button id="fullscreenPageButton">全画面表示</button>
-        <input type="text" id="text-input" placeholder="セルの文字を入力">
-      </div>
-      <!-- 中段：32個の文字入力ボタン -->
-      <div id="insertable-buttons">
-        <!-- 8列×4行、32個のボタン例（内容は例示） -->
-        <button class="insertable-button">左枡</button>
-        <button class="insertable-button">D</button>
-        <button class="insertable-button">S</button>
-        <button class="insertable-button">SS</button>
-        <button class="insertable-button">E</button>
-        <button class="insertable-button">電柱</button>
-        <button class="insertable-button">標</button>
-        <button class="insertable-button">EP</button>
-        
-        <button class="insertable-button">H</button>
-        <button class="insertable-button">車止</button>
-        <button class="insertable-button">支線</button>
-        <button class="insertable-button">桝</button>
-        <button class="insertable-button">右枡</button>
-        <button class="insertable-button">左境</button>
-        <button class="insertable-button">F</button>
-        <button class="insertable-button">SV</button>
-        
-        <button class="insertable-button">W</button>
-        <button class="insertable-button">T</button>
-        <button class="insertable-button">市</button>
-        <button class="insertable-button">民</button>
-        <button class="insertable-button">都</button>
-        <button class="insertable-button">他</button>
-        <button class="insertable-button">右境</button>
-        <button class="insertable-button">追加1</button>
-        
-        <button class="insertable-button">追加2</button>
-        <button class="insertable-button">追加3</button>
-        <button class="insertable-button">追加4</button>
-        <button class="insertable-button">追加5</button>
-        <button class="insertable-button">追加6</button>
-        <button class="insertable-button">追加7</button>
-        <button class="insertable-button">追加8</button>
-        <button class="insertable-button">追加9</button>
-      </div>
-      <!-- 下部固定：十字キー（左下）とテンキー（右下） -->
-      <div id="arrowKeysContainer">
-        <div id="arrow-keys">
-          <button id="arrow-up">↑</button>
-          <button id="arrow-left">←</button>
-          <button id="arrow-right">→</button>
-          <button id="arrow-down">↓</button>
-        </div>
-      </div>
-      <div id="numpadContainer">
-        <div id="numpad">
-          <button>7</button>
-          <button>8</button>
-          <button>9</button>
-          <button>4</button>
-          <button>5</button>
-          <button>6</button>
-          <button>1</button>
-          <button>2</button>
-          <button>3</button>
-          <button>0</button>
-          <button>.</button>
-          <button>⌫</button>
-        </div>
+    <div id="numpadContainer">
+      <div id="numpad">
+        <button>7</button>
+        <button>8</button>
+        <button>9</button>
+        <button>4</button>
+        <button>5</button>
+        <button>6</button>
+        <button>1</button>
+        <button>2</button>
+        <button>3</button>
+        <button>0</button>
+        <button>.</button>
+        <button>⌫</button>
       </div>
     </div>
   </div>
+</div>
+
+<script>
+  // 未定義の変数の初期化
+  let inputVisible = true;
   
-  <script>
-    // グローバル変数：テーブル状態管理
-    let tableState = [];
-    const ROW_COUNT = 100;
-    const COL_COUNT = 10;
-    let currentRow = 0, currentCol = 0;
-    const tbody = document.getElementById('table-body');
-    const textInput = document.getElementById('text-input');
-    
-    // 初期状態生成
-    function generateTableState() {
-      tableState = [];
-      for (let i = 0; i < ROW_COUNT; i++) {
-        let rowData = [];
-        for (let j = 0; j < COL_COUNT; j++) {
-          rowData.push("");
-        }
-        tableState.push(rowData);
+  // グローバル変数：テーブル状態管理
+  let tableState = [];
+  const ROW_COUNT = 100;
+  const COL_COUNT = 10;
+  let currentRow = 0, currentCol = 0;
+  const tbody = document.getElementById('table-body');
+  const textInput = document.getElementById('text-input');
+
+  // テーブル初期状態生成
+  function generateTable() {
+    tableState = [];
+    for (let i = 0; i < ROW_COUNT; i++) {
+      let rowData = [];
+      for (let j = 0; j < COL_COUNT; j++) {
+        rowData.push("");
       }
-      // サンプル初期値（2行目）
-      tableState[1][0] = "サンプル";
-      tableState[1][1] = "10";
-      tableState[1][2] = "5";
-      tableState[1][3] = "2";
-      tableState[1][4] = "コメント";
-      tableState[1][5] = "1";
-      tableState[1][6] = "0.5";
-      tableState[1][7] = "5";
-      tableState[1][8] = "0.5";
-      tableState[1][9] = "1";
+      tableState.push(rowData);
     }
-    
-    // テーブル描画（セルは contentEditable を外し tabindex でフォーカス可能に）
-    function renderTable() {
-      tbody.innerHTML = "";
-      for (let i = 0; i < ROW_COUNT; i++) {
-        const tr = document.createElement('tr');
-        for (let j = 0; j < COL_COUNT; j++) {
-          const td = document.createElement('td');
-          td.dataset.row = i;
-          td.dataset.col = j;
-          td.setAttribute("tabindex", "0"); // フォーカス可能に
-          td.innerText = tableState[i][j];
-          if (i === currentRow && j === currentCol) {
-            td.classList.add("selected");
-          }
-          td.addEventListener("click", () => { setSelectedCell(i, j); });
-          td.addEventListener("keydown", navigationHandler);
-          // セル自体の入力イベントは発火しないので更新は入力ボックス経由
-          tr.appendChild(td);
+    // サンプル初期値（2行目）
+    tableState[1][6] = "0.5";
+    tableState[1][7] = "5";
+    tableState[1][8] = "0.5";
+  }
+
+  // テーブル描画
+  function renderTable() {
+    tbody.innerHTML = "";
+    for (let i = 0; i < ROW_COUNT; i++) {
+      const tr = document.createElement('tr');
+      for (let j = 0; j < COL_COUNT; j++) {
+        const td = document.createElement('td');
+        td.dataset.row = i;
+        td.dataset.col = j;
+        td.setAttribute("tabindex", "0");
+        td.innerText = tableState[i][j];
+        if (i === currentRow && j === currentCol) {
+          td.classList.add("selected");
         }
-        tbody.appendChild(tr);
+        td.addEventListener("click", () => { setSelectedCell(i, j); });
+        td.addEventListener("keydown", navigationHandler);
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+  }
+
+  // セル選択時の処理
+  function setSelectedCell(r, c) {
+    currentRow = r;
+    currentCol = c;
+    textInput.value = tableState[r][c];
+    renderTable();
+    updateCanvas();
+    saveTableState();
+    const container = document.getElementById('table-container');
+    const cell = container.querySelector(`td[data-row="${currentRow}"][data-col="${currentCol}"]`);
+    if (cell) cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+  }
+
+  // テキスト入力ボックス変更時の処理
+  function handleTextInputChange() {
+    tableState[currentRow][currentCol] = textInput.value;
+    renderTable();
+    updateCanvas();
+    saveTableState();
+  }
+  textInput.addEventListener("input", handleTextInputChange);
+
+  // セル間移動（矢印キー、Enter）
+  function navigationHandler(event) {
+    let targetRow = currentRow;
+    let targetCol = currentCol;
+    if (event.key === "Enter") {
+      targetRow = currentRow + 1;
+      event.preventDefault();
+    } else if (event.key === "ArrowUp") {
+      targetRow = currentRow - 1;
+    } else if (event.key === "ArrowDown") {
+      targetRow = currentRow + 1;
+    } else if (event.key === "ArrowLeft") {
+      targetCol = currentCol - 1;
+    } else if (event.key === "ArrowRight") {
+      targetCol = currentCol + 1;
+    } else {
+      return;
+    }
+    if (targetRow < 0) targetRow = 0;
+    if (targetRow >= ROW_COUNT) targetRow = ROW_COUNT - 1;
+    if (targetCol < 0) targetCol = 0;
+    if (targetCol >= COL_COUNT) targetCol = COL_COUNT - 1;
+    setSelectedCell(targetRow, targetCol);
+    const targetCell = document.querySelector(`[data-row="${targetRow}"][data-col="${targetCol}"]`);
+    if (targetCell) targetCell.focus();
+  }
+
+  // 文字列を入力ボックスに追加して更新
+  function insertStringIntoInput(str) {
+    textInput.value += str;
+    handleTextInputChange();
+  }
+
+  // 保存／復元
+  function saveTableState() {
+    localStorage.setItem("tableState", JSON.stringify(tableState));
+  }
+  function loadTableState() {
+    const saved = localStorage.getItem("tableState");
+    if (saved) {
+      const data = JSON.parse(saved);
+      if (data && data.length === ROW_COUNT && data[0].length === COL_COUNT) {
+        tableState = data;
       }
     }
-    
-    // セル選択時、currentRow/currentCol 更新とテキスト入力ボックス反映
-    function setSelectedCell(r, c) {
-      currentRow = r;
-      currentCol = c;
-      textInput.value = tableState[r][c];
-      renderTable();
+  }
+
+  // キャンバス描画ロジック
+  function updateCanvas() {
+    const canvas = document.getElementById('drawingCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('diagram-container');
+    const scale = 20;
+    let maxDistance = 0;
+    for (let i = 0; i < ROW_COUNT; i++){
+      let d = parseFloat(tableState[i][1]);
+      if (!isNaN(d) && d > maxDistance) maxDistance = d;
     }
-    
-    // テキスト入力ボックス更新
-    textInput.addEventListener("input", () => {
-      tableState[currentRow][currentCol] = textInput.value;
-      renderTable();
-      updateCanvas();
-      saveTableState();
+    if (maxDistance === 0) maxDistance = 100;
+    canvas.width = container.clientWidth;
+    canvas.height = (maxDistance + 5) * scale + 50;
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    let originX = canvas.width / 2;
+    const originY = canvas.height - 50;
+    const roadWidth = parseFloat(tableState[1][7]) || 0;
+    let offsetG = parseFloat(tableState[1][6]) || 0;
+    let offsetI = parseFloat(tableState[1][8]) || 0;
+    let sidewalkL = parseFloat(tableState[1][5]) || 0;
+    let sidewalkR = parseFloat(tableState[1][9]) || 0;
+    originX = originX - (roadWidth * scale) / 2;
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(originX, originY);
+    ctx.lineTo(originX, originY - ((maxDistance + 5) * scale));
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(originX + roadWidth * scale, originY);
+    ctx.lineTo(originX + roadWidth * scale, originY - ((maxDistance + 5) * scale));
+    ctx.stroke();
+    if (!isNaN(offsetG) && offsetG !== 0){
+      ctx.beginPath();
+      ctx.moveTo(originX + offsetG * scale, originY);
+      ctx.lineTo(originX + offsetG * scale, originY - ((maxDistance + 5) * scale));
+      ctx.stroke();
+    }
+    if (!isNaN(offsetI) && offsetI !== 0){
+      ctx.beginPath();
+      ctx.moveTo(originX + (roadWidth - offsetI) * scale, originY);
+      ctx.lineTo(originX + (roadWidth - offsetI) * scale, originY - ((maxDistance + 5) * scale));
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'yellow';
+    ctx.lineWidth = 2;
+    if (!isNaN(sidewalkL) && sidewalkL !== 0){
+      let sidewalkLX = originX - sidewalkL * scale;
+      ctx.beginPath();
+      ctx.moveTo(sidewalkLX, originY);
+      ctx.lineTo(sidewalkLX, originY - ((maxDistance + 5) * scale));
+      ctx.stroke();
+    }
+    if (!isNaN(sidewalkR) && sidewalkR !== 0){
+      let sidewalkRX = originX + (roadWidth + sidewalkR) * scale;
+      ctx.beginPath();
+      ctx.moveTo(sidewalkRX, originY);
+      ctx.lineTo(sidewalkRX, originY - ((maxDistance + 5) * scale));
+      ctx.stroke();
+    }
+    const roadCenterX = originX + (roadWidth * scale) / 2;
+    const colors = ["red", "yellow", "green", "cyan", "magenta"];
+    for (let i = 0; i < ROW_COUNT; i++){
+      const label = tableState[i][0].trim();
+      const yVal = parseFloat(tableState[i][1]);
+      let xStr = tableState[i][2].trim();
+      if (isNaN(yVal)) continue;
+      let xVal = (xStr === "") ? roadWidth : parseFloat(xStr);
+      if (xVal < 0) xVal = roadWidth - Math.abs(xVal);
+      if (isNaN(xVal)) continue;
+      const diamVal = parseFloat(tableState[i][3]);
+      const comment = tableState[i][4].trim();
+      const xPos = originX + (xVal * scale);
+      const yPos = originY - (yVal * scale);
+      const color = colors[i % colors.length];
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(originX, yPos);
+      ctx.lineTo(xPos, yPos);
+      ctx.stroke();
+      const pointRadius = 0.1 * scale;
+      ctx.beginPath();
+      ctx.arc(xPos, yPos, pointRadius, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
+      if (!isNaN(diamVal) && diamVal > 0) {
+        const circleRadius = (diamVal / 2) * scale;
+        ctx.beginPath();
+        ctx.arc(xPos, yPos, circleRadius, 0, 2 * Math.PI);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      let displayText = label;
+      if (comment) displayText += " (" + comment + ")";
+      ctx.font = '30px sans-serif';
+      ctx.fillStyle = color;
+      let textWidth = ctx.measureText(displayText).width;
+      let textX = (xPos >= roadCenterX) ? xPos + pointRadius + 2 : xPos - pointRadius - 2 - textWidth;
+      ctx.fillText(displayText, textX, yPos);
+    }
+    // スクロールを一番下に
+    container.scrollTop = container.scrollHeight;
+  }
+
+  // 各種イベント設定
+  document.querySelectorAll(".insertable-button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      insertStringIntoInput(btn.innerText);
     });
-    
-    // キーボード（矢印キー・Enter）によるセル移動用ハンドラー
-    function navigationHandler(event) {
-      let targetRow = currentRow;
-      let targetCol = currentCol;
-      if (event.key === "Enter") {
-        targetRow = currentRow + 1;
-        event.preventDefault();
-      } else if (event.key === "ArrowUp") {
-        targetRow = currentRow - 1;
-      } else if (event.key === "ArrowDown") {
-        targetRow = currentRow + 1;
-      } else if (event.key === "ArrowLeft") {
-        targetCol = currentCol - 1;
-      } else if (event.key === "ArrowRight") {
-        targetCol = currentCol + 1;
+  });
+
+  document.getElementById("arrow-up")
+      .addEventListener("click", () => moveFocus(-1, 0));
+  document.getElementById("arrow-down")
+      .addEventListener("click", () => moveFocus(1, 0));
+  document.getElementById("arrow-left")
+      .addEventListener("click", () => moveFocus(0, -1));
+  document.getElementById("arrow-right")
+      .addEventListener("click", () => moveFocus(0, 1));
+
+  // moveFocus の定義
+  function moveFocus(dRow, dCol) {
+    let newRow = currentRow + dRow;
+    let newCol = currentCol + dCol;
+    if(newRow < 0) newRow = 0;
+    if(newRow >= ROW_COUNT) newRow = ROW_COUNT - 1;
+    if(newCol < 0) newCol = 0;
+    if(newCol >= COL_COUNT) newCol = COL_COUNT - 1;
+    setSelectedCell(newRow, newCol);
+  }
+
+  document.querySelectorAll("#numpad button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const value = btn.innerText;
+      if (value === "⌫") {
+        textInput.value = textInput.value.slice(0, -1);
+        handleTextInputChange();
       } else {
-        return;
+        insertStringIntoInput(value);
       }
-      if (targetRow < 0) targetRow = 0;
-      if (targetRow >= ROW_COUNT) targetRow = ROW_COUNT - 1;
-      if (targetCol < 0) targetCol = 0;
-      if (targetCol >= COL_COUNT) targetCol = COL_COUNT - 1;
-      setSelectedCell(targetRow, targetCol);
-      const targetCell = document.querySelector(`[data-row="${targetRow}"][data-col="${targetCol}"]`);
-      if (targetCell) {
-        targetCell.focus();
-      }
+    });
+  });
+
+  // 簡易なリセット処理
+  function resetTable() {
+    if(confirm("本当にリセットしますか？")){
+      localStorage.removeItem("tableState");
+      generateTable();
+      setSelectedCell(0,0);
     }
-    
-    // getFocusedCell は常に currentRow/currentCol に対応するセルを返す
-    function getFocusedCell() {
-      return document.querySelector(`[data-row="${currentRow}"][data-col="${currentCol}"]`);
+  }
+  
+  // 簡易なExcelエクスポート処理
+  function exportToExcel() {
+    alert("Excelエクスポート機能はまだ実装されていません。");
+  }
+  
+  // 全画面表示（キャンバスのみ）の処理
+  document.getElementById("fullscreenButton").addEventListener("click", () => {
+    const drawingArea = document.getElementById("diagram-container");
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      drawingArea.requestFullscreen();
     }
-    
-    // 文字挿入処理（入力ボックス、挿入ボタン、テンキーから）
-    function insertTextIntoCell(text) {
-      const cell = getFocusedCell();
-      if (cell) {
-        tableState[currentRow][currentCol] += text;
-        renderTable();
-        updateCanvas();
-        saveTableState();
-        cell.focus();
-      }
-    }
-    function backspaceInCell() {
-      const cell = getFocusedCell();
-      if (cell) {
-        tableState[currentRow][currentCol] = tableState[currentRow][currentCol].slice(0, -1);
-        renderTable();
-        updateCanvas();
-        saveTableState();
-        cell.focus();
-      }
-    }
-    function moveFocus(dRow, dCol) {
-      const targetRow = currentRow + dRow;
-      const targetCol = currentCol + dCol;
-      if (targetRow >= 0 && targetRow < ROW_COUNT && targetCol >= 0 && targetCol < COL_COUNT) {
-        setSelectedCell(targetRow, targetCol);
-        const targetCell = document.querySelector(`[data-row="${targetRow}"][data-col="${targetCol}"]`);
-        if (targetCell) {
-          targetCell.focus();
-        }
-      }
-    }
-    
-    // イベント設定（テンキー・矢印キー・挿入ボタン）
-    document.querySelectorAll("#numpadContainer button").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const value = btn.innerText;
-        if (value === "⌫") backspaceInCell();
-        else insertTextIntoCell(value);
+  });
+  
+  // ページ全体の全画面表示
+  document.getElementById("fullscreenPageButton").addEventListener("click", () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error(`全画面表示エラー: ${err.message}`);
       });
-    });
-    document.querySelectorAll(".insertable-button").forEach(btn => {
-      btn.addEventListener("click", () => {
-        insertTextIntoCell(btn.innerText);
-      });
-    });
-    document.getElementById("arrow-up").addEventListener("click", () => moveFocus(-1, 0));
-    document.getElementById("arrow-down").addEventListener("click", () => moveFocus(1, 0));
-    document.getElementById("arrow-left").addEventListener("click", () => moveFocus(0, -1));
-    document.getElementById("arrow-right").addEventListener("click", () => moveFocus(0, 1));
-    
-    // 図内ボタン：Full（図部分のみ全画面表示）
-    document.getElementById("fullscreenButton").addEventListener("click", () => {
-      const drawingArea = document.getElementById("diagram-container");
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      } else {
-        drawingArea.requestFullscreen();
-      }
-    });
-    // Toggle Input（Hide/Show Input：下部エリアの表示切替）
-    let inputVisible = true;
-    document.getElementById("toggleInputButton").addEventListener("click", () => {
-      const bottom = document.getElementById("bottom-area");
-      const top = document.getElementById("top-area");
-      if (inputVisible) {
-        bottom.style.display = "none";
-        top.style.flex = "1 1 auto";
-        document.getElementById("toggleInputButton").innerText = "Show Input";
-      } else {
-        bottom.style.display = "block";
-        top.style.flex = "0 0 20vh";
-        document.getElementById("toggleInputButton").innerText = "Hide Input";
-      }
-      inputVisible = !inputVisible;
-      updateCanvas();
-    });
-    // Reset, Export
-    document.getElementById("resetButton").addEventListener("click", () => {
-      if (confirm("本当にリセットしますか？")) {
-        localStorage.removeItem("tableState");
-        generateTableState();
-        updateCanvas();
-        renderTable();
-      }
-    });
-    document.getElementById("exportButton").addEventListener("click", () => {
-      let wb = XLSX.utils.table_to_book(document.getElementById('excelTable'), {sheet:"Sheet1"});
-      XLSX.writeFile(wb, "export.xlsx");
-    });
-    // 全画面（ページ全体）切替ボタン（入力行側）
-    document.getElementById("fullscreenPageButton").addEventListener("click", () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(err => {
-          console.error(`全画面表示エラー: ${err.message}`);
-        });
-      } else {
-        document.exitFullscreen();
-      }
-    });
-    
-    window.addEventListener('resize', updateCanvas);
-    window.onload = function() {
-      generateTableState();
-      loadTableState();
-      renderTable();
-      updateCanvas();
-    };
-    
-    // 保存／復元処理
-    function saveTableState() {
-      localStorage.setItem("tableState", JSON.stringify(tableState));
+    } else {
+      document.exitFullscreen();
     }
-    function loadTableState() {
-      const saved = localStorage.getItem("tableState");
-      if (saved) {
-        tableState = JSON.parse(saved);
-      }
+  });
+
+  // 入力エリアの表示・非表示切替
+  document.getElementById("toggleInputButton").addEventListener("click", () => {
+    const bottom = document.getElementById("bottom-area");
+    const top = document.getElementById("top-area");
+    if (inputVisible) {
+      bottom.style.display = "none";
+      top.style.flex = "1 1 auto";
+      document.getElementById("toggleInputButton").innerText = "Show Input";
+    } else {
+      bottom.style.display = "block";
+      top.style.flex = "0 0 20vh";
+      document.getElementById("toggleInputButton").innerText = "Hide Input";
     }
-  </script>
+    inputVisible = !inputVisible;
+    updateCanvas();
+  });
+
+  window.addEventListener('resize', updateCanvas);
+  window.onload = () => {
+    generateTable();
+    loadTableState();
+    renderTable();
+    updateCanvas();
+    setSelectedCell(0, 0);
+  };
+</script>
 </body>
 </html>
