@@ -48,8 +48,10 @@
       text-align: center;
       min-width: 40px;
     }
+    /* セルはフォーカス可能だが直接編集はさせない */
     td {
-      cursor: text;
+      cursor: pointer;
+      outline: none;
     }
     .selected {
       background-color: #caf;
@@ -88,7 +90,7 @@
       bottom: 40px;
       right: 10px;
     }
-    /* Full ボタンは、図部分だけ全画面表示するように対象を #diagram-container に変更 */
+    /* Full ボタンは、図部分のみ全画面表示 */
     #fullscreenButton {
       bottom: 10px;
       right: 10px;
@@ -255,7 +257,7 @@
         <button class="insertable-button">追加8</button>
         <button class="insertable-button">追加9</button>
       </div>
-      <!-- 下部固定：十字キーとテンキー（個別配置） -->
+      <!-- 下部固定：十字キー（左下）とテンキー（右下） -->
       <div id="arrowKeysContainer">
         <div id="arrow-keys">
           <button id="arrow-up">↑</button>
@@ -284,7 +286,7 @@
   </div>
   
   <script>
-    // テーブル状態管理用グローバル変数
+    // グローバル変数：テーブル状態管理
     let tableState = [];
     const ROW_COUNT = 100;
     const COL_COUNT = 10;
@@ -315,7 +317,7 @@
       tableState[1][9] = "1";
     }
     
-    // テーブル描画
+    // テーブル描画（セルは contentEditable を外し tabindex でフォーカス可能に）
     function renderTable() {
       tbody.innerHTML = "";
       for (let i = 0; i < ROW_COUNT; i++) {
@@ -324,12 +326,13 @@
           const td = document.createElement('td');
           td.dataset.row = i;
           td.dataset.col = j;
-          td.contentEditable = "true";
+          td.setAttribute("tabindex", "0"); // フォーカス可能にする
           td.innerText = tableState[i][j];
           if (i === currentRow && j === currentCol) {
             td.classList.add("selected");
           }
           td.addEventListener("click", () => { setSelectedCell(i, j); });
+          td.addEventListener("keydown", navigationHandler);
           td.addEventListener("input", () => {
             tableState[i][j] = td.innerText;
             updateCanvas();
@@ -341,7 +344,7 @@
       }
     }
     
-    // セル選択処理
+    // セル選択時、currentRow/currentCol 更新とテキスト入力ボックス反映
     function setSelectedCell(r, c) {
       currentRow = r;
       currentCol = c;
@@ -349,7 +352,7 @@
       renderTable();
     }
     
-    // テキスト入力更新
+    // テキスト入力ボックス更新
     textInput.addEventListener("input", () => {
       tableState[currentRow][currentCol] = textInput.value;
       renderTable();
@@ -357,138 +360,43 @@
       saveTableState();
     });
     
-    // キャンバス描画
-    function updateCanvas() {
-      const canvas = document.getElementById('drawingCanvas');
-      const ctx = canvas.getContext('2d');
-      const container = document.getElementById('diagram-container');
-      const scale = 20;
-      let maxDistance = 0;
-      for (let i = 0; i < ROW_COUNT; i++){
-        let d = parseFloat(tableState[i][1]);
-        if (!isNaN(d) && d > maxDistance) maxDistance = d;
+    // キーボード（矢印キー・Enter）によるセル移動用ハンドラー
+    function navigationHandler(event) {
+      let targetRow = currentRow;
+      let targetCol = currentCol;
+      if (event.key === "Enter") {
+        targetRow = currentRow + 1;
+        event.preventDefault();
+      } else if (event.key === "ArrowUp") {
+        targetRow = currentRow - 1;
+      } else if (event.key === "ArrowDown") {
+        targetRow = currentRow + 1;
+      } else if (event.key === "ArrowLeft") {
+        targetCol = currentCol - 1;
+      } else if (event.key === "ArrowRight") {
+        targetCol = currentCol + 1;
+      } else {
+        return;
       }
-      if (maxDistance === 0) maxDistance = 100;
-      canvas.width = container.clientWidth;
-      canvas.height = (maxDistance + 5) * scale + 50;
-      
-      ctx.fillStyle = 'black';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      let originX = canvas.width / 2;
-      const originY = canvas.height - 50;
-      const roadWidth = parseFloat(tableState[1][7]) || 0;
-      let offsetG = parseFloat(tableState[1][6]) || 0;
-      let offsetI = parseFloat(tableState[1][8]) || 0;
-      let sidewalkL = parseFloat(tableState[1][5]) || 0;
-      let sidewalkR = parseFloat(tableState[1][9]) || 0;
-      originX = originX - (roadWidth * scale) / 2;
-      
-      // 道路輪郭
-      ctx.strokeStyle = 'white';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(originX, originY);
-      ctx.lineTo(originX, originY - ((maxDistance + 5) * scale));
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(originX + roadWidth * scale, originY);
-      ctx.lineTo(originX + roadWidth * scale, originY - ((maxDistance + 5) * scale));
-      ctx.stroke();
-      
-      // オフセット線
-      if (!isNaN(offsetG) && offsetG !== 0) {
-        ctx.beginPath();
-        ctx.moveTo(originX + offsetG * scale, originY);
-        ctx.lineTo(originX + offsetG * scale, originY - ((maxDistance + 5) * scale));
-        ctx.stroke();
+      // 範囲チェック
+      if (targetRow < 0) targetRow = 0;
+      if (targetRow >= ROW_COUNT) targetRow = ROW_COUNT - 1;
+      if (targetCol < 0) targetCol = 0;
+      if (targetCol >= COL_COUNT) targetCol = COL_COUNT - 1;
+      setSelectedCell(targetRow, targetCol);
+      // フォーカスを移す
+      const targetCell = document.querySelector(`[data-row="${targetRow}"][data-col="${targetCol}"]`);
+      if (targetCell) {
+        targetCell.focus();
       }
-      if (!isNaN(offsetI) && offsetI !== 0) {
-        ctx.beginPath();
-        ctx.moveTo(originX + (roadWidth - offsetI) * scale, originY);
-        ctx.lineTo(originX + (roadWidth - offsetI) * scale, originY - ((maxDistance + 5) * scale));
-        ctx.stroke();
-      }
-      
-      // 歩道
-      ctx.strokeStyle = 'yellow';
-      if (!isNaN(sidewalkL) && sidewalkL !== 0) {
-        let sidewalkLX = originX - sidewalkL * scale;
-        ctx.beginPath();
-        ctx.moveTo(sidewalkLX, originY);
-        ctx.lineTo(sidewalkLX, originY - ((maxDistance + 5) * scale));
-        ctx.stroke();
-      }
-      if (!isNaN(sidewalkR) && sidewalkR !== 0) {
-        let sidewalkRX = originX + roadWidth * scale + sidewalkR * scale;
-        ctx.beginPath();
-        ctx.moveTo(sidewalkRX, originY);
-        ctx.lineTo(sidewalkRX, originY - ((maxDistance + 5) * scale));
-        ctx.stroke();
-      }
-      
-      const roadCenterX = originX + (roadWidth * scale) / 2;
-      const colors = ["red", "yellow", "green", "cyan", "magenta"];
-      for (let i = 0; i < ROW_COUNT; i++){
-        const label = tableState[i][0].trim();
-        const yVal = parseFloat(tableState[i][1]);
-        let xStr = tableState[i][2].trim();
-        if (isNaN(yVal)) continue;
-        let xVal = (xStr === "") ? roadWidth : parseFloat(xStr);
-        if (xVal < 0) xVal = roadWidth - Math.abs(xVal);
-        if (isNaN(xVal)) continue;
-        const diamVal = parseFloat(tableState[i][3]);
-        const comment = tableState[i][4].trim();
-        const xPos = originX + (xVal * scale);
-        const yPos = originY - (yVal * scale);
-        const color = colors[i % colors.length];
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(originX, yPos);
-        ctx.lineTo(xPos, yPos);
-        ctx.stroke();
-        const pointRadius = 0.1 * scale;
-        ctx.beginPath();
-        ctx.arc(xPos, yPos, pointRadius, 0, 2 * Math.PI);
-        ctx.fillStyle = color;
-        ctx.fill();
-        if (!isNaN(diamVal) && diamVal > 0) {
-          const circleRadius = (diamVal / 2) * scale;
-          ctx.beginPath();
-          ctx.arc(xPos, yPos, circleRadius, 0, 2 * Math.PI);
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-        }
-        let displayText = label;
-        if (comment) displayText += " (" + comment + ")";
-        ctx.font = '20px sans-serif';
-        ctx.fillStyle = color;
-        let textWidth = ctx.measureText(displayText).width;
-        let textX = (xPos >= roadCenterX) ? xPos + pointRadius + 2 : xPos - pointRadius - 2 - textWidth;
-        ctx.fillText(displayText, textX, yPos);
-      }
-      container.scrollTop = container.scrollHeight;
     }
     
-    // 保存／復元
-    function saveTableState() {
-      localStorage.setItem("tableState", JSON.stringify(tableState));
-    }
-    function loadTableState() {
-      const saved = localStorage.getItem("tableState");
-      if (saved) {
-        tableState = JSON.parse(saved);
-      }
+    // getFocusedCell は常に currentRow, currentCol に対応するセルを返す
+    function getFocusedCell() {
+      return document.querySelector(`[data-row="${currentRow}"][data-col="${currentCol}"]`);
     }
     
     // 文字挿入処理
-    function getFocusedCell() {
-      let active = document.activeElement;
-      if (active && active.tagName === "TD") return active;
-      return document.querySelector("#table-body td");
-    }
     function insertTextIntoCell(text) {
       const cell = getFocusedCell();
       if (cell) {
@@ -508,17 +416,18 @@
       }
     }
     function moveFocus(dRow, dCol) {
-      const cell = getFocusedCell();
-      if (cell) {
-        const currentRow = parseInt(cell.dataset.row);
-        const currentCol = parseInt(cell.dataset.col);
-        const targetCell = document.querySelector(`[data-row='${currentRow + dRow}'][data-col='${currentCol + dCol}']`);
+      const targetRow = currentRow + dRow;
+      const targetCol = currentCol + dCol;
+      if (targetRow >= 0 && targetRow < ROW_COUNT && targetCol >= 0 && targetCol < COL_COUNT) {
+        setSelectedCell(targetRow, targetCol);
+        const targetCell = document.querySelector(`[data-row="${targetRow}"][data-col="${targetCol}"]`);
         if (targetCell) {
           targetCell.focus();
-          setTimeout(() => { selectCellContent.call(targetCell); }, 0);
         }
       }
     }
+    
+    // セル内のテキスト全選択（必要なら）
     function selectCellContent() {
       let range = document.createRange();
       range.selectNodeContents(this);
@@ -545,7 +454,7 @@
     document.getElementById("arrow-left").addEventListener("click", () => moveFocus(0, -1));
     document.getElementById("arrow-right").addEventListener("click", () => moveFocus(0, 1));
     
-    // 図内ボタン：Full（図部分のみ全画面表示 → 対象は #diagram-container）
+    // 図内ボタン：Full（図部分のみ全画面表示）
     document.getElementById("fullscreenButton").addEventListener("click", () => {
       const drawingArea = document.getElementById("diagram-container");
       if (document.fullscreenElement) {
