@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>縦画面レイアウト（機能付き・統合版）</title>
+  <title>左右50:50レイアウト（表と図）</title>
   <!-- Excelエクスポート用ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
@@ -15,22 +15,24 @@
       font-family: sans-serif;
       box-sizing: border-box;
     }
-    /* コンテナ：上部20％（表＋図）／下部80％（操作エリア） */
+    /* コンテナ：上部50vh（左右分割）／下部残り（操作エリア） */
     #container {
       display: flex;
       flex-direction: column;
       height: 100vh;
     }
-    /* 上部エリア：表と図を左右に分割（20vh） */
+    /* 上部エリア：左右に50:50で分割 */
     #top-area {
-      flex: 0 0 20vh;
+      flex: 0 0 50vh;
       display: flex;
+      flex-direction: row;
       border-bottom: 1px solid #ccc;
       overflow: hidden;
     }
     #table-container, #diagram-container {
       flex: 1;
       padding: 5px;
+      overflow: auto;
       -webkit-overflow-scrolling: touch;
     }
     #table-container {
@@ -47,7 +49,7 @@
       padding: 5px;
       text-align: center;
       min-width: 50px;
-      min-height: 24px; /* 空行でも高さを確保 */
+      min-height: 24px;
       user-select: none;
     }
     td {
@@ -58,15 +60,13 @@
       background-color: #caf;
     }
     /* 図（キャンバス）のスタイル */
-    /* キャンバスは描画サイズで管理し、CSS上は自動サイズ（自然サイズ）に */
     #diagram-container {
       position: relative;
-      overflow: auto;  /* コンテナ内でスクロール可能に */
+      overflow: auto;
     }
     #diagram-container canvas {
       background-color: #000;
       display: block;
-      /* CSSでの幅・高さ指定を削除し、updateCanvas()の描画サイズをそのまま表示 */
     }
     /* 図内操作ボタン */
     .topButton {
@@ -179,7 +179,7 @@
 </head>
 <body>
 <div id="container">
-  <!-- 上部エリア：表と図 -->
+  <!-- 上部エリア：左に表、右に図 -->
   <div id="top-area">
     <div id="table-container">
       <table id="excelTable">
@@ -412,8 +412,8 @@
       if (!isNaN(d) && d > maxDistance) maxDistance = d;
     }
     if (maxDistance === 0) maxDistance = 100;
-    // canvas の自然サイズを設定（このサイズが大きければ、containerはスクロール表示になります）
-    canvas.width = container.clientWidth;  // containerの幅に合わせる
+    // canvas の自然サイズを設定（container からはスクロール可能）
+    canvas.width = container.clientWidth;
     canvas.height = (maxDistance + 5) * scale + 50;
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -505,7 +505,6 @@
       let textX = (xPos >= roadCenterX) ? xPos + pointRadius + 2 : xPos - pointRadius - 2 - textWidth;
       ctx.fillText(displayText, textX, yPos);
     }
-    // コンテナ内でスクロールできるようにするため、container自体のscrollTopを利用
     container.scrollTop = container.scrollHeight;
   }
 
@@ -547,7 +546,7 @@
     });
   });
 
-  // reset ボタンの処理（renderTable と updateCanvas を明示的に呼ぶ）
+  // reset ボタンの処理
   function resetTable() {
     if(confirm("本当にリセットしますか？")){
       localStorage.removeItem("tableState");
@@ -595,7 +594,7 @@
       document.getElementById("toggleInputButton").innerText = "Show Input";
     } else {
       bottom.style.display = "block";
-      top.style.flex = "0 0 20vh";
+      top.style.flex = "0 0 50vh";
       document.getElementById("toggleInputButton").innerText = "Hide Input";
     }
     inputVisible = !inputVisible;
