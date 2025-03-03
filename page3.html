@@ -57,6 +57,20 @@
       display: block;
       pointer-events: none;
     }
+    /* Reset ボタン（図の右上） */
+    #right-side #resetButton {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      font-size: 14px;
+      padding: 8px 12px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      color: white;
+      background-color: red;
+    }
     /* 下半分：文字入力ボタン群エリア */
     #bottom {
       flex: 0 0 20vh; /* 20%の高さ */
@@ -101,7 +115,7 @@
       white-space: nowrap;
       flex-shrink: 0;
     }
-    /* カラー付き操作ボタン群 */
+    /* 下部右下の操作ボタン群（Reset は除外） */
     #colored-buttons {
       position: absolute;
       bottom: 5px;
@@ -117,7 +131,6 @@
       border-radius: 4px;
       color: white;
     }
-    #resetButton { background-color: red; }
     #exportButton { background-color: green; }
     #fullscreenButton { background-color: black; }
   </style>
@@ -150,6 +163,8 @@
       </div>
       <!-- 右側：描写部 -->
       <div id="right-side">
+        <!-- Reset ボタンを図の右上に配置 -->
+        <button id="resetButton">Reset</button>
         <canvas id="drawingCanvas"></canvas>
       </div>
     </div>
@@ -157,7 +172,7 @@
     <div id="bottom">
       <!-- 説明テキスト -->
       <div id="explanation">このHTMLでは描写されませんが、下記ボタンを使用すればpython自動作図にて円口径+線+四角+電柱マークなど正しく再現されます。(同じ文字を手打ちしてもOKです)</div>
-      <!-- テキストボタン群（テンキーは削除し、名称ボタンのみ配置） -->
+      <!-- テキストボタン群 -->
       <div id="text-buttons">
         <button onclick="insertTextIntoCell('左境')">左境</button>
         <button onclick="insertTextIntoCell('左枡')">左枡</button>
@@ -189,9 +204,8 @@
         <button onclick="insertTextIntoCell('右桝')">右桝</button>
         <button onclick="insertTextIntoCell('右境')">右境</button>
       </div>
-      <!-- カラー付き操作ボタン群（Reset, Export, Full）を右下に配置 -->
+      <!-- 下部右下の操作ボタン群（Export, Full） -->
       <div id="colored-buttons">
-        <button id="resetButton" class="colored-button">Reset</button>
         <button id="exportButton" class="colored-button">Export</button>
         <button id="fullscreenButton" class="colored-button">Full</button>
       </div>
