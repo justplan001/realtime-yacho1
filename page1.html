@@ -245,9 +245,9 @@
       <button class="insertable-button">市</button>
       <button class="insertable-button">民</button>
       
-      <button class="insertable-button">Start</button>
+      <button class="insertable-button">Str</button>
       <button class="insertable-button">END</button>
-      <button class="insertable-button">ガード</button>
+      <button class="insertable-button">GR</button>
       <button class="insertable-button">植樹</button>
       <button class="insertable-button">/</button>
       <button class="insertable-button">*</button>
@@ -558,8 +558,11 @@
   }
   document.getElementById("resetButton").addEventListener("click", resetTable);
 
+  // export ボタンの処理：HTMLテーブルをExcelファイル（xlsx）にエクスポート
   function exportToExcel() {
-    alert("Excelエクスポート機能はまだ実装されていません。");
+    const table = document.getElementById('excelTable');
+    const workbook = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
+    XLSX.writeFile(workbook, "export.xlsx");
   }
   document.getElementById("exportButton").addEventListener("click", exportToExcel);
 
