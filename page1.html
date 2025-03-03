@@ -37,18 +37,20 @@
     #table-container {
       border-right: 1px solid #ccc;
     }
-    /* 表のスタイル */
-    table {
-      width: 100%;
+    /* 表のスタイル（元のスタイルに近い） */
+    #table-container table {
       border-collapse: collapse;
+      width: 100%;
     }
-    th, td {
+    #table-container th, 
+    #table-container td {
       border: 1px solid #ccc;
-      padding: 2px 4px;
+      padding: 5px;
       text-align: center;
-      min-width: 40px;
+      min-width: 50px;
+      user-select: none;
     }
-    /* セルはフォーカス可能だが直接編集はさせない */
+    /* セルはフォーカス可能（tabindexで設定）だが直接編集は無効 */
     td {
       cursor: pointer;
       outline: none;
@@ -90,7 +92,7 @@
       bottom: 40px;
       right: 10px;
     }
-    /* Full ボタンは、図部分のみ全画面表示 */
+    /* Full ボタン：図部分のみ全画面表示（対象は #diagram-container） */
     #fullscreenButton {
       bottom: 10px;
       right: 10px;
@@ -326,18 +328,14 @@
           const td = document.createElement('td');
           td.dataset.row = i;
           td.dataset.col = j;
-          td.setAttribute("tabindex", "0"); // フォーカス可能にする
+          td.setAttribute("tabindex", "0"); // フォーカス可能に
           td.innerText = tableState[i][j];
           if (i === currentRow && j === currentCol) {
             td.classList.add("selected");
           }
           td.addEventListener("click", () => { setSelectedCell(i, j); });
           td.addEventListener("keydown", navigationHandler);
-          td.addEventListener("input", () => {
-            tableState[i][j] = td.innerText;
-            updateCanvas();
-            saveTableState();
-          });
+          // セル自体の入力イベントは発火しないので更新は入力ボックス経由
           tr.appendChild(td);
         }
         tbody.appendChild(tr);
@@ -378,41 +376,41 @@
       } else {
         return;
       }
-      // 範囲チェック
       if (targetRow < 0) targetRow = 0;
       if (targetRow >= ROW_COUNT) targetRow = ROW_COUNT - 1;
       if (targetCol < 0) targetCol = 0;
       if (targetCol >= COL_COUNT) targetCol = COL_COUNT - 1;
       setSelectedCell(targetRow, targetCol);
-      // フォーカスを移す
       const targetCell = document.querySelector(`[data-row="${targetRow}"][data-col="${targetCol}"]`);
       if (targetCell) {
         targetCell.focus();
       }
     }
     
-    // getFocusedCell は常に currentRow, currentCol に対応するセルを返す
+    // getFocusedCell は常に currentRow/currentCol に対応するセルを返す
     function getFocusedCell() {
       return document.querySelector(`[data-row="${currentRow}"][data-col="${currentCol}"]`);
     }
     
-    // 文字挿入処理
+    // 文字挿入処理（入力ボックス、挿入ボタン、テンキーから）
     function insertTextIntoCell(text) {
       const cell = getFocusedCell();
       if (cell) {
-        cell.innerText += text;
-        cell.focus();
+        tableState[currentRow][currentCol] += text;
+        renderTable();
         updateCanvas();
         saveTableState();
+        cell.focus();
       }
     }
     function backspaceInCell() {
       const cell = getFocusedCell();
       if (cell) {
-        cell.innerText = cell.innerText.slice(0, -1);
-        cell.focus();
+        tableState[currentRow][currentCol] = tableState[currentRow][currentCol].slice(0, -1);
+        renderTable();
         updateCanvas();
         saveTableState();
+        cell.focus();
       }
     }
     function moveFocus(dRow, dCol) {
@@ -427,16 +425,7 @@
       }
     }
     
-    // セル内のテキスト全選択（必要なら）
-    function selectCellContent() {
-      let range = document.createRange();
-      range.selectNodeContents(this);
-      let sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-    }
-    
-    // イベント設定（テンキー・矢印キー・入力ボタン）
+    // イベント設定（テンキー・矢印キー・挿入ボタン）
     document.querySelectorAll("#numpadContainer button").forEach(btn => {
       btn.addEventListener("click", () => {
         const value = btn.innerText;
@@ -511,6 +500,17 @@
       renderTable();
       updateCanvas();
     };
+    
+    // 保存／復元処理
+    function saveTableState() {
+      localStorage.setItem("tableState", JSON.stringify(tableState));
+    }
+    function loadTableState() {
+      const saved = localStorage.getItem("tableState");
+      if (saved) {
+        tableState = JSON.parse(saved);
+      }
+    }
   </script>
 </body>
 </html>
