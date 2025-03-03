@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+  <title>JustPlan-RealTimeDemo</title>
+  <!-- SheetJS ライブラリ（Excelエクスポート用） -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    /* 基本設定 */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: sans-serif;
+      box-sizing: border-box;
+      background-color: white;
+    }
+    /* コンテナ：表と描写部のみ */
+    #container {
+      display: flex;
+      height: 100vh;
+    }
+    /* 上半分：表と描写部 */
+    #top {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+    /* 左側：表 */
+    #left-side {
+      flex: 6;
+      overflow: auto;
+      border-right: 1px solid #ccc;
+    }
+    #left-side table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    #left-side th, #left-side td {
+      border: 1px solid #ccc;
+      padding: 5px;
+      text-align: center;
+      min-width: 50px;
+    }
+    #left-side td {
+      cursor: text;
+    }
+    /* 右側：描写部 */
+    #right-side {
+      flex: 4;
+      position: relative;
+      overflow: auto;
+    }
+    #drawingCanvas {
+      display: block;
+      pointer-events: none;
+    }
+    /* Reset ボタン（図の右上） */
+    #right-side #resetButton {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      font-size: 14px;
+      padding: 8px 12px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      color: white;
+      background-color: red;
+    }
+    /* 右下の操作ボタン群（Export, Full） */
+    #colored-buttons {
+      position: absolute;
+      bottom: 5px;
+      right: 5px;
+      display: flex;
+      gap: 5px;
+    }
+    .colored-button {
+      font-size: 14px;
+      padding: 8px 12px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      color: white;
+    }
+    #exportButton { background-color: green; }
+    #fullscreenButton { background-color: black; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <!-- 表と描写部 -->
+    <div id="top">
+      <!-- 左側：表 -->
+      <div id="left-side">
+        <table id="excelTable">
+          <thead>
+            <tr>
+              <th>名称</th>
+              <th>距離</th>
+              <th>X座標</th>
+              <th>直径</th>
+              <th>コメント</th>
+              <th>歩道(L)</th>
+              <th>L側溝</th>
+              <th>幅員</th>
+              <th>R側溝</th>
+              <th>歩道(R)</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <!-- データ行は JS により生成 -->
+          </tbody>
+        </table>
+      </div>
+      <!-- 右側：描写部 -->
+      <div id="right-side">
+        <!-- Reset ボタンを図の右上に配置 -->
+        <button id="resetButton">Reset</button>
+        <canvas id="drawingCanvas"></canvas>
+        <!-- Export と Full ボタンを図の右下に配置 -->
+        <div id="colored-buttons">
+          <button id="exportButton" class="colored-button">Export</button>
+          <button id="fullscreenButton" class="colored-button">Full</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // グローバル変数：最後にフォーカスしたセル
+    let lastFocusedCell = null;
+    
+    // セルがフォーカスされたときに全選択する
+    function selectCellContent() {
+      lastFocusedCell = this;
+      let range = document.createRange();
+      range.selectNodeContents(this);
+      let sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    
+    // キーボード（矢印キー・Enter）によるセル移動
+    function navigationHandler(event) {
+      let currentRow = parseInt(this.dataset.row);
+      let currentCol = parseInt(this.dataset.col);
+      let targetRow = currentRow;
+      let targetCol = currentCol;
+      if (event.key === "Enter") {
+        targetRow = currentRow + 1;
+        event.preventDefault();
+      } else if (event.key === "ArrowUp") {
+        targetRow = currentRow - 1;
+      } else if (event.key === "ArrowDown") {
+        targetRow = currentRow + 1;
+      } else if (event.key === "ArrowLeft") {
+        targetCol = currentCol - 1;
+      } else if (event.key === "ArrowRight") {
+        targetCol = currentCol + 1;
+      } else {
+        return;
+      }
+      let targetCell = document.querySelector(`[data-row='${targetRow}'][data-col='${targetCol}']`);
+      if (targetCell) {
+        targetCell.focus();
+        setTimeout(() => { selectCellContent.call(targetCell); }, 0);
+      }
+    }
+    
+    // 表の生成（10列：名称, 距離, X座標, 直径, コメント, 歩道(L), L側溝, 幅員, R側溝, 歩道(R)）
+    const tbody = document.getElementById('table-body');
+    function generateTable() {
+      tbody.innerHTML = "";
+      for (let i = 0; i < 100; i++) {
+        let row = document.createElement('tr');
+        for (let col = 0; col < 10; col++) {
+          let cell = document.createElement('td');
+          cell.contentEditable = "true";
+          cell.tabIndex = 0;
+          cell.dataset.row = i;
+          cell.dataset.col = col;
+          if (i === 1 && col === 6) { cell.innerText = "0.5"; }
+          if (i === 1 && col === 7) { cell.innerText = "5"; }
+          if (i === 1 && col === 8) { cell.innerText = "0.5"; }
+          cell.addEventListener("keydown", navigationHandler);
+          cell.addEventListener("focus", selectCellContent);
+          cell.addEventListener("input", function() {
+            saveTableState();
+            updateCanvas();
+          });
+          row.appendChild(cell);
+        }
+        tbody.appendChild(row);
+      }
+    }
+    
+    // テーブル状態の保存
+    function saveTableState() {
+      const tableData = [];
+      const rows = document.querySelectorAll("#table-body tr");
+      rows.forEach(row => {
+        const rowData = [];
+        row.querySelectorAll("td").forEach(cell => {
+          rowData.push(cell.innerText);
+        });
+        tableData.push(rowData);
+      });
+      localStorage.setItem("tableState", JSON.stringify(tableData));
+    }
+    
+    // 保存状態の復元
+    function loadTableState() {
+      const tableData = localStorage.getItem("tableState");
+      if (tableData) {
+        const data = JSON.parse(tableData);
+        const rows = document.querySelectorAll("#table-body tr");
+        rows.forEach((row, i) => {
+          row.querySelectorAll("td").forEach((cell, j) => {
+            if (data[i] && data[i][j] !== undefined) {
+              cell.innerText = data[i][j];
+            }
+          });
+        });
+      }
+    }
+    
+    // 描写部（キャンバス）の更新
+    function updateCanvas() {
+      const canvas = document.getElementById('drawingCanvas');
+      const ctx = canvas.getContext('2d');
+      const container = document.getElementById('right-side');
+      const desiredZoom = 20;
+      const scale = desiredZoom;
+      const table = document.getElementById('excelTable');
+      const rows = table.tBodies[0].rows;
+      
+      let maxDistance = 0;
+      for (let i = 0; i < rows.length; i++) {
+        let d = parseFloat(rows[i].cells[1].innerText);
+        if (!isNaN(d) && d > maxDistance) {
+          maxDistance = d;
+        }
+      }
+      if (maxDistance === 0) { maxDistance = 100; }
+      
+      canvas.width = container.clientWidth;
+      canvas.height = (maxDistance + 5) * scale + 50;
+      
+      ctx.fillStyle = 'black';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      let originX = canvas.width / 2;
+      const originY = canvas.height - 50;
+      
+      const roadWidth = parseFloat(rows[1].cells[7].innerText) || 0;
+      let cellG = rows[1].cells[6].innerText.trim();
+      let cellI = rows[1].cells[8].innerText.trim();
+      const offsetG = cellG === "" ? null : parseFloat(cellG);
+      const offsetI = cellI === "" ? null : parseFloat(cellI);
+      
+      originX = originX - (roadWidth * scale) / 2;
+      
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(originX, originY);
+      ctx.lineTo(originX, originY - ((maxDistance+5) * scale));
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(originX + roadWidth * scale, originY);
+      ctx.lineTo(originX + roadWidth * scale, originY - ((maxDistance+5) * scale));
+      ctx.stroke();
+      
+      if (offsetG !== null && !isNaN(offsetG)) {
+        ctx.beginPath();
+        ctx.moveTo(originX + offsetG * scale, originY);
+        ctx.lineTo(originX + offsetG * scale, originY - ((maxDistance+5) * scale));
+        ctx.stroke();
+      }
+      if (offsetI !== null && !isNaN(offsetI)) {
+        ctx.beginPath();
+        ctx.moveTo(originX + roadWidth * scale - offsetI * scale, originY);
+        ctx.lineTo(originX + roadWidth * scale - offsetI * scale, originY - ((maxDistance+5) * scale));
+        ctx.stroke();
+      }
+      
+      let cellSideL = rows[1].cells[5].innerText.trim();
+      let cellSideR = rows[1].cells[9].innerText.trim();
+      const sidewalkL = cellSideL === "" ? null : parseFloat(cellSideL);
+      const sidewalkR = cellSideR === "" ? null : parseFloat(cellSideR);
+      if (sidewalkL !== null && !isNaN(sidewalkL)) {
+         ctx.beginPath();
+         ctx.strokeStyle = 'yellow';
+         ctx.lineWidth = 2;
+         let sidewalkLX = originX - sidewalkL * scale;
+         ctx.moveTo(sidewalkLX, originY);
+         ctx.lineTo(sidewalkLX, originY - ((maxDistance+5) * scale));
+         ctx.stroke();
+      }
+      if (sidewalkR !== null && !isNaN(sidewalkR)) {
+         ctx.beginPath();
+         ctx.strokeStyle = 'yellow';
+         ctx.lineWidth = 2;
+         let sidewalkRX = originX + roadWidth * scale + sidewalkR * scale;
+         ctx.moveTo(sidewalkRX, originY);
+         ctx.lineTo(sidewalkRX, originY - ((maxDistance+5) * scale));
+         ctx.stroke();
+      }
+      
+      const roadCenterX = originX + (roadWidth * scale) / 2;
+      const colors = ["red", "yellow", "green", "cyan", "magenta"];
+      
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const label = row.cells[0].innerText.trim();
+        const yVal = parseFloat(row.cells[1].innerText);
+        let xStr = row.cells[2].innerText.trim();
+        let xVal;
+        if (!isNaN(yVal)) {
+          if (xStr === "") {
+            xVal = roadWidth;
+          } else {
+            xVal = parseFloat(xStr);
+            if (xVal < 0) {
+              xVal = roadWidth - Math.abs(xVal);
+            }
+          }
+        } else {
+          continue;
+        }
+        const diamVal = parseFloat(row.cells[3].innerText);
+        const comment = row.cells[4].innerText.trim();
+        if (!isNaN(xVal) && !isNaN(yVal)) {
+          const xPos = originX + (xVal * scale);
+          const yPos = originY - (yVal * scale);
+          const color = colors[i % colors.length];
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(originX, yPos);
+          ctx.lineTo(xPos, yPos);
+          ctx.stroke();
+          const pointRadius = 0.1 * scale;
+          ctx.beginPath();
+          ctx.arc(xPos, yPos, pointRadius, 0, 2 * Math.PI);
+          ctx.fillStyle = color;
+          ctx.fill();
+          if (!isNaN(diamVal) && diamVal > 0) {
+            const circleRadius = (diamVal / 2) * scale;
+            ctx.beginPath();
+            ctx.arc(xPos, yPos, circleRadius, 0, 2 * Math.PI);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+          }
+          let displayText = label;
+          if (comment) displayText += " (" + comment + ")";
+          ctx.font = '30px sans-serif';
+          ctx.fillStyle = color;
+          let textWidth = ctx.measureText(displayText).width;
+          let textX = xPos >= roadCenterX ? xPos + pointRadius + 2 : xPos - pointRadius - 2 - textWidth;
+          ctx.fillText(displayText, textX, yPos);
+        }
+      }
+      container.scrollTop = container.scrollHeight;
+    }
+    
+    function exportToExcel() {
+      let wb = XLSX.utils.table_to_book(document.getElementById('excelTable'), {sheet:"Sheet1"});
+      XLSX.writeFile(wb, "export.xlsx");
+    }
+    
+    function resetTable() {
+      if (confirm("本当にリセットしますか？")) {
+        localStorage.removeItem("tableState");
+        generateTable();
+        updateCanvas();
+      }
+    }
+    
+    function getFocusedCell() {
+      let active = document.activeElement;
+      if (active && active.tagName === "TD") return active;
+      if (lastFocusedCell) return lastFocusedCell;
+      const firstCell = document.querySelector("#table-body td");
+      if (firstCell) {
+        firstCell.focus();
+        return firstCell;
+      }
+      return null;
+    }
+    
+    document.getElementById("resetButton").addEventListener("click", resetTable);
+    document.getElementById("exportButton").addEventListener("click", exportToExcel);
+    document.getElementById("fullscreenButton").addEventListener("click", () => {
+      const drawingArea = document.getElementById("right-side");
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        drawingArea.requestFullscreen();
+      }
+    });
+    
+    window.addEventListener('resize', updateCanvas);
+    window.onload = function() {
+      generateTable();
+      loadTableState();
+      updateCanvas();
+    };
+  </script>
+</body>
+</html>
