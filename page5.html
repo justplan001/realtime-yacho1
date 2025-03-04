@@ -21,13 +21,13 @@
       font-family: sans-serif;
       box-sizing: border-box;
     }
-    /* コンテナ：上部50vh（左右分割）／下部残り（操作エリア） */
+    /* コンテナ：上部（左右分割）／下部（操作エリア） */
     #container {
       display: flex;
       flex-direction: column;
       height: 100vh;
     }
-    /* 上部エリア：左右に50:50で分割 */
+    /* 上部エリア：左右に分割 */
     #top-area {
       flex: 0 0 25vh;
       display: flex;
@@ -102,7 +102,7 @@
       right: 10px;
       z-index: 2000;
     }
-    /* 下部エリア：操作エリア */
+    /* 下部エリア：操作エリア（相対配置） */
     #bottom-area {
       flex: 1;
       position: relative;
@@ -125,38 +125,50 @@
       padding: 8px;
       font-size: 16px;
     }
-    /* 中段：32個の文字入力ボタン（8列×4行のグリッド） */
+    /* 下部コントロールエリアのラッパー */
+    #bottom-controls-wrapper {
+      margin-top: 10px;
+    }
+    /* 寄せボタン（固定、横一列埋めるサイズ） */
+    #togglePositionButton {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+    /* 下部コントロール群（左右に並ぶ2グループ） */
+    #bottom-controls {
+      display: flex;
+      justify-content: space-between;
+    }
+    /* 両グループは50%幅 */
+    #insertable-buttons,
+    #controls-container {
+      width: 48%;
+    }
+    /* 文字入力ボタン群：グリッドレイアウト（4列×8行） */
     #insertable-buttons {
       display: grid;
-      grid-template-columns: repeat(8, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 5px;
-      margin-bottom: 80px;
     }
     #insertable-buttons button {
-      padding: 8px;
+      padding: 8px 12px;
       font-size: 16px;
       cursor: pointer;
       background-color: #eee;
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-    /* 新しいコントロールコンテナ：十字キーとテンキー */
+    /* コントロール群：十字キーとテンキー */
     #controls-container {
-      position: absolute;
-      bottom: 10px;
-      right: 10px; /* 初期は右寄せ */
       display: flex;
       flex-direction: column;
-      align-items: flex-end;
       gap: 10px;
+      align-items: flex-end;
     }
-    /* 左寄せ時のスタイル */
-    #controls-container.align-left {
-      left: 10px;
-      right: auto;
-      align-items: flex-start;
-    }
-    /* 十字キー内レイアウト */
+    /* 十字キーのレイアウト */
     #arrow-keys {
       display: grid;
       grid-template-areas:
@@ -187,11 +199,9 @@
       font-size: 16px;
       cursor: pointer;
     }
-    /* 組ボタン */
-    #togglePositionButton {
-      padding: 8px 12px;
-      font-size: 16px;
-      cursor: pointer;
+    /* クラス .reversed を付与すると左右の順序を反転 */
+    #bottom-controls.reversed {
+      flex-direction: row-reverse;
     }
   </style>
 </head>
@@ -235,88 +245,95 @@
       <button id="fullscreenPageButton">全画面表示</button>
       <input type="text" id="text-input" placeholder="セルの文字を入力">
     </div>
-    <div id="insertable-buttons">
-      <button class="insertable-button">左境</button>
-      <button class="insertable-button">左枡</button>
-      <button class="insertable-button">車止</button>
-      <button class="insertable-button">支線</button>
-      <button class="insertable-button">標</button>
-      <button class="insertable-button">電柱</button>
-      <button class="insertable-button">右桝</button>
-      <button class="insertable-button">右境</button>
-      
-      <button class="insertable-button">下</button>
-      <button class="insertable-button">D</button>
-      <button class="insertable-button">S</button>
-      <button class="insertable-button">SS</button>
-      <button class="insertable-button">消</button>
-      <button class="insertable-button">F</button>
-      <button class="insertable-button">SV</button>
-      <button class="insertable-button">W</button>
-      
-      <button class="insertable-button">E</button>
-      <button class="insertable-button">T</button>
-      <button class="insertable-button">メジ</button>
-      <button class="insertable-button">杭</button>
-      <button class="insertable-button">都</button>
-      <button class="insertable-button">他</button>
-      <button class="insertable-button">市</button>
-      <button class="insertable-button">民</button>
-      
-      <button class="insertable-button">終</button>
-      <button class="insertable-button">GR</button>
-      <button class="insertable-button">植樹</button>
-      <button class="insertable-button">ﾐﾗｰ</button>
-      <button class="insertable-button">角</button>
-      <button class="insertable-button">*</button>
-      <button class="insertable-button">+</button>
-      <button class="insertable-button">-</button>
-    </div>
-    <!-- 新しいコントロールコンテナ：十字キーとテンキー -->
-    <div id="controls-container" class="align-right">
-      <div id="arrowKeysContainer">
-        <div id="arrow-keys">
-          <button id="arrow-up">↑</button>
-          <button id="arrow-left">←</button>
-          <button id="arrow-right">→</button>
-          <button id="arrow-down">↓</button>
+    <!-- 下部コントロールラッパー -->
+    <div id="bottom-controls-wrapper">
+      <!-- 寄せボタン（固定） -->
+      <button id="togglePositionButton">反転</button>
+      <!-- 2グループを横並びにするコンテナ -->
+      <div id="bottom-controls">
+        <!-- 文字入力ボタン群 -->
+        <div id="insertable-buttons">
+          <button class="insertable-button">左境</button>
+          <button class="insertable-button">左枡</button>
+          <button class="insertable-button">車止</button>
+          <button class="insertable-button">支線</button>
+          <button class="insertable-button">標</button>
+          <button class="insertable-button">電柱</button>
+          <button class="insertable-button">右桝</button>
+          <button class="insertable-button">右境</button>
+          
+          <button class="insertable-button">下</button>
+          <button class="insertable-button">D</button>
+          <button class="insertable-button">S</button>
+          <button class="insertable-button">SS</button>
+          <button class="insertable-button">消</button>
+          <button class="insertable-button">F</button>
+          <button class="insertable-button">SV</button>
+          <button class="insertable-button">W</button>
+          
+          <button class="insertable-button">E</button>
+          <button class="insertable-button">T</button>
+          <button class="insertable-button">メジ</button>
+          <button class="insertable-button">杭</button>
+          <button class="insertable-button">都</button>
+          <button class="insertable-button">他</button>
+          <button class="insertable-button">市</button>
+          <button class="insertable-button">民</button>
+          
+          <button class="insertable-button">終</button>
+          <button class="insertable-button">GR</button>
+          <button class="insertable-button">植樹</button>
+          <button class="insertable-button">ﾐﾗｰ</button>
+          <button class="insertable-button">角</button>
+          <button class="insertable-button">*</button>
+          <button class="insertable-button">+</button>
+          <button class="insertable-button">-</button>
         </div>
-      </div>
-      <div id="numpadContainer">
-        <div id="numpad">
-          <button>7</button>
-          <button>8</button>
-          <button>9</button>
-          <button>4</button>
-          <button>5</button>
-          <button>6</button>
-          <button>1</button>
-          <button>2</button>
-          <button>3</button>
-          <button>0</button>
-          <button>.</button>
-          <button>⌫</button>
+        <!-- コントロール群（十字キー＆テンキー） -->
+        <div id="controls-container">
+          <div id="arrowKeysContainer">
+            <div id="arrow-keys">
+              <button id="arrow-up">↑</button>
+              <button id="arrow-left">←</button>
+              <button id="arrow-right">→</button>
+              <button id="arrow-down">↓</button>
+            </div>
+          </div>
+          <div id="numpadContainer">
+            <div id="numpad">
+              <button>7</button>
+              <button>8</button>
+              <button>9</button>
+              <button>4</button>
+              <button>5</button>
+              <button>6</button>
+              <button>1</button>
+              <button>2</button>
+              <button>3</button>
+              <button>0</button>
+              <button>.</button>
+              <button>⌫</button>
+            </div>
+          </div>
         </div>
-      </div>
-      <!-- 新たな左右切替ボタン -->
-      <button id="togglePositionButton">左寄せ</button>
-    </div>
-  </div>
-</div>
+      </div><!-- end #bottom-controls -->
+    </div><!-- end #bottom-controls-wrapper -->
+  </div><!-- end #bottom-area -->
+</div><!-- end #container -->
 
 <script>
-  // 未定義の変数の初期化
+  // グローバル変数など（テーブル関連は従来通り）
   let inputVisible = true;
-  
-  // グローバル変数：テーブル状態管理
   let tableState = [];
   const ROW_COUNT = 100;
   const COL_COUNT = 10;
   let currentRow = 0, currentCol = 0;
   const tbody = document.getElementById('table-body');
   const textInput = document.getElementById('text-input');
-
-  // テーブル初期状態生成
+  
+  // 初期状態：controls-containerが右、insertable-buttonsが左（isLeftAligned=false）
+  let isLeftAligned = false;
+  
   function generateTable() {
     tableState = [];
     for (let i = 0; i < ROW_COUNT; i++) {
@@ -331,8 +348,7 @@
     tableState[1][7] = "5";
     tableState[1][8] = "0.5";
   }
-
-  // テーブル描画
+  
   function renderTable() {
     tbody.innerHTML = "";
     for (let i = 0; i < ROW_COUNT; i++) {
@@ -353,8 +369,7 @@
       tbody.appendChild(tr);
     }
   }
-
-  // セル選択時の処理
+  
   function setSelectedCell(r, c) {
     currentRow = r;
     currentCol = c;
@@ -366,8 +381,7 @@
     const cell = container.querySelector(`td[data-row="${currentRow}"][data-col="${currentCol}"]`);
     if (cell) cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
   }
-
-  // テキスト入力ボックス変更時の処理
+  
   function handleTextInputChange() {
     tableState[currentRow][currentCol] = textInput.value;
     renderTable();
@@ -375,8 +389,7 @@
     saveTableState();
   }
   textInput.addEventListener("input", handleTextInputChange);
-
-  // セル間移動（矢印キー、Enter）
+  
   function navigationHandler(event) {
     let targetRow = currentRow;
     let targetCol = currentCol;
@@ -402,14 +415,12 @@
     const targetCell = document.querySelector(`[data-row="${targetRow}"][data-col="${targetCol}"]`);
     if (targetCell) targetCell.focus();
   }
-
-  // 文字列を入力ボックスに追加して更新
+  
   function insertStringIntoInput(str) {
     textInput.value += str;
     handleTextInputChange();
   }
-
-  // 保存／復元
+  
   function saveTableState() {
     localStorage.setItem("tableState", JSON.stringify(tableState));
   }
@@ -422,8 +433,7 @@
       }
     }
   }
-
-  // キャンバス描画ロジック
+  
   function updateCanvas() {
     const canvas = document.getElementById('drawingCanvas');
     const ctx = canvas.getContext('2d');
@@ -435,7 +445,6 @@
       if (!isNaN(d) && d > maxDistance) maxDistance = d;
     }
     if (maxDistance === 0) maxDistance = 100;
-    // canvas の自然サイズを設定（container からはスクロール可能）
     canvas.width = container.clientWidth;
     canvas.height = (maxDistance + 5) * scale + 50;
     ctx.fillStyle = 'black';
@@ -530,14 +539,13 @@
     }
     container.scrollTop = container.scrollHeight;
   }
-
-  // 各種イベント設定
+  
   document.querySelectorAll(".insertable-button").forEach(btn => {
     btn.addEventListener("click", () => {
       insertStringIntoInput(btn.innerText);
     });
   });
-
+  
   document.getElementById("arrow-up")
       .addEventListener("click", () => moveFocus(-1, 0));
   document.getElementById("arrow-down")
@@ -546,7 +554,7 @@
       .addEventListener("click", () => moveFocus(0, -1));
   document.getElementById("arrow-right")
       .addEventListener("click", () => moveFocus(0, 1));
-
+  
   function moveFocus(dRow, dCol) {
     let newRow = currentRow + dRow;
     let newCol = currentCol + dCol;
@@ -556,7 +564,7 @@
     if(newCol >= COL_COUNT) newCol = COL_COUNT - 1;
     setSelectedCell(newRow, newCol);
   }
-
+  
   document.querySelectorAll("#numpad button").forEach(btn => {
     btn.addEventListener("click", () => {
       const value = btn.innerText;
@@ -568,8 +576,7 @@
       }
     });
   });
-
-  // reset ボタンの処理
+  
   function resetTable() {
     if(confirm("本当にリセットしますか？")){
       localStorage.removeItem("tableState");
@@ -580,16 +587,14 @@
     }
   }
   document.getElementById("resetButton").addEventListener("click", resetTable);
-
-  // export ボタンの処理：HTMLテーブルをExcelファイル（xlsx）にエクスポート
+  
   function exportToExcel() {
     const table = document.getElementById('excelTable');
     const workbook = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
     XLSX.writeFile(workbook, "export.xlsx");
   }
   document.getElementById("exportButton").addEventListener("click", exportToExcel);
-
-  // 全画面表示（キャンバスのみ）の処理
+  
   document.getElementById("fullscreenButton").addEventListener("click", () => {
     const drawingArea = document.getElementById("diagram-container");
     if (document.fullscreenElement) {
@@ -599,7 +604,6 @@
     }
   });
   
-  // ページ全体の全画面表示
   document.getElementById("fullscreenPageButton").addEventListener("click", () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(err => {
@@ -609,8 +613,7 @@
       document.exitFullscreen();
     }
   });
-
-  // 入力エリアの表示・非表示切替
+  
   document.getElementById("toggleInputButton").addEventListener("click", () => {
     const bottom = document.getElementById("bottom-area");
     const top = document.getElementById("top-area");
@@ -626,23 +629,14 @@
     inputVisible = !inputVisible;
     updateCanvas();
   });
-
-  // 新たな左右切替ボタンの処理
+  
+  // 寄せボタンの処理：下部コントロール群 (#bottom-controls) の左右順序を反転する
   document.getElementById("togglePositionButton").addEventListener("click", () => {
-    const controlsContainer = document.getElementById("controls-container");
-    if (controlsContainer.classList.contains("align-left")) {
-      // 右寄せへ切替
-      controlsContainer.classList.remove("align-left");
-      controlsContainer.classList.add("align-right");
-      document.getElementById("togglePositionButton").innerText = "左寄せ";
-    } else {
-      // 左寄せへ切替
-      controlsContainer.classList.remove("align-right");
-      controlsContainer.classList.add("align-left");
-      document.getElementById("togglePositionButton").innerText = "右寄せ";
-    }
+    const bottomControls = document.getElementById("bottom-controls");
+    bottomControls.classList.toggle("reversed");
+    // テキスト変更は行わず、常に「反転」
   });
-
+  
   window.addEventListener('resize', updateCanvas);
   window.onload = () => {
     generateTable();
