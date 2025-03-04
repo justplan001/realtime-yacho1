@@ -1,56 +1,27 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>やちょーアプリ</title>
-  <!-- Webアプリとして起動するための設定 -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <!-- 任意：ホーム画面用アイコン -->
-  <link rel="apple-touch-icon" href="your-icon.png">
-  
-  <!-- 内部リンクで Web アプリモードを維持するための JavaScript -->
-  <script>
-    document.addEventListener('click', function(e) {
-      var target = e.target;
-      // クリックされた要素が <a> タグになるまで親要素をたどる
-      while (target && target.nodeName !== 'A') {
-        target = target.parentNode;
-      }
-      if (target && target.nodeName === 'A') {
-        // 外部リンクや target="_blank" でない場合、スタンドアロンモードを維持
-        if (target.getAttribute('target') !== '_blank') {
-          e.preventDefault();
-          window.location.href = target.href;
-        }
-      }
-    });
-  </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>やちょーアプリ</title>
 </head>
 <body>
-  <h1>スマホ版</h1>
-  <ul>
-    <li><a href="page1.html">縦画面</a></li>
-    <li><a href="page2.html">横画面</a></li>
-    <br>
-    <li><a href="説明書.png">説明</a></li>
-    <a>ボタン配置がおかしいときは"全画面化ボタン"を押して画面領域を広く使用してください。<br>
-    ※iPhoneではWeb Appとしてホーム画面に追加し、スタンドアロンモードで実行すると全画面表示できるみたいです</a>
-  </ul>
-  
-  <h1>PC版</h1>
-  <ul>
-    <li><a href="page3.html">通常版</a></li>
-    <li><a href="page4.html">玄人版</a></li>
-  </ul>
-  
-  <h1>ExcelをDXFする.pyファイル</h1>
-  <ul>
-    <li><a href="Cadpointauto20250218.py">20250218.py</a></li>
-    <a>起動には下記２つをCMDで追加してください<br>
-    pip install pandas<br>
-    pip install ezdxf</a>
-  </ul>
+    <h1>スマホ版</h1>
+    <ul>
+        <li><a href="page1.html">縦画面</a></li>
+        <li><a href="page2.html">横画面</a></li>
+        <br>
+        <li><a href="説明書.png">説明</a></li>
+        <a>※iphoneで使うときはホーム画面に追加してからWeb Appとしてスタンドアロンモードで実行すると全画面表示されます。</a>
+    </ul>
+    <h1>PC版</h1>
+        <ul>
+        <li><a href="page3.html">通常版</a></li>
+        <li><a href="page4.html">玄人版</a></li>
+    </ul>
+        <h1>ExcelをDXFする.pyファイル</h1>
+        <ul>
+        <li>><a href="Cadpointauto20250218.py">20250218.py</a></li><a>起動には下記２つをCMDで追加してください<br>pip install pandas<br>pip install ezdxf</a><br>
+        </ul>
 </body>
 </html>
