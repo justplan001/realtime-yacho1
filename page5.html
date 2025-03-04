@@ -129,7 +129,7 @@
     #bottom-controls-wrapper {
       margin-top: 10px;
     }
-    /* 寄せボタン（固定、横一列埋めるサイズ） */
+    /* 寄せボタン（固定、横一列埋めるサイズ、テキストは「反転」） */
     #togglePositionButton {
       width: 100%;
       padding: 8px 12px;
@@ -161,12 +161,17 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-    /* コントロール群：十字キーとテンキー */
+    /* コントロール群（十字キーとテンキー） */
     #controls-container {
       display: flex;
       flex-direction: column;
       gap: 10px;
+      /* デフォルトは右寄せ */
       align-items: flex-end;
+    }
+    /* 反転時は controls-container を左寄せ */
+    #bottom-controls.reversed #controls-container {
+      align-items: flex-start;
     }
     /* 十字キーのレイアウト */
     #arrow-keys {
@@ -199,7 +204,7 @@
       font-size: 16px;
       cursor: pointer;
     }
-    /* クラス .reversed を付与すると左右の順序を反転 */
+    /* .reversed クラスを付与すると、下部コントロール群の左右の順序が反転 */
     #bottom-controls.reversed {
       flex-direction: row-reverse;
     }
@@ -322,7 +327,7 @@
 </div><!-- end #container -->
 
 <script>
-  // グローバル変数など（テーブル関連は従来通り）
+  // グローバル変数（テーブル管理などは従来通り）
   let inputVisible = true;
   let tableState = [];
   const ROW_COUNT = 100;
@@ -630,11 +635,12 @@
     updateCanvas();
   });
   
-  // 寄せボタンの処理：下部コントロール群 (#bottom-controls) の左右順序を反転する
+  // 寄せボタンの処理：#bottom-controls の左右順序を反転する
   document.getElementById("togglePositionButton").addEventListener("click", () => {
     const bottomControls = document.getElementById("bottom-controls");
     bottomControls.classList.toggle("reversed");
-    // テキスト変更は行わず、常に「反転」
+    // グローバルフラグ更新（任意）
+    isLeftAligned = !isLeftAligned;
   });
   
   window.addEventListener('resize', updateCanvas);
