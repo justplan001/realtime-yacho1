@@ -204,6 +204,19 @@
       font-size: 16px;
       cursor: pointer;
     }
+    /* テンキー下に追加するボタン群 */
+    #numpadExtra {
+      display: grid;
+      grid-template-columns: repeat(3, 50px);
+      gap: 5px;
+      margin-top: 30px; /* テンキーとの間に余白を追加 */
+    }
+    #numpadExtra button {
+      width: 50px;
+      height: 50px;
+      font-size: 16px;
+      cursor: pointer;
+    }
     /* .reversed クラスを付与すると、下部コントロール群の左右の順序が反転 */
     #bottom-controls.reversed {
       flex-direction: row-reverse;
@@ -285,14 +298,14 @@
           <button class="insertable-button">市</button>
           <button class="insertable-button">民</button>
           
-          <button class="insertable-button">終</button>
+          <button class="insertable-button">他</button>
           <button class="insertable-button">GR</button>
           <button class="insertable-button">植樹</button>
           <button class="insertable-button">ﾐﾗｰ</button>
           <button class="insertable-button">角</button>
-          <button class="insertable-button">*</button>
-          <button class="insertable-button">+</button>
-          <button class="insertable-button">-</button>
+          <button class="insertable-button">始</button>
+          <button class="insertable-button">終</button>
+          <button class="insertable-button">JP</button>
         </div>
         <!-- コントロール群（十字キー＆テンキー） -->
         <div id="controls-container">
@@ -318,6 +331,12 @@
               <button>0</button>
               <button>.</button>
               <button>⌫</button>
+            </div>
+            <!-- ここにテンキー下に追加するボタン群を配置 -->
+            <div id="numpadExtra">
+              <button>*</button>
+              <button>+</button>
+              <button>-</button>
             </div>
           </div>
         </div>
@@ -579,6 +598,15 @@
       } else {
         insertStringIntoInput(value);
       }
+    });
+  });
+  
+  // ※必要に応じて、numpadExtraのボタンにもイベントリスナーを追加可能
+  document.querySelectorAll("#numpadExtra button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const value = btn.innerText;
+      // ここで何か処理したい場合は記述（例：insertStringIntoInput(value);）
+      insertStringIntoInput(value);
     });
   });
   
