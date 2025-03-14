@@ -36,20 +36,6 @@
             display: block;
             background-color: black;
         }
-        #fullscreen-button {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            cursor: pointer;
-            z-index: 1000;
-            border-radius: 5px;
-            display: block;
-        }
     </style>
 </head>
 <body>
@@ -64,13 +50,9 @@
         <div id="unity-warning"></div>
         <div id="unity-footer">
             <div id="unity-logo-title-footer"></div>
-            <button id="unity-fullscreen-button">Fullscreen</button>
             <div id="unity-build-title">app1</div>
         </div>
     </div>
-
-    <!-- フルスクリーンボタン -->
-    <button id="fullscreen-button">フルスクリーン</button>
 
     <script>
         var canvas = document.querySelector("#unity-canvas");
@@ -94,7 +76,7 @@
             updateBannerVisibility();
         }
 
-        var buildUrl = "Build";
+        var buildUrl = "./Build"; // 修正
         var loaderUrl = buildUrl + "/android.loader.js";
         var config = {
             arguments: [],
@@ -129,36 +111,12 @@
                 document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
             }).then((unityInstance) => {
                 document.querySelector("#unity-loading-bar").style.display = "none";
-                document.querySelector("#unity-fullscreen-button").onclick = () => {
-                    goFullscreen();
-                };
             }).catch((message) => {
                 alert(message);
             });
         };
 
         document.body.appendChild(script);
-
-        // フルスクリーン処理
-        function goFullscreen() {
-            var canvas = document.getElementById('unity-canvas');
-            if (canvas.requestFullscreen) {
-                canvas.requestFullscreen();
-            } else if (canvas.mozRequestFullScreen) {
-                canvas.mozRequestFullScreen();
-            } else if (canvas.webkitRequestFullscreen) {
-                canvas.webkitRequestFullscreen();
-            } else if (canvas.msRequestFullscreen) {
-                canvas.msRequestFullscreen();
-            }
-        }
-
-        // ホーム画面に追加した場合はフルスクリーンボタンを非表示
-        if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) {
-            document.getElementById("fullscreen-button").style.display = "none";
-        }
-
-        document.getElementById("fullscreen-button").addEventListener("click", goFullscreen);
     </script>
 </body>
 </html>
