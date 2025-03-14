@@ -4,14 +4,24 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity Web Player | app1</title>
+    
+    <!-- Favicon & Styles -->
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
+
+    <!-- PWA 用の設定 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="app1">
+
     <style>
         html, body {
             margin: 0;
             padding: 0;
             height: 100%;
             overflow: hidden;
+            background-color: black;
         }
         #unity-container {
             width: 100vw;
@@ -24,6 +34,7 @@
             width: 100vw !important;
             height: 100vh !important;
             display: block;
+            background-color: black;
         }
         #fullscreen-button {
             position: fixed;
@@ -37,6 +48,7 @@
             cursor: pointer;
             z-index: 1000;
             border-radius: 5px;
+            display: block;
         }
     </style>
 </head>
@@ -100,7 +112,7 @@
             var meta = document.createElement('meta');
             meta.name = 'viewport';
             meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-            document.getElementsByTagName('head')[0].appendChild(meta);
+            document.getElementsByTagName('head")[0].appendChild(meta);
             document.querySelector("#unity-container").className = "unity-mobile";
             canvas.className = "unity-mobile";
         } else {
@@ -127,11 +139,9 @@
 
         document.body.appendChild(script);
 
-        // iOS でフルスクリーンを実現するための処理
+        // フルスクリーン処理
         function goFullscreen() {
             var canvas = document.getElementById('unity-canvas');
-
-            // iOS Safari では webkitRequestFullscreen を使う
             if (canvas.requestFullscreen) {
                 canvas.requestFullscreen();
             } else if (canvas.mozRequestFullScreen) {
@@ -143,12 +153,12 @@
             }
         }
 
-        // **iOS Safari の制限を回避するためにタップイベントを使う**
+        // ホーム画面に追加した場合はフルスクリーンボタンを非表示
+        if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) {
+            document.getElementById("fullscreen-button").style.display = "none";
+        }
+
         document.getElementById("fullscreen-button").addEventListener("click", goFullscreen);
-        document.getElementById("unity-canvas").addEventListener("touchstart", function(event) {
-            goFullscreen();
-            event.preventDefault();
-        });
     </script>
 </body>
 </html>
