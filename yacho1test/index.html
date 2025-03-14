@@ -1,122 +1,112 @@
 <!DOCTYPE html>
 <html lang="en-us">
-<head>
+  <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity Web Player | app1</title>
-    
-    <!-- Favicon & Styles -->
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
 
-    <!-- PWA 用の設定 -->
-    <link rel="manifest" href="manifest.json">
+    <!-- iOS Web App 用設定 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="app1">
-
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden;
-            background-color: black;
-        }
-        #unity-container {
-            width: 100vw;
-            height: 100vh;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-        canvas {
-            width: 100vw !important;
-            height: 100vh !important;
-            display: block;
-            background-color: black;
-        }
-    </style>
-</head>
-<body>
+    <!-- 必要に応じて、タッチアイコンも指定 -->
+    <link rel="apple-touch-icon" href="TemplateData/favicon.ico">
+  </head>
+  <body>
     <div id="unity-container" class="unity-desktop">
-        <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
-        <div id="unity-loading-bar">
-            <div id="unity-logo"></div>
-            <div id="unity-progress-bar-empty">
-                <div id="unity-progress-bar-full"></div>
-            </div>
+      <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
+      <div id="unity-loading-bar">
+        <div id="unity-logo"></div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
         </div>
-        <div id="unity-warning"></div>
-        <div id="unity-footer">
-            <div id="unity-logo-title-footer"></div>
-            <div id="unity-build-title">app1</div>
-        </div>
+      </div>
+      <div id="unity-warning"> </div>
+      <div id="unity-footer">
+        <div id="unity-logo-title-footer"></div>
+        <div id="unity-fullscreen-button"></div>
+        <div id="unity-build-title">app1</div>
+      </div>
     </div>
-
     <script>
-        var canvas = document.querySelector("#unity-canvas");
+      var canvas = document.querySelector("#unity-canvas");
 
-        function unityShowBanner(msg, type) {
-            var warningBanner = document.querySelector("#unity-warning");
-            function updateBannerVisibility() {
-                warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-            }
-            var div = document.createElement('div');
-            div.innerHTML = msg;
-            warningBanner.appendChild(div);
-            if (type == 'error') div.style = 'background: red; padding: 10px;';
-            else {
-                if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-                setTimeout(function () {
-                    warningBanner.removeChild(div);
-                    updateBannerVisibility();
-                }, 5000);
-            }
+      // 一時的なメッセージバナーやエラー表示のための関数
+      function unityShowBanner(msg, type) {
+        var warningBanner = document.querySelector("#unity-warning");
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        }
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
             updateBannerVisibility();
+          }, 5000);
         }
+        updateBannerVisibility();
+      }
 
-        var buildUrl = "/Build"; // 絶対パスに変更
-        var loaderUrl = buildUrl + "/android.loader.js";
-        var config = {
-            arguments: [],
-            dataUrl: buildUrl + "/android.data",
-            frameworkUrl: buildUrl + "/android.framework.js",
-            codeUrl: buildUrl + "/android.wasm",
-            streamingAssetsUrl: "/StreamingAssets", // 修正
-            companyName: "DefaultCompany",
-            productName: "app1",
-            productVersion: "0.1.0",
-            showBanner: unityShowBanner,
-        };
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/android.loader.js";
+      var config = {
+        arguments: [],
+        dataUrl: buildUrl + "/android.data",
+        frameworkUrl: buildUrl + "/android.framework.js",
+        codeUrl: buildUrl + "/android.wasm",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "app1",
+        productVersion: "0.1.0",
+        showBanner: unityShowBanner,
+      };
 
-        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-            var meta = document.createElement('meta');
-            meta.name = 'viewport';
-            meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-            document.getElementsByTagName('head")[0].appendChild(meta);
-            document.querySelector("#unity-container").className = "unity-mobile";
-            canvas.className = "unity-mobile";
-        } else {
-            canvas.style.width = "960px";
-            canvas.style.height = "600px";
-        }
+      // Unityは通常、canvas要素のDOMサイズに合わせてWebGLのレンダーサイズを自動調整します。
+      // 必要に応じて、以下の設定でこの動作を無効にできます。
+      // config.matchWebGLToCanvasSize = false;
 
-        document.querySelector("#unity-loading-bar").style.display = "block";
+      // iOSなどのモバイルデバイス向けのスタイル調整
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // ブラウザ全体をゲームキャンバスで埋めるためのviewport設定を追加
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.getElementsByTagName('head')[0].appendChild(meta);
+        document.querySelector("#unity-container").className = "unity-mobile";
+        canvas.className = "unity-mobile";
 
-        var script = document.createElement("script");
-        script.src = loaderUrl;
-        script.onload = () => {
-            createUnityInstance(canvas, config, (progress) => {
-                document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
-            }).then((unityInstance) => {
-                document.querySelector("#unity-loading-bar").style.display = "none";
-            }).catch((message) => {
-                alert(message);
-            });
-        };
+        // モバイルデバイスでパフォーマンス向上のため、解像度を下げる場合は以下を有効にしてください
+        // config.devicePixelRatio = 1;
+      } else {
+        // デスクトップの場合は、キャンバスサイズを固定
+        canvas.style.width = "960px";
+        canvas.style.height = "600px";
+      }
 
-        document.body.appendChild(script);
+      document.querySelector("#unity-loading-bar").style.display = "block";
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+          document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
+        }).then((unityInstance) => {
+          document.querySelector("#unity-loading-bar").style.display = "none";
+          document.querySelector("#unity-fullscreen-button").onclick = () => {
+            unityInstance.SetFullscreen(1);
+          };
+        }).catch((message) => {
+          alert(message);
+        });
+      };
+
+      document.body.appendChild(script);
     </script>
-</body>
+  </body>
 </html>
