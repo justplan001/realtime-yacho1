@@ -76,14 +76,14 @@
             updateBannerVisibility();
         }
 
-        var buildUrl = "./Build"; // 修正
+        var buildUrl = "/Build"; // 絶対パスに変更
         var loaderUrl = buildUrl + "/android.loader.js";
         var config = {
             arguments: [],
             dataUrl: buildUrl + "/android.data",
             frameworkUrl: buildUrl + "/android.framework.js",
             codeUrl: buildUrl + "/android.wasm",
-            streamingAssetsUrl: "StreamingAssets",
+            streamingAssetsUrl: "/StreamingAssets", // 修正
             companyName: "DefaultCompany",
             productName: "app1",
             productVersion: "0.1.0",
