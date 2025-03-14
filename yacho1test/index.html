@@ -58,7 +58,7 @@
     </div>
 
     <!-- フルスクリーンボタン -->
-    <button id="fullscreen-button" onclick="goFullscreen()">フルスクリーン</button>
+    <button id="fullscreen-button">フルスクリーン</button>
 
     <script>
         var canvas = document.querySelector("#unity-canvas");
@@ -127,9 +127,11 @@
 
         document.body.appendChild(script);
 
-        // フルスクリーン処理
+        // iOS でフルスクリーンを実現するための処理
         function goFullscreen() {
             var canvas = document.getElementById('unity-canvas');
+
+            // iOS Safari では webkitRequestFullscreen を使う
             if (canvas.requestFullscreen) {
                 canvas.requestFullscreen();
             } else if (canvas.mozRequestFullScreen) {
@@ -140,6 +142,13 @@
                 canvas.msRequestFullscreen();
             }
         }
+
+        // **iOS Safari の制限を回避するためにタップイベントを使う**
+        document.getElementById("fullscreen-button").addEventListener("click", goFullscreen);
+        document.getElementById("unity-canvas").addEventListener("touchstart", function(event) {
+            goFullscreen();
+            event.preventDefault();
+        });
     </script>
 </body>
 </html>
