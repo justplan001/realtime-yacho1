@@ -116,7 +116,9 @@
     }
     /* ドラム全体のコンテナ */
     #drum-container {
-  position: relative;
+  position: absolute; /* 絶対配置に変更 */
+  top: 150px;
+  right: 200px;
   width: 140px;
   height: 150px;
   overflow: hidden;
@@ -125,9 +127,8 @@
   background: #fafafa;
   user-select: none;
   touch-action: none;
-  margin-left: auto; /* 右寄せ */
-  margin-right: 0;
 }
+
 
     .drum-list {
       position: absolute;
@@ -162,8 +163,8 @@
     /* 自由記述入力ボックス */
     #freeInput {
   position: absolute;
-  top: 10px;       /* 上から10pxの位置 */
-  right: 10px;     /* 右から10pxの位置 */
+  top: 250px;
+  right: 200px;
   width: 140px;    /* 固定幅 */
   font-size: 16px;
   padding: 8px;
@@ -173,8 +174,8 @@
     /* 送信ボタン */
     #sendButton {
   position: absolute;
-  top: 180px;       /* 例として自由記述入力の下に配置 */
-  right: 10px;     /* 右から10pxの位置 */
+  top: 330px;       /* 例として自由記述入力の下に配置 */
+  right: 200px;     /* 右から10pxの位置 */
   width: 140px;    /* 固定幅 */
   font-size: 16px;
   padding: 8px 12px;
