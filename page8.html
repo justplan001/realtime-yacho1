@@ -99,7 +99,7 @@
       right: 10px;
       z-index: 2000;
     }
-    /* 下部エリア：操作エリア */
+    /* 下部エリア：操作エリア（position:relative として子要素の絶対配置を有効にする） */
     #bottom-area {
       flex: 1;
       position: relative;
@@ -109,7 +109,7 @@
     /* ページ全体の全画面表示ボタン */
     #pageFullscreenButton {
       position: absolute;
-      top: 10px;  /* 下部エリアの上部10px位置 */
+      top: 10px;
       left: 10px;
       padding: 8px 12px;
       font-size: 16px;
@@ -119,36 +119,35 @@
       border-radius: 4px;
       z-index: 1000;
     }
-/* 新規：挿入可能なボタン群 */
-#insertable-buttons {
-  position: absolute;
-  top: 60px;
-  left: 10px;  /* 必要に応じて左右のマージンも調整 */
-  right: 10px;
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 5px;
-}
-#insertable-buttons button {
-  padding: 8px;
-  font-size: 16px;
-  cursor: pointer;
-  background-color: #eee;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
+    /* 新規：挿入可能なボタン群（下部エリア内、上から50pxに配置） */
+    #insertable-buttons {
+      position: absolute;
+      top: 60px;
+      left: 10px;
+      right: 10px;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 5px;
+    }
+    #insertable-buttons button {
+      padding: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #eee;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
     /* ドラム式入力エリア */
     #drum-input-area {
       display: flex;
       flex-direction: column;
       gap: 10px;
-      margin-bottom: 10px;
+      margin-top: 140px; /* 挿入可能なボタン群との重なり防止のため上部に余白を追加 */
       align-items: center;
     }
     /* ドラム全体のコンテナ */
     #drum-container {
-      position: absolute; /* 絶対配置に変更 */
+      position: absolute;
       bottom: 70px;
       right: 200px;
       width: 140px;
@@ -195,18 +194,18 @@
       position: absolute;
       top: 100px;
       right: 50px;
-      width: 300px;    /* 固定幅 */
+      width: 300px;
       font-size: 16px;
       padding: 8px;
       box-sizing: border-box;
-      display: none;   /* 初期状態は非表示（ドラム式選択中） */
+      display: none;
     }
     /* 送信ボタン */
     #sendButton {
       position: absolute;
-      bottom: 10px;       /* 例として自由記述入力の下に配置 */
-      right: 200px;       /* 右から200pxの位置 */
-      width: 140px;       /* 固定幅 */
+      bottom: 10px;
+      right: 200px;
+      width: 140px;
       font-size: 16px;
       padding: 8px 12px;
       cursor: pointer;
@@ -279,8 +278,8 @@
             <th>名称</th>
             <th>距離</th>
             <th>X座標</th>
-            <th>直径</th>
             <th>コメント</th>
+            <th>直径</th>
             <th>歩道(L)</th>
             <th>L側溝</th>
             <th>幅員</th>
@@ -295,7 +294,7 @@
     </div>
     <div id="diagram-container">
       <canvas id="drawingCanvas"></canvas>
-      <!-- 図内操作ボタン（toggleInputButton削除） -->
+      <!-- 図内操作ボタン -->
       <button id="resetButton" class="topButton">Reset</button>
       <button id="exportButton" class="topButton">Export</button>
       <button id="fullscreenButton" class="topButton">Full</button>
@@ -306,43 +305,31 @@
     <!-- ページ全体の全画面表示ボタン -->
     <button id="pageFullscreenButton">全画面表示</button>
     
-    <!-- 新規：挿入可能なボタン群 -->
+    <!-- 新規：挿入可能なボタン群（A列へ書き込む） -->
     <div id="insertable-buttons">
       <button class="insertable-button">左境</button>
       <button class="insertable-button">左枡</button>
-      <button class="insertable-button">車止</button>
-      <button class="insertable-button">支線</button>
+      <button class="insertable-button">角</button>
+      <button class="insertable-button">桝</button>
       <button class="insertable-button">標</button>
       <button class="insertable-button">電柱</button>
       <button class="insertable-button">右桝</button>
       <button class="insertable-button">右境</button>
       
       <button class="insertable-button">下</button>
-      <button class="insertable-button">D</button>
       <button class="insertable-button">S</button>
-      <button class="insertable-button">SS</button>
       <button class="insertable-button">消</button>
-      <button class="insertable-button">F</button>
       <button class="insertable-button">SV</button>
-      <button class="insertable-button">W</button>
-      
-      <button class="insertable-button">E</button>
-      <button class="insertable-button">T</button>
-      <button class="insertable-button">メジ</button>
-      <button class="insertable-button">杭</button>
-      <button class="insertable-button">都</button>
-      <button class="insertable-button">他</button>
       <button class="insertable-button">市</button>
       <button class="insertable-button">民</button>
+      <button class="insertable-button">杭</button>
+      <button class="insertable-button">他</button>
+
+      <button class="insertable-button">基準点</button>
+      <button class="insertable-button">G</button>
+      <button class="insertable-button">空</button>
+      <button class="insertable-button">***</button>
       
-      <button class="insertable-button">終</button>
-      <button class="insertable-button">GR</button>
-      <button class="insertable-button">植樹</button>
-      <button class="insertable-button">ﾐﾗｰ</button>
-      <button class="insertable-button">角</button>
-      <button class="insertable-button">基準点</button> 
-      <button class="insertable-button">G</button> 
-      <button class="insertable-button">空</button> 
     </div>
     
     <!-- ドラム式入力エリア -->
@@ -356,6 +343,7 @@
       <input id="freeInput" type="text" placeholder="自由記述入力">
       <button id="sendButton">送信</button>
     </div>
+    
     <!-- 右下：テンキー＆四則演算ボタン -->
     <div id="numpadArea">
       <div id="operatorButtons">
@@ -379,6 +367,7 @@
         <button>⌫</button>
       </div>
     </div>
+    
     <!-- 十字キー（左下） -->
     <div id="arrowKeysContainer">
       <div id="arrow-keys">
@@ -413,6 +402,7 @@
     tableState[1][7] = "5";
     tableState[1][8] = "0.5";
   }
+
   function renderTable() {
     tbody.innerHTML = "";
     for (let i = 0; i < ROW_COUNT; i++) {
@@ -432,6 +422,7 @@
       tbody.appendChild(tr);
     }
   }
+
   function setSelectedCell(r, c) {
     currentRow = r;
     currentCol = c;
@@ -442,6 +433,7 @@
     const cell = container.querySelector(`td[data-row="${currentRow}"][data-col="${currentCol}"]`);
     if (cell) cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
   }
+
   function navigationHandler(event) {
     let targetRow = currentRow;
     let targetCol = currentCol;
@@ -467,9 +459,11 @@
     const targetCell = document.querySelector(`[data-row="${targetRow}"][data-col="${targetCol}"]`);
     if (targetCell) targetCell.focus();
   }
+
   function saveTableState() {
     localStorage.setItem("tableState", JSON.stringify(tableState));
   }
+
   function loadTableState() {
     const saved = localStorage.getItem("tableState");
     if (saved) {
@@ -479,18 +473,20 @@
       }
     }
   }
-  // セル内容更新用（上書き）
+
+  // セル内容更新（上書き）
   function updateCellText(newText) {
     tableState[currentRow][currentCol] = newText;
     renderTable();
     updateCanvas();
     saveTableState();
   }
-  // セル内容に追加する場合（末尾に）
+
+  // セル内容に追加（末尾に）
   function appendCellText(str) {
     updateCellText(tableState[currentRow][currentCol] + str);
   }
-  
+
   //////////// キャンバス描画処理 ////////////
   function updateCanvas() {
     const canvas = document.getElementById('drawingCanvas');
@@ -597,11 +593,13 @@
     }
     container.scrollTop = container.scrollHeight;
   }
-  
+
   //////////// ドラム式入力処理 ////////////
   const drumItems = [
     "左境", "左枡", "車止", "支線", "標", "電柱", "右桝", "右境",
-    "下", "D", "S", "SS", "消", "F", "SV", "W",
+"下", "D", "S", "SS", "消", "F", "SV", "W",
+"E", "T", "メジ", "杭", "都", "他", "市", "民",
+"終", "GR", "植樹", "ﾐﾗｰ", "角", "基準点", "G", "空",
     "自由記述"
   ];
   const drumContainer = document.getElementById('drum-container');
@@ -613,7 +611,7 @@
   let isDragging = false, startY = 0, startOffset = 0;
   let currentIndex = 0; // 現在選択中の項目インデックス
   let inFreeInputMode = false; // 自由記述モードか
-  
+
   function createDrumItems() {
     drumList.innerHTML = '';
     drumItems.forEach(item => {
@@ -624,7 +622,7 @@
     });
   }
   createDrumItems();
-  
+
   function updateSelected() {
     const centerY = drumContainer.clientHeight / 2;
     const listCoord = centerY - currentOffset;
@@ -638,7 +636,7 @@
     });
   }
   updateSelected();
-  
+
   function onPointerDown(e) {
     isDragging = true;
     startY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -669,11 +667,22 @@
   drumContainer.addEventListener('touchmove', onPointerMove);
   drumContainer.addEventListener('touchend', onPointerUp);
   drumContainer.addEventListener('touchcancel', onPointerUp);
-  
-  // 送信ボタン処理：自由記述時は現在のセル内容を引き継ぐ
+
+  // 挿入可能なボタン群のクリックイベント（常にA列（col:0）に書き込む）
+  document.querySelectorAll('.insertable-button').forEach(button => {
+    button.addEventListener('click', () => {
+      // A列にするため、現在の行の0列目を選択
+      setSelectedCell(currentRow, 0);
+      updateCellText(button.innerText);
+    });
+  });
+
+  // ドラム式入力の送信ボタン処理（A列に書き込み）
   sendButton.addEventListener('click', () => {
     if (inFreeInputMode) {
       const freeText = freeInput.value.trim();
+      // A列に切り替えてから更新
+      setSelectedCell(currentRow, 0);
       updateCellText(freeText);
       freeInput.style.display = 'none';
       drumContainer.style.display = 'block';
@@ -681,20 +690,20 @@
     } else {
       const selectedValue = drumItems[currentIndex];
       if (selectedValue === "自由記述") {
-        // 自由記述モードに切替え時、現在のセル内容を引き継ぐ
-        freeInput.value = tableState[currentRow][currentCol];
+        // 自由記述モードに切替え時、A列の現在値を引き継ぐ
+        freeInput.value = tableState[currentRow][0];
         drumContainer.style.display = 'none';
         freeInput.style.display = 'block';
         freeInput.focus();
         inFreeInputMode = true;
       } else {
+        setSelectedCell(currentRow, 0);
         updateCellText(selectedValue);
       }
     }
   });
-  
-  //////////// テンキー＆四則演算ボタン処理 ////////////
-  // 四則演算ボタンは、現在のセル内容にその演算子を末尾に追加します
+
+  // テンキー＆四則演算ボタン処理
   document.querySelectorAll("#operatorButtons button").forEach(btn => {
     btn.addEventListener("click", () => {
       appendCellText(btn.innerText);
@@ -711,8 +720,8 @@
       }
     });
   });
-  
-  //////////// その他の操作ボタン処理 ////////////
+
+  // その他の操作ボタン処理
   document.getElementById("arrow-up")
       .addEventListener("click", () => moveFocus(-1, 0));
   document.getElementById("arrow-down")
@@ -730,7 +739,7 @@
     if(newCol >= COL_COUNT) newCol = COL_COUNT - 1;
     setSelectedCell(newRow, newCol);
   }
-  
+
   // reset ボタン
   function resetTable() {
     if(confirm("本当にリセットしますか？")){
@@ -742,6 +751,7 @@
     }
   }
   document.getElementById("resetButton").addEventListener("click", resetTable);
+  
   // export ボタン：HTMLテーブルをExcelへ
   function exportToExcel() {
     const table = document.getElementById('excelTable');
@@ -749,8 +759,7 @@
     XLSX.writeFile(workbook, "export.xlsx");
   }
   document.getElementById("exportButton").addEventListener("click", exportToExcel);
-  // 全画面表示（キャンバスのみ）のボタンは既存のものなので変更なし
-  
+
   // ページ全体の全画面表示ボタンの処理
   document.getElementById("pageFullscreenButton").addEventListener("click", () => {
     if (!document.fullscreenElement) {
@@ -759,7 +768,7 @@
       document.exitFullscreen();
     }
   });
-  
+
   window.addEventListener('resize', updateCanvas);
   window.onload = () => {
     generateTable();
@@ -771,3 +780,6 @@
 </script>
 </body>
 </html>
+
+自由記述のボックスは全画面表示ボタンの右に常に表示しておいて、そこで今のセルに入力されてる文字を編集できるようにしておいて
+それに伴い、ドラム式から自由記述って選択肢はなくして、それに伴う処理も
