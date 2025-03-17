@@ -2,12 +2,18 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>最終版：ドラム式リール＋自由記述＋表＋図形</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- iOS Webアプリ設定 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="縦画面やちょー">
+  <link rel="apple-touch-icon" href="path/to/your-icon.png">
+  
+  <title>縦画面やちょー</title>
   <!-- Excelエクスポート用ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    /* 全体リセット・基本設定 */
+    /* 全体設定 */
     html, body {
       margin: 0;
       padding: 0;
@@ -15,28 +21,60 @@
       font-family: sans-serif;
       box-sizing: border-box;
     }
-    /* 横並び：スマホ縦画面でも左右50%ずつ */
+    /* コンテナ：上部25vh（左右分割）／下部残り（操作エリア） */
     #container {
       display: flex;
+      flex-direction: column;
       height: 100vh;
     }
-    #left-panel, #right-panel {
-      width: 50%;
+    /* 上部エリア：左右に50:50で分割 */
+    #top-area {
+      flex: 0 0 25vh;
+      display: flex;
+      flex-direction: row;
+      border-bottom: 1px solid #ccc;
+      overflow: hidden;
     }
-    /* 左パネル：図形表示 */
-    #left-panel {
-      position: relative;
-      background-color: #000;
+    #table-container, #diagram-container {
+      flex: 1;
+      padding: 5px;
       overflow: auto;
+      -webkit-overflow-scrolling: touch;
     }
+    #table-container {
+      border-right: 1px solid #ccc;
+    }
+    /* 表のスタイル */
+    #table-container table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    #table-container th,
+    #table-container td {
+      border: 1px solid #ccc;
+      padding: 5px;
+      text-align: center;
+      min-width: 50px;
+      min-height: 24px;
+      user-select: none;
+    }
+    td {
+      cursor: pointer;
+      outline: none;
+    }
+    .selected {
+      background-color: #caf;
+    }
+    /* 図（キャンバス）のスタイル */
     #diagram-container {
       position: relative;
+      overflow: auto;
     }
     #diagram-container canvas {
-      display: block;
       background-color: #000;
+      display: block;
     }
-    /* 図形上の操作ボタン */
+    /* 図内操作ボタン */
     .topButton {
       font-size: 14px;
       padding: 8px 12px;
@@ -47,81 +85,52 @@
       position: absolute;
       z-index: 1000;
     }
-    #resetButton { top: 10px; right: 10px; }
-    #toggleInputButton { top: 50px; right: 10px; }
-    #exportButton { top: 90px; right: 10px; }
-    #fullscreenButton { top: 130px; right: 10px; }
-    
-    /* 右パネル：上下に分割（上：表、下：ボタンエリア） */
-    #right-panel {
-      display: flex;
-      flex-direction: column;
-      border-left: 1px solid #ccc;
+    #resetButton {
+      top: 10px;
+      right: 10px;
     }
-    #table-area {
-      flex: 3;
-      overflow: auto;
-      padding: 5px;
+    /* 反転ボタン削除 */
+    #exportButton {
+      bottom: 40px;
+      right: 10px;
     }
-    #excelTable {
-      border-collapse: collapse;
-      width: 100%;
+    #fullscreenButton {
+      bottom: 10px;
+      right: 10px;
+      z-index: 2000;
     }
-    #excelTable th, #excelTable td {
-      border: 1px solid #ccc;
-      padding: 5px;
-      text-align: center;
-      min-width: 50px;
-      min-height: 24px;
-      user-select: none;
-      cursor: pointer;
-    }
-    .selected {
-      background-color: #caf;
-    }
-    
-    /* ボタンエリア（下部）固定し、スクロールさせない */
-    #buttons-area {
-      flex: 7;
+    /* 下部エリア：操作エリア */
+    #bottom-area {
+      flex: 1;
       position: relative;
-      background-color: #f9f9f9;
-      border-top: 1px solid #ccc;
-      overflow: hidden;
-    }
-    /* ボタンエリア内、左右2カラム（左：名称入力、右：その他ボタン） */
-    #buttons-columns {
-      display: grid;
-      grid-template-columns: 150px 1fr;
-      height: 100%;
       padding: 10px;
-      gap: 10px;
+      overflow: auto;
     }
-    /* 左カラム：名称入力用ラッパー */
-    #name-input-wrapper {
+    /* ドラム式入力エリア */
+    #drum-input-area {
       display: flex;
       flex-direction: column;
       gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
     }
-    #toggleNameInputMode {
-      font-size: 16px;
-      padding: 8px;
-      cursor: pointer;
-    }
-    /* ドラム式リール（サイズ：幅140px、高さ150px） */
+    /* ドラム全体のコンテナ */
     #drum-container {
-      width: 140px;
-      height: 150px;
-      overflow: hidden;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      background: #fafafa;
-      user-select: none;
-      touch-action: none;
-      position: relative;
-    }
+  position: relative;
+  width: 140px;
+  height: 150px;
+  overflow: hidden;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fafafa;
+  user-select: none;
+  touch-action: none;
+  margin-left: auto; /* 右寄せ */
+  margin-right: 0;
+}
+
     .drum-list {
       position: absolute;
-      top: 0;
       left: 0;
       right: 0;
       transition: transform 0.1s ease-out;
@@ -131,8 +140,8 @@
       line-height: 30px;
       text-align: center;
       border-bottom: 1px solid #ddd;
-      color: #333;
       font-size: 16px;
+      color: #333;
     }
     .drum-center-line {
       position: absolute;
@@ -150,26 +159,65 @@
       font-weight: bold;
       background-color: #eef;
     }
-    /* 自由記述用テキスト入力 */
-    #nameFreeInput {
-      font-size: 16px;
-      padding: 8px;
-      width: 100%;
-      box-sizing: border-box;
-      display: none;
-    }
-    
-    /* 右カラム：下部ボタンエリアの右側、すべてのボタンを右下固定 */
-    #right-buttons {
+    /* 自由記述入力ボックス */
+    #freeInput {
+  position: absolute;
+  top: 10px;       /* 上から10pxの位置 */
+  right: 10px;     /* 右から10pxの位置 */
+  width: 140px;    /* 固定幅 */
+  font-size: 16px;
+  padding: 8px;
+  box-sizing: border-box;
+  display: none;   /* 初期状態は非表示（ドラム式選択中） */
+}
+    /* 送信ボタン */
+    #sendButton {
+  position: absolute;
+  top: 180px;       /* 例として自由記述入力の下に配置 */
+  right: 10px;     /* 右から10pxの位置 */
+  width: 140px;    /* 固定幅 */
+  font-size: 16px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+    /* テンキー＆四則演算ボタン配置 */
+    #numpadArea {
       position: absolute;
-      right: 10px;
       bottom: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      right: 10px;
     }
-    /* 十字キー */
+    #operatorButtons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      margin-bottom: 5px;
+    }
+    #operatorButtons button {
+      padding: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #eee;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    #numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 50px);
+      gap: 5px;
+    }
+    #numpad button {
+      width: 50px;
+      height: 50px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    /* 十字キー（左下） */
     #arrowKeysContainer {
+      position: absolute;
+      bottom: 300px;
+      right: 25px;
+    }
+    #arrowKeysContainer #arrow-keys {
       display: grid;
       grid-template-areas:
         ". up ."
@@ -187,47 +235,13 @@
     #arrow-left  { grid-area: left; }
     #arrow-right { grid-area: right; }
     #arrow-down  { grid-area: down; }
-    /* 四則演算ボタン */
-    #arithmetic-buttons-container {
-      display: flex;
-      gap: 5px;
-    }
-    #arithmetic-buttons-container button {
-      font-size: 16px;
-      padding: 8px 12px;
-      cursor: pointer;
-    }
-    /* テンキー */
-    #numpadContainer {
-      display: grid;
-      grid-template-columns: repeat(3, 50px);
-      gap: 5px;
-    }
-    #numpadContainer button {
-      width: 50px;
-      height: 50px;
-      font-size: 16px;
-      cursor: pointer;
-    }
   </style>
 </head>
 <body>
 <div id="container">
-  <!-- 左パネル：図形表示 -->
-  <div id="left-panel">
-    <div id="diagram-container">
-      <canvas id="drawingCanvas"></canvas>
-      <button id="resetButton" class="topButton">Reset</button>
-      <button id="toggleInputButton" class="topButton">Hide Input</button>
-      <button id="exportButton" class="topButton">Export</button>
-      <button id="fullscreenButton" class="topButton">Full</button>
-    </div>
-  </div>
-  
-  <!-- 右パネル：上部に表、下部にボタンエリア -->
-  <div id="right-panel">
-    <!-- 表エリア -->
-    <div id="table-area">
+  <!-- 上部エリア：左に表、右に図 -->
+  <div id="top-area">
+    <div id="table-container">
       <table id="excelTable">
         <thead>
           <tr>
@@ -244,102 +258,74 @@
           </tr>
         </thead>
         <tbody id="table-body">
-          <!-- JSで生成 -->
+          <!-- 表データはJSで自動生成 -->
         </tbody>
       </table>
     </div>
-    <!-- ボタンエリア -->
-    <div id="buttons-area">
-      <div id="buttons-columns">
-        <!-- 左カラム：名称入力用 -->
-        <div id="name-input-wrapper">
-          <button id="toggleNameInputMode">自由記述</button>
-          <!-- ドラム式リール -->
-          <div id="drum-container">
-            <div class="drum-list" id="drum-list">
-              <!-- JSで生成 -->
-            </div>
-            <div class="drum-center-line"></div>
-          </div>
-          <!-- 自由記述用テキスト入力 -->
-          <input id="nameFreeInput" type="text" placeholder="自由入力">
+    <div id="diagram-container">
+      <canvas id="drawingCanvas"></canvas>
+      <!-- 図内操作ボタン（toggleInputButton削除） -->
+      <button id="resetButton" class="topButton">Reset</button>
+      <button id="exportButton" class="topButton">Export</button>
+      <button id="fullscreenButton" class="topButton">Full</button>
+    </div>
+  </div>
+  <!-- 下部エリア：操作エリア -->
+  <div id="bottom-area">
+    <!-- ドラム式入力エリア -->
+    <div id="drum-input-area">
+      <div id="drum-container">
+        <div class="drum-list" id="drumList">
+          <!-- 項目はJSで生成 -->
         </div>
-        <!-- 右カラムは空（全ボタンは右下固定） -->
+        <div class="drum-center-line"></div>
       </div>
-      <!-- 右下固定のボタン群 -->
-      <div id="right-buttons">
-        <!-- 十字キー -->
-        <div id="arrowKeysContainer">
-          <button id="arrow-up">↑</button>
-          <button id="arrow-left">←</button>
-          <button id="arrow-right">→</button>
-          <button id="arrow-down">↓</button>
-        </div>
-        <!-- 四則演算ボタン -->
-        <div id="arithmetic-buttons-container">
-          <button class="arith-btn" data-value="+">+</button>
-          <button class="arith-btn" data-value="-">-</button>
-          <button class="arith-btn" data-value="*">×</button>
-          <button class="arith-btn" data-value="/">÷</button>
-        </div>
-        <!-- テンキー -->
-        <div id="numpadContainer">
-          <button>7</button>
-          <button>8</button>
-          <button>9</button>
-          <button>4</button>
-          <button>5</button>
-          <button>6</button>
-          <button>1</button>
-          <button>2</button>
-          <button>3</button>
-          <button>0</button>
-          <button>.</button>
-          <button>⌫</button>
-        </div>
+      <input id="freeInput" type="text" placeholder="自由記述入力">
+      <button id="sendButton">送信</button>
+    </div>
+    <!-- 右下：テンキー＆四則演算ボタン -->
+    <div id="numpadArea">
+      <div id="operatorButtons">
+        <button class="operator-button">+</button>
+        <button class="operator-button">/</button>
+        <button class="operator-button">×</button>
+        <button class="operator-button">-</button>
+      </div>
+      <div id="numpad">
+        <button>7</button>
+        <button>8</button>
+        <button>9</button>
+        <button>4</button>
+        <button>5</button>
+        <button>6</button>
+        <button>1</button>
+        <button>2</button>
+        <button>3</button>
+        <button>0</button>
+        <button>.</button>
+        <button>⌫</button>
+      </div>
+    </div>
+    <!-- 十字キー（左下） -->
+    <div id="arrowKeysContainer">
+      <div id="arrow-keys">
+        <button id="arrow-up">↑</button>
+        <button id="arrow-left">←</button>
+        <button id="arrow-right">→</button>
+        <button id="arrow-down">↓</button>
       </div>
     </div>
   </div>
 </div>
-  
+
 <script>
-  /****************************************************
-   * グローバル変数・定数
-   ****************************************************/
+  //////////// テーブル関連処理 ////////////
   let tableState = [];
   const ROW_COUNT = 100;
   const COL_COUNT = 10;
   let currentRow = 0, currentCol = 0;
-  
-  // DOM取得
   const tbody = document.getElementById('table-body');
-  const drumContainer = document.getElementById('drum-container');
-  const drumList = document.getElementById('drum-list');
-  const toggleNameInputMode = document.getElementById('toggleNameInputMode');
-  const nameFreeInput = document.getElementById('nameFreeInput');
-  
-  // 現在、名称入力はドラム式モードか自由記述モードか（true: ドラム式）
-  let useDrumMode = true;
-  
-  // ドラム式で選択する文字列リスト（名称用）
-  const nameItems = [
-    "左境","左枡","車止","支線","標","電柱","右桝","右境",
-    "下","D","S","SS","消","F","SV","W",
-    "E","T","メジ","杭","都","他","市","民",
-    "終","GR","植樹","ﾐﾗｰ","角","*","+","-"
-  ];
-  
-  // ドラムアイテム1つあたりの高さ
-  const itemHeight = 25;
-  // 現在のドラムスクロール位置
-  let currentOffset = 0;
-  let isDragging = false;
-  let startY = 0;
-  let startOffset = 0;
-  
-  /****************************************************
-   * テーブル初期生成＆描画
-   ****************************************************/
+
   function generateTable() {
     tableState = [];
     for (let i = 0; i < ROW_COUNT; i++) {
@@ -354,7 +340,6 @@
     tableState[1][7] = "5";
     tableState[1][8] = "0.5";
   }
-  
   function renderTable() {
     tbody.innerHTML = "";
     for (let i = 0; i < ROW_COUNT; i++) {
@@ -374,161 +359,16 @@
       tbody.appendChild(tr);
     }
   }
-  
-  /****************************************************
-   * セル選択時の処理
-   ****************************************************/
   function setSelectedCell(r, c) {
     currentRow = r;
     currentCol = c;
     renderTable();
     updateCanvas();
     saveTableState();
-  
-    // 常に名称入力用（ドラム式／自由記述）は左カラムに表示
-    // 新規行の場合、空ならそのまま空のまま（自動入力しない）
-    if (currentCol === 0) {
-      if (!tableState[currentRow][0]) {
-        // 何もセットせず、ユーザー操作待ち
-      } else if (useDrumMode) {
-        const currentVal = tableState[currentRow][0];
-        const index = nameItems.indexOf(currentVal);
-        if (index >= 0) {
-          snapToIndex(index);
-        } else {
-          snapToIndex(0);
-        }
-      } else {
-        nameFreeInput.value = tableState[currentRow][0];
-      }
-    }
-  
-    // 選択セルが見えるようにスクロール
-    const container = document.getElementById('table-area');
+    const container = document.getElementById('table-container');
     const cell = container.querySelector(`td[data-row="${currentRow}"][data-col="${currentCol}"]`);
-    if (cell) {
-      cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
-      cell.focus();
-    }
+    if (cell) cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
   }
-  
-  /****************************************************
-   * 名称入力用：ドラム式リール初期生成
-   ****************************************************/
-  function createNameDrumItems() {
-    drumList.innerHTML = '';
-    nameItems.forEach((val) => {
-      const div = document.createElement('div');
-      div.className = 'drum-item';
-      div.innerText = val;
-      drumList.appendChild(div);
-    });
-  }
-  
-  /****************************************************
-   * ドラム式リール操作（PC/モバイル共通）
-   ****************************************************/
-  function onPointerDown(e) {
-    isDragging = true;
-    startY = (e.touches) ? e.touches[0].clientY : e.clientY;
-    startOffset = currentOffset;
-    drumList.style.transition = 'none';
-  }
-  function onPointerMove(e) {
-    if (!isDragging) return;
-    const y = (e.touches) ? e.touches[0].clientY : e.clientY;
-    const dy = y - startY;
-    currentOffset = startOffset + dy;
-    drumList.style.transform = `translateY(${currentOffset}px)`;
-  }
-  function onPointerUp() {
-    if (!isDragging) return;
-    isDragging = false;
-    drumList.style.transition = 'transform 0.2s ease-out';
-    const roundedOffset = Math.round(currentOffset / itemHeight) * itemHeight;
-    currentOffset = roundedOffset;
-    drumList.style.transform = `translateY(${currentOffset}px)`;
-    updateSelectedItem();
-  }
-  drumContainer.addEventListener('mousedown', onPointerDown);
-  drumContainer.addEventListener('mousemove', onPointerMove);
-  drumContainer.addEventListener('mouseup', onPointerUp);
-  drumContainer.addEventListener('mouseleave', onPointerUp);
-  drumContainer.addEventListener('touchstart', (e) => onPointerDown(e));
-  drumContainer.addEventListener('touchmove', (e) => onPointerMove(e));
-  drumContainer.addEventListener('touchend', onPointerUp);
-  drumContainer.addEventListener('touchcancel', onPointerUp);
-  
-  // ドラムの選択アイテム更新
-  function updateSelectedItem() {
-    const containerHeight = drumContainer.clientHeight; // 150
-    const centerY = containerHeight / 2; // 75
-    const listCoord = centerY - currentOffset;
-    let index = Math.floor(listCoord / itemHeight);
-    if (index < 0) index = 0;
-    if (index >= nameItems.length) index = nameItems.length - 1;
-  
-    const itemElems = drumList.querySelectorAll('.drum-item');
-    itemElems.forEach((el, i) => {
-      el.classList.remove('selected');
-      if (i === index) el.classList.add('selected');
-    });
-  
-    if (useDrumMode) {
-      // 自動入力は行わない（ユーザー操作待ち）
-      // ※ユーザーがドラムを操作した時のみ updateSelectedItem() によりセルが更新される
-    }
-  }
-  
-  // 任意のインデックスにスナップ
-  function snapToIndex(index) {
-    currentOffset = -(index * itemHeight);
-    drumList.style.transition = 'transform 0.2s ease-out';
-    drumList.style.transform = `translateY(${currentOffset}px)`;
-    updateSelectedItem();
-    // ※ここでテーブルへの反映はしない
-  }
-  
-  /****************************************************
-   * 自由記述用テキスト入力イベント
-   ****************************************************/
-  nameFreeInput.addEventListener("input", () => {
-    if (!useDrumMode) {
-      tableState[currentRow][0] = nameFreeInput.value;
-      renderTable();
-      updateCanvas();
-      saveTableState();
-    }
-  });
-  
-  /****************************************************
-   * トグルボタン：名称入力モード切替（ドラム式⇔自由記述）
-   ****************************************************/
-  toggleNameInputMode.addEventListener("click", () => {
-    useDrumMode = !useDrumMode;
-    if (useDrumMode) {
-      toggleNameInputMode.innerText = "自由記述";
-      drumContainer.style.display = "block";
-      nameFreeInput.style.display = "none";
-      const currentVal = tableState[currentRow][0];
-      const index = nameItems.indexOf(currentVal);
-      if (index >= 0) {
-        snapToIndex(index);
-      } else {
-        // 値がなければリセット（空のまま）
-        drumList.style.transform = "translateY(0px)";
-      }
-    } else {
-      toggleNameInputMode.innerText = "ドラム式";
-      drumContainer.style.display = "none";
-      nameFreeInput.style.display = "block";
-      nameFreeInput.value = tableState[currentRow][0] || "";
-    }
-  });
-  
-  /****************************************************
-   * セル間移動（矢印キー、Enter）
-   ****************************************************/
   function navigationHandler(event) {
     let targetRow = currentRow;
     let targetCol = currentCol;
@@ -551,59 +391,9 @@
     if (targetCol < 0) targetCol = 0;
     if (targetCol >= COL_COUNT) targetCol = COL_COUNT - 1;
     setSelectedCell(targetRow, targetCol);
-    const targetCell = document.querySelector(`td[data-row="${targetRow}"][data-col="${targetCol}"]`);
+    const targetCell = document.querySelector(`[data-row="${targetRow}"][data-col="${targetCol}"]`);
     if (targetCell) targetCell.focus();
   }
-  
-  // 画面上の十字キー
-  function moveFocus(dRow, dCol) {
-    let newRow = currentRow + dRow;
-    let newCol = currentCol + dCol;
-    if (newRow < 0) newRow = 0;
-    if (newRow >= ROW_COUNT) newRow = ROW_COUNT - 1;
-    if (newCol < 0) newCol = 0;
-    if (newCol >= COL_COUNT) newCol = COL_COUNT - 1;
-    setSelectedCell(newRow, newCol);
-  }
-  document.getElementById("arrow-up").addEventListener("click", () => moveFocus(-1, 0));
-  document.getElementById("arrow-down").addEventListener("click", () => moveFocus(1, 0));
-  document.getElementById("arrow-left").addEventListener("click", () => moveFocus(0, -1));
-  document.getElementById("arrow-right").addEventListener("click", () => moveFocus(0, 1));
-  
-  /****************************************************
-   * テンキー＆四則演算（名称列以外に文字入力）
-   ****************************************************/
-  function appendToCurrentCell(value) {
-    if (currentCol !== 0) {
-      tableState[currentRow][currentCol] += value;
-      renderTable();
-      updateCanvas();
-      saveTableState();
-    }
-  }
-  document.querySelectorAll("#numpadContainer button").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const value = btn.innerText;
-      if (value === "⌫") {
-        tableState[currentRow][currentCol] = tableState[currentRow][currentCol].slice(0, -1);
-      } else {
-        appendToCurrentCell(value);
-      }
-      renderTable();
-      updateCanvas();
-      saveTableState();
-    });
-  });
-  document.querySelectorAll(".arith-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const value = btn.getAttribute("data-value");
-      appendToCurrentCell(value);
-    });
-  });
-  
-  /****************************************************
-   * 保存／復元
-   ****************************************************/
   function saveTableState() {
     localStorage.setItem("tableState", JSON.stringify(tableState));
   }
@@ -616,14 +406,23 @@
       }
     }
   }
+  // セル内容更新用（上書き）
+  function updateCellText(newText) {
+    tableState[currentRow][currentCol] = newText;
+    renderTable();
+    updateCanvas();
+    saveTableState();
+  }
+  // セル内容に追加する場合（末尾に）
+  function appendCellText(str) {
+    updateCellText(tableState[currentRow][currentCol] + str);
+  }
   
-  /****************************************************
-   * キャンバス描画ロジック
-   ****************************************************/
+  //////////// キャンバス描画処理 ////////////
   function updateCanvas() {
     const canvas = document.getElementById('drawingCanvas');
     const ctx = canvas.getContext('2d');
-    const container = document.getElementById('left-panel');
+    const container = document.getElementById('diagram-container');
     const scale = 20;
     let maxDistance = 0;
     for (let i = 0; i < ROW_COUNT; i++){
@@ -635,7 +434,6 @@
     canvas.height = (maxDistance + 5) * scale + 50;
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
     let originX = canvas.width / 2;
     const originY = canvas.height - 50;
     const roadWidth = parseFloat(tableState[1][7]) || 0;
@@ -644,19 +442,16 @@
     let sidewalkL = parseFloat(tableState[1][5]) || 0;
     let sidewalkR = parseFloat(tableState[1][9]) || 0;
     originX = originX - (roadWidth * scale) / 2;
-  
     ctx.strokeStyle = 'white';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(originX, originY);
     ctx.lineTo(originX, originY - ((maxDistance + 5) * scale));
     ctx.stroke();
-  
     ctx.beginPath();
     ctx.moveTo(originX + roadWidth * scale, originY);
     ctx.lineTo(originX + roadWidth * scale, originY - ((maxDistance + 5) * scale));
     ctx.stroke();
-  
     if (!isNaN(offsetG) && offsetG !== 0){
       ctx.beginPath();
       ctx.moveTo(originX + offsetG * scale, originY);
@@ -669,7 +464,6 @@
       ctx.lineTo(originX + (roadWidth - offsetI) * scale, originY - ((maxDistance + 5) * scale));
       ctx.stroke();
     }
-  
     ctx.strokeStyle = 'yellow';
     ctx.lineWidth = 2;
     if (!isNaN(sidewalkL) && sidewalkL !== 0){
@@ -686,7 +480,6 @@
       ctx.lineTo(sidewalkRX, originY - ((maxDistance + 5) * scale));
       ctx.stroke();
     }
-  
     const roadCenterX = originX + (roadWidth * scale) / 2;
     const colors = ["red", "yellow", "green", "cyan", "magenta"];
     for (let i = 0; i < ROW_COUNT; i++){
@@ -701,7 +494,6 @@
       const comment = tableState[i][4].trim();
       const xPos = originX + (xVal * scale);
       const yPos = originY - (yVal * scale);
-  
       const color = colors[i % colors.length];
       ctx.strokeStyle = color;
       ctx.lineWidth = 1;
@@ -709,13 +501,11 @@
       ctx.moveTo(originX, yPos);
       ctx.lineTo(xPos, yPos);
       ctx.stroke();
-  
       const pointRadius = 0.1 * scale;
       ctx.beginPath();
       ctx.arc(xPos, yPos, pointRadius, 0, 2 * Math.PI);
       ctx.fillStyle = color;
       ctx.fill();
-  
       if (!isNaN(diamVal) && diamVal > 0) {
         const circleRadius = (diamVal / 2) * scale;
         ctx.beginPath();
@@ -724,7 +514,6 @@
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
-  
       let displayText = label;
       if (comment) displayText += " (" + comment + ")";
       ctx.font = '30px sans-serif';
@@ -733,58 +522,175 @@
       let textX = (xPos >= roadCenterX) ? xPos + pointRadius + 2 : xPos - pointRadius - 2 - textWidth;
       ctx.fillText(displayText, textX, yPos);
     }
-  
     container.scrollTop = container.scrollHeight;
   }
   
-  /****************************************************
-   * 各種ボタン：Reset, Export, FullScreen, HideInput
-   ****************************************************/
+  //////////// ドラム式入力処理 ////////////
+  const drumItems = [
+    "左境", "左枡", "車止", "支線", "標", "電柱", "右桝", "右境",
+    "下", "D", "S", "SS", "消", "F", "SV", "W",
+    "自由記述"
+  ];
+  const drumContainer = document.getElementById('drum-container');
+  const drumList = document.getElementById('drumList');
+  const freeInput = document.getElementById('freeInput');
+  const sendButton = document.getElementById('sendButton');
+  const itemHeight = 30;
+  let currentOffset = 0;
+  let isDragging = false, startY = 0, startOffset = 0;
+  let currentIndex = 0; // 現在選択中の項目インデックス
+  let inFreeInputMode = false; // 自由記述モードか
+  
+  function createDrumItems() {
+    drumList.innerHTML = '';
+    drumItems.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'drum-item';
+      div.innerText = item;
+      drumList.appendChild(div);
+    });
+  }
+  createDrumItems();
+  
+  function updateSelected() {
+    const centerY = drumContainer.clientHeight / 2;
+    const listCoord = centerY - currentOffset;
+    let index = Math.floor(listCoord / itemHeight);
+    if (index < 0) index = 0;
+    if (index >= drumItems.length) index = drumItems.length - 1;
+    currentIndex = index;
+    const itemElems = drumList.querySelectorAll('.drum-item');
+    itemElems.forEach((el, i) => {
+      el.classList.toggle('selected', i === index);
+    });
+  }
+  updateSelected();
+  
+  function onPointerDown(e) {
+    isDragging = true;
+    startY = e.touches ? e.touches[0].clientY : e.clientY;
+    startOffset = currentOffset;
+    drumList.style.transition = 'none';
+  }
+  function onPointerMove(e) {
+    if (!isDragging) return;
+    const y = e.touches ? e.touches[0].clientY : e.clientY;
+    const dy = y - startY;
+    currentOffset = startOffset + dy;
+    drumList.style.transform = `translateY(${currentOffset}px)`;
+    updateSelected();
+  }
+  function onPointerUp(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    drumList.style.transition = 'transform 0.2s ease-out';
+    currentOffset = Math.round(currentOffset / itemHeight) * itemHeight;
+    drumList.style.transform = `translateY(${currentOffset}px)`;
+    updateSelected();
+  }
+  drumContainer.addEventListener('mousedown', onPointerDown);
+  drumContainer.addEventListener('mousemove', onPointerMove);
+  drumContainer.addEventListener('mouseup', onPointerUp);
+  drumContainer.addEventListener('mouseleave', onPointerUp);
+  drumContainer.addEventListener('touchstart', onPointerDown);
+  drumContainer.addEventListener('touchmove', onPointerMove);
+  drumContainer.addEventListener('touchend', onPointerUp);
+  drumContainer.addEventListener('touchcancel', onPointerUp);
+  
+  // 送信ボタン処理：自由記述時は現在のセル内容を引き継ぐ
+  sendButton.addEventListener('click', () => {
+    if (inFreeInputMode) {
+      const freeText = freeInput.value.trim();
+      updateCellText(freeText);
+      freeInput.style.display = 'none';
+      drumContainer.style.display = 'block';
+      inFreeInputMode = false;
+    } else {
+      const selectedValue = drumItems[currentIndex];
+      if (selectedValue === "自由記述") {
+        // 自由記述モードに切替え時、現在のセル内容を引き継ぐ
+        freeInput.value = tableState[currentRow][currentCol];
+        drumContainer.style.display = 'none';
+        freeInput.style.display = 'block';
+        freeInput.focus();
+        inFreeInputMode = true;
+      } else {
+        updateCellText(selectedValue);
+      }
+    }
+  });
+  
+  //////////// テンキー＆四則演算ボタン処理 ////////////
+  // 四則演算ボタンは、現在のセル内容にその演算子を末尾に追加します
+  document.querySelectorAll("#operatorButtons button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      appendCellText(btn.innerText);
+    });
+  });
+  document.querySelectorAll("#numpad button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const value = btn.innerText;
+      if (value === "⌫") {
+        const currentText = tableState[currentRow][currentCol];
+        updateCellText(currentText.slice(0, -1));
+      } else {
+        appendCellText(value);
+      }
+    });
+  });
+  
+  //////////// その他の操作ボタン処理 ////////////
+  document.getElementById("arrow-up")
+      .addEventListener("click", () => moveFocus(-1, 0));
+  document.getElementById("arrow-down")
+      .addEventListener("click", () => moveFocus(1, 0));
+  document.getElementById("arrow-left")
+      .addEventListener("click", () => moveFocus(0, -1));
+  document.getElementById("arrow-right")
+      .addEventListener("click", () => moveFocus(0, 1));
+  function moveFocus(dRow, dCol) {
+    let newRow = currentRow + dRow;
+    let newCol = currentCol + dCol;
+    if(newRow < 0) newRow = 0;
+    if(newRow >= ROW_COUNT) newRow = ROW_COUNT - 1;
+    if(newCol < 0) newCol = 0;
+    if(newCol >= COL_COUNT) newCol = COL_COUNT - 1;
+    setSelectedCell(newRow, newCol);
+  }
+  
+  // reset ボタン
   function resetTable() {
-    if (confirm("本当にリセットしますか？")) {
+    if(confirm("本当にリセットしますか？")){
       localStorage.removeItem("tableState");
       generateTable();
       renderTable();
       updateCanvas();
-      setSelectedCell(0, 0);
+      setSelectedCell(0,0);
     }
   }
   document.getElementById("resetButton").addEventListener("click", resetTable);
+  // export ボタン：HTMLテーブルをExcelへ
   function exportToExcel() {
     const table = document.getElementById('excelTable');
     const workbook = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
     XLSX.writeFile(workbook, "export.xlsx");
   }
   document.getElementById("exportButton").addEventListener("click", exportToExcel);
+  // 全画面表示（キャンバスのみ）
   document.getElementById("fullscreenButton").addEventListener("click", () => {
-    const drawingArea = document.getElementById("left-panel");
+    const drawingArea = document.getElementById("diagram-container");
     if (document.fullscreenElement) {
       document.exitFullscreen();
     } else {
       drawingArea.requestFullscreen();
     }
   });
-  document.getElementById("toggleInputButton").addEventListener("click", () => {
-    const btnArea = document.getElementById("buttons-area");
-    if (btnArea.style.display === "none") {
-      btnArea.style.display = "block";
-      document.getElementById("toggleInputButton").innerText = "Hide Input";
-    } else {
-      btnArea.style.display = "none";
-      document.getElementById("toggleInputButton").innerText = "Show Input";
-    }
-    updateCanvas();
-  });
   
-  /****************************************************
-   * ウィンドウロード時の初期化
-   ****************************************************/
   window.addEventListener('resize', updateCanvas);
   window.onload = () => {
     generateTable();
     loadTableState();
     renderTable();
-    createNameDrumItems(); // ドラムの項目生成
     updateCanvas();
     setSelectedCell(0, 0);
   };
