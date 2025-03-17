@@ -13,25 +13,28 @@
   <!-- Excelエクスポート用ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    /* 全体設定 */
+    /* html, body を画面全体に固定＆スクロールを防止 */
     html, body {
       margin: 0;
       padding: 0;
-      height: 100%;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
       font-family: sans-serif;
       box-sizing: border-box;
     }
-    /* コンテナ：左右に分割（左：図形、右：表＋その他操作） */
+    /* コンテナ：左右に分割（左:右＝3:7） */
     #container {
       display: flex;
+      width: 100vw;
       height: 100vh;
     }
-    /* 左側：図形表示エリア */
+    /* 左側：図形表示エリア（比率3） */
     #left-area {
-      flex: 1;
+      flex: 3;
       position: relative;
       background-color: #000;
-      overflow: auto;
+      overflow: hidden;
     }
     #left-area canvas {
       display: block;
@@ -66,9 +69,9 @@
       border-radius: 4px;
       margin-right: 5px;
     }
-    /* 右側：上下分割エリア */
+    /* 右側：上下分割エリア（比率7） */
     #right-area {
-      flex: 1;
+      flex: 7;
       display: flex;
       flex-direction: column;
     }
@@ -103,7 +106,7 @@
     #controls-container {
       flex: 1;
       padding: 10px;
-      overflow: auto;
+      overflow: hidden;
     }
     /* 入力行：全画面表示ボタン＋文字入力 */
     #input-row {
@@ -125,7 +128,7 @@
     #input-buttons-wrapper {
       display: flex;
       gap: 10px;
-      height: calc(100% - 60px); /* input-row分を除く */
+      height: calc(100% - 60px); /* 入力行分を除く */
     }
     /* 文字入力ボタン群（左側）：10行×4列のグリッド */
     #text-buttons {
@@ -134,6 +137,7 @@
       grid-template-columns: repeat(4, 1fr);
       grid-template-rows: repeat(10, 1fr);
       gap: 5px;
+      overflow: auto;
     }
     #text-buttons button {
       padding: 8px;
@@ -143,12 +147,11 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-    /* 制御ボタン群（右側）：十字キーとテンキー */
+    /* 制御ボタン群（右側）：十字キーとテンキーを縦方向に配置、右端寄せ */
     #control-buttons {
       display: flex;
       flex-direction: column;
       gap: 10px;
-      /* 右端寄せ */
       justify-content: flex-start;
     }
     /* 十字キー */
@@ -236,7 +239,7 @@
       </div>
       <!-- 入力ボタン群と制御ボタン群を左右に配置 -->
       <div id="input-buttons-wrapper">
-        <!-- 文字入力ボタン群 -->
+        <!-- 文字入力ボタン群：10行×4列 -->
         <div id="text-buttons">
           <button class="insertable-button">左境</button>
           <button class="insertable-button">左枡</button>
@@ -246,7 +249,6 @@
           <button class="insertable-button">電柱</button>
           <button class="insertable-button">右桝</button>
           <button class="insertable-button">右境</button>
-          
           <button class="insertable-button">下</button>
           <button class="insertable-button">D</button>
           <button class="insertable-button">S</button>
@@ -255,7 +257,6 @@
           <button class="insertable-button">F</button>
           <button class="insertable-button">SV</button>
           <button class="insertable-button">W</button>
-          
           <button class="insertable-button">E</button>
           <button class="insertable-button">T</button>
           <button class="insertable-button">メジ</button>
@@ -264,16 +265,6 @@
           <button class="insertable-button">他</button>
           <button class="insertable-button">市</button>
           <button class="insertable-button">民</button>
-          
-          <button class="insertable-button">G</button>
-          <button class="insertable-button">水取器</button>
-          <button class="insertable-button">基準点</button>
-          <button class="insertable-button">空1</button>
-          <button class="insertable-button">空2</button>
-          <button class="insertable-button">空3</button>
-          <button class="insertable-button">空4</button>
-          <button class="insertable-button">空5</button>
-
           <button class="insertable-button">終</button>
           <button class="insertable-button">GR</button>
           <button class="insertable-button">植樹</button>
@@ -283,7 +274,7 @@
           <button class="insertable-button">+</button>
           <button class="insertable-button">-</button>
         </div>
-        <!-- 制御ボタン群：十字キーとテンキー（右端寄せ） -->
+        <!-- 制御ボタン群：十字キーとテンキー -->
         <div id="control-buttons">
           <div id="arrowKeysContainer">
             <div id="arrow-keys">
@@ -444,9 +435,9 @@
       if (!isNaN(d) && d > maxDistance) maxDistance = d;
     }
     if (maxDistance === 0) maxDistance = 100;
-    // canvas の自然サイズを設定（container からはスクロール可能）
+    // container のサイズに合わせ canvas のサイズを設定
     canvas.width = container.clientWidth;
-    canvas.height = (maxDistance + 5) * scale + 50;
+    canvas.height = container.clientHeight;
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     let originX = canvas.width / 2;
@@ -531,13 +522,12 @@
       }
       let displayText = label;
       if (comment) displayText += " (" + comment + ")";
-      ctx.font = '15px sans-serif'; // 文字サイズ半分に変更
+      ctx.font = '15px sans-serif';
       ctx.fillStyle = color;
       let textWidth = ctx.measureText(displayText).width;
       let textX = (xPos >= roadCenterX) ? xPos + pointRadius + 2 : xPos - pointRadius - 2 - textWidth;
       ctx.fillText(displayText, textX, yPos);
     }
-    container.scrollTop = container.scrollHeight;
   }
 
   // 各種イベント設定
