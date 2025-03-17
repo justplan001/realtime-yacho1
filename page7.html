@@ -106,6 +106,19 @@
       padding: 10px;
       overflow: auto;
     }
+    /* 新規：ページ全体の全画面表示ボタン */
+    #pageFullscreenButton {
+      position: absolute;
+      top: 10px;  /* 下部エリアの上部10px位置 */
+      left: 10px;
+      padding: 8px 12px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #eee;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      z-index: 1000;
+    }
     /* ドラム式入力エリア */
     #drum-input-area {
       display: flex;
@@ -116,20 +129,18 @@
     }
     /* ドラム全体のコンテナ */
     #drum-container {
-  position: absolute; /* 絶対配置に変更 */
-  top: 150px;
-  right: 200px;
-  width: 140px;
-  height: 150px;
-  overflow: hidden;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background: #fafafa;
-  user-select: none;
-  touch-action: none;
-}
-
-
+      position: absolute; /* 絶対配置に変更 */
+      bottom: 70px;
+      right: 200px;
+      width: 140px;
+      height: 150px;
+      overflow: hidden;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fafafa;
+      user-select: none;
+      touch-action: none;
+    }
     .drum-list {
       position: absolute;
       left: 0;
@@ -162,25 +173,25 @@
     }
     /* 自由記述入力ボックス */
     #freeInput {
-  position: absolute;
-  top: 250px;
-  right: 200px;
-  width: 140px;    /* 固定幅 */
-  font-size: 16px;
-  padding: 8px;
-  box-sizing: border-box;
-  display: none;   /* 初期状態は非表示（ドラム式選択中） */
-}
+      position: absolute;
+      top: 100px;
+      right: 50px;
+      width: 300px;    /* 固定幅 */
+      font-size: 16px;
+      padding: 8px;
+      box-sizing: border-box;
+      display: none;   /* 初期状態は非表示（ドラム式選択中） */
+    }
     /* 送信ボタン */
     #sendButton {
-  position: absolute;
-  top: 330px;       /* 例として自由記述入力の下に配置 */
-  right: 200px;     /* 右から10pxの位置 */
-  width: 140px;    /* 固定幅 */
-  font-size: 16px;
-  padding: 8px 12px;
-  cursor: pointer;
-}
+      position: absolute;
+      bottom: 10px;       /* 例として自由記述入力の下に配置 */
+      right: 200px;     /* 右から10pxの位置 */
+      width: 140px;    /* 固定幅 */
+      font-size: 16px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
     /* テンキー＆四則演算ボタン配置 */
     #numpadArea {
       position: absolute;
@@ -273,6 +284,9 @@
   </div>
   <!-- 下部エリア：操作エリア -->
   <div id="bottom-area">
+    <!-- 新規：ページ全体の全画面表示ボタン -->
+    <button id="pageFullscreenButton">ｽｸﾛｰﾙ固定</button>
+    
     <!-- ドラム式入力エリア -->
     <div id="drum-input-area">
       <div id="drum-container">
@@ -677,13 +691,14 @@
     XLSX.writeFile(workbook, "export.xlsx");
   }
   document.getElementById("exportButton").addEventListener("click", exportToExcel);
-  // 全画面表示（キャンバスのみ）
-  document.getElementById("fullscreenButton").addEventListener("click", () => {
-    const drawingArea = document.getElementById("diagram-container");
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
+  // 全画面表示（キャンバスのみ）のボタンは既存のものなので変更なし
+  
+  // 新規：ページ全体の全画面表示ボタンの処理
+  document.getElementById("pageFullscreenButton").addEventListener("click", () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
     } else {
-      drawingArea.requestFullscreen();
+      document.exitFullscreen();
     }
   });
   
