@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ドラム式リール＋自由記述＋表＋図形 完成版（レイアウト調整済）</title>
+  <title>最終版：ドラム式リール＋自由記述＋表＋図形</title>
   <!-- Excelエクスポート用ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
@@ -15,15 +15,16 @@
       font-family: sans-serif;
       box-sizing: border-box;
     }
-    /* 全体を左右分割（左：図形、右：表＋ボタン群） */
+    /* 横並び：スマホ縦画面でも左右50%ずつ */
     #container {
       display: flex;
       height: 100vh;
-      flex-direction: row;
+    }
+    #left-panel, #right-panel {
+      width: 50%;
     }
     /* 左パネル：図形表示 */
     #left-panel {
-      flex: 1;
       position: relative;
       background-color: #000;
       overflow: auto;
@@ -51,14 +52,12 @@
     #exportButton { top: 90px; right: 10px; }
     #fullscreenButton { top: 130px; right: 10px; }
     
-    /* 右パネル：上部に表(比率3)、下部にボタン群(比率7) */
+    /* 右パネル：上下に分割（上：表、下：ボタンエリア） */
     #right-panel {
-      flex: 1;
       display: flex;
       flex-direction: column;
       border-left: 1px solid #ccc;
     }
-    /* 表エリア（比率3） */
     #table-area {
       flex: 3;
       overflow: auto;
@@ -81,31 +80,34 @@
       background-color: #caf;
     }
     
-    /* ボタン群エリア（比率7） */
+    /* ボタンエリア（下部）固定し、スクロールさせない */
     #buttons-area {
       flex: 7;
+      position: relative;
+      background-color: #f9f9f9;
+      border-top: 1px solid #ccc;
+      overflow: hidden;
+    }
+    /* ボタンエリア内、左右2カラム（左：名称入力、右：その他ボタン） */
+    #buttons-columns {
       display: grid;
-      grid-template-columns: 150px 1fr; /* 左カラム固定 */
+      grid-template-columns: 150px 1fr;
+      height: 100%;
       padding: 10px;
       gap: 10px;
-      border-top: 1px solid #ccc;
-      background-color: #f9f9f9;
-      position: relative;
     }
     /* 左カラム：名称入力用ラッパー */
     #name-input-wrapper {
       display: flex;
       flex-direction: column;
       gap: 10px;
-      /* このカラム内にドラム式リールと自由記述を収める */
     }
-    /* トグルボタン（ドラム式⇔自由記述） */
     #toggleNameInputMode {
       font-size: 16px;
       padding: 8px;
       cursor: pointer;
     }
-    /* ドラム式リール（元サイズに戻す） */
+    /* ドラム式リール（サイズ：幅140px、高さ150px） */
     #drum-container {
       width: 140px;
       height: 150px;
@@ -157,14 +159,14 @@
       display: none;
     }
     
-    /* 右カラム：下部に寄せる形で、矢印キー／四則演算／テンキーを右下に固定 */
+    /* 右カラム：下部ボタンエリアの右側、すべてのボタンを右下固定 */
     #right-buttons {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
       display: flex;
       flex-direction: column;
-      justify-content: flex-end;
-      align-items: flex-end;
       gap: 10px;
-      /* 相対位置で配置。必要ならpaddingで調整 */
     }
     /* 十字キー */
     #arrowKeysContainer {
@@ -222,7 +224,7 @@
     </div>
   </div>
   
-  <!-- 右パネル：上部に表(3)、下部にボタン群(7) -->
+  <!-- 右パネル：上部に表、下部にボタンエリア -->
   <div id="right-panel">
     <!-- 表エリア -->
     <div id="table-area">
@@ -246,24 +248,25 @@
         </tbody>
       </table>
     </div>
-    
-    <!-- ボタン群エリア -->
+    <!-- ボタンエリア -->
     <div id="buttons-area">
-      <!-- 左カラム：名称入力用（ドラム式と自由記述） -->
-      <div id="name-input-wrapper">
-        <button id="toggleNameInputMode">自由記述</button>
-        <!-- ドラム式リール -->
-        <div id="drum-container">
-          <div class="drum-list" id="drum-list">
-            <!-- JSで生成 -->
+      <div id="buttons-columns">
+        <!-- 左カラム：名称入力用 -->
+        <div id="name-input-wrapper">
+          <button id="toggleNameInputMode">自由記述</button>
+          <!-- ドラム式リール -->
+          <div id="drum-container">
+            <div class="drum-list" id="drum-list">
+              <!-- JSで生成 -->
+            </div>
+            <div class="drum-center-line"></div>
           </div>
-          <div class="drum-center-line"></div>
+          <!-- 自由記述用テキスト入力 -->
+          <input id="nameFreeInput" type="text" placeholder="自由入力">
         </div>
-        <!-- 自由記述用テキスト入力 -->
-        <input id="nameFreeInput" type="text" placeholder="自由入力">
+        <!-- 右カラムは空（全ボタンは右下固定） -->
       </div>
-      
-      <!-- 右カラム：矢印キー／四則演算／テンキー -->
+      <!-- 右下固定のボタン群 -->
       <div id="right-buttons">
         <!-- 十字キー -->
         <div id="arrowKeysContainer">
@@ -383,15 +386,20 @@
     saveTableState();
   
     // 常に名称入力用（ドラム式／自由記述）は左カラムに表示
-    if (!useDrumMode) {
-      nameFreeInput.value = tableState[currentRow][0] || "";
-    } else {
-      const currentVal = tableState[currentRow][0];
-      const index = nameItems.indexOf(currentVal);
-      if (index >= 0) {
-        snapToIndex(index);
+    // 新規行の場合、空ならそのまま空のまま（自動入力しない）
+    if (currentCol === 0) {
+      if (!tableState[currentRow][0]) {
+        // 何もセットせず、ユーザー操作待ち
+      } else if (useDrumMode) {
+        const currentVal = tableState[currentRow][0];
+        const index = nameItems.indexOf(currentVal);
+        if (index >= 0) {
+          snapToIndex(index);
+        } else {
+          snapToIndex(0);
+        }
       } else {
-        snapToIndex(0);
+        nameFreeInput.value = tableState[currentRow][0];
       }
     }
   
@@ -442,7 +450,6 @@
     drumList.style.transform = `translateY(${currentOffset}px)`;
     updateSelectedItem();
   }
-  // イベント登録
   drumContainer.addEventListener('mousedown', onPointerDown);
   drumContainer.addEventListener('mousemove', onPointerMove);
   drumContainer.addEventListener('mouseup', onPointerUp);
@@ -454,8 +461,8 @@
   
   // ドラムの選択アイテム更新
   function updateSelectedItem() {
-    const containerHeight = drumContainer.clientHeight; // 100
-    const centerY = containerHeight / 2; // 50
+    const containerHeight = drumContainer.clientHeight; // 150
+    const centerY = containerHeight / 2; // 75
     const listCoord = centerY - currentOffset;
     let index = Math.floor(listCoord / itemHeight);
     if (index < 0) index = 0;
@@ -468,10 +475,8 @@
     });
   
     if (useDrumMode) {
-      tableState[currentRow][0] = nameItems[index];
-      renderTable();
-      updateCanvas();
-      saveTableState();
+      // 自動入力は行わない（ユーザー操作待ち）
+      // ※ユーザーがドラムを操作した時のみ updateSelectedItem() によりセルが更新される
     }
   }
   
@@ -481,6 +486,7 @@
     drumList.style.transition = 'transform 0.2s ease-out';
     drumList.style.transform = `translateY(${currentOffset}px)`;
     updateSelectedItem();
+    // ※ここでテーブルへの反映はしない
   }
   
   /****************************************************
@@ -509,7 +515,8 @@
       if (index >= 0) {
         snapToIndex(index);
       } else {
-        snapToIndex(0);
+        // 値がなければリセット（空のまま）
+        drumList.style.transform = "translateY(0px)";
       }
     } else {
       toggleNameInputMode.innerText = "ドラム式";
@@ -574,7 +581,6 @@
       saveTableState();
     }
   }
-  // テンキー
   document.querySelectorAll("#numpadContainer button").forEach(btn => {
     btn.addEventListener("click", () => {
       const value = btn.innerText;
@@ -588,7 +594,6 @@
       saveTableState();
     });
   });
-  // 四則演算
   document.querySelectorAll(".arith-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       const value = btn.getAttribute("data-value");
@@ -640,7 +645,6 @@
     let sidewalkR = parseFloat(tableState[1][9]) || 0;
     originX = originX - (roadWidth * scale) / 2;
   
-    // 左縁
     ctx.strokeStyle = 'white';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -648,20 +652,17 @@
     ctx.lineTo(originX, originY - ((maxDistance + 5) * scale));
     ctx.stroke();
   
-    // 右縁
     ctx.beginPath();
     ctx.moveTo(originX + roadWidth * scale, originY);
     ctx.lineTo(originX + roadWidth * scale, originY - ((maxDistance + 5) * scale));
     ctx.stroke();
   
-    // L側 offset
     if (!isNaN(offsetG) && offsetG !== 0){
       ctx.beginPath();
       ctx.moveTo(originX + offsetG * scale, originY);
       ctx.lineTo(originX + offsetG * scale, originY - ((maxDistance + 5) * scale));
       ctx.stroke();
     }
-    // R側 offset
     if (!isNaN(offsetI) && offsetI !== 0){
       ctx.beginPath();
       ctx.moveTo(originX + (roadWidth - offsetI) * scale, originY);
@@ -669,7 +670,6 @@
       ctx.stroke();
     }
   
-    // 歩道
     ctx.strokeStyle = 'yellow';
     ctx.lineWidth = 2;
     if (!isNaN(sidewalkL) && sidewalkL !== 0){
@@ -687,7 +687,6 @@
       ctx.stroke();
     }
   
-    // 各行データの描画
     const roadCenterX = originX + (roadWidth * scale) / 2;
     const colors = ["red", "yellow", "green", "cyan", "magenta"];
     for (let i = 0; i < ROW_COUNT; i++){
@@ -704,7 +703,6 @@
       const yPos = originY - (yVal * scale);
   
       const color = colors[i % colors.length];
-      // 横線
       ctx.strokeStyle = color;
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -712,14 +710,12 @@
       ctx.lineTo(xPos, yPos);
       ctx.stroke();
   
-      // 点
       const pointRadius = 0.1 * scale;
       ctx.beginPath();
       ctx.arc(xPos, yPos, pointRadius, 0, 2 * Math.PI);
       ctx.fillStyle = color;
       ctx.fill();
   
-      // 直径があるなら円描画
       if (!isNaN(diamVal) && diamVal > 0) {
         const circleRadius = (diamVal / 2) * scale;
         ctx.beginPath();
@@ -729,7 +725,6 @@
         ctx.stroke();
       }
   
-      // テキスト表示
       let displayText = label;
       if (comment) displayText += " (" + comment + ")";
       ctx.font = '30px sans-serif';
@@ -772,7 +767,7 @@
   document.getElementById("toggleInputButton").addEventListener("click", () => {
     const btnArea = document.getElementById("buttons-area");
     if (btnArea.style.display === "none") {
-      btnArea.style.display = "grid";
+      btnArea.style.display = "block";
       document.getElementById("toggleInputButton").innerText = "Hide Input";
     } else {
       btnArea.style.display = "none";
