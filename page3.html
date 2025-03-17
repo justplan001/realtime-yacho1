@@ -71,6 +71,26 @@
       color: white;
       background-color: red;
     }
+    /* ナビゲーションボタン（キャンバス下部中央） */
+    #diagramNav {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #diagramNav button {
+      font-size: 16px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    #diagramIndicator {
+      color: white;
+      font-size: 16px;
+    }
     /* 下半分：文字入力ボタン群エリア */
     #bottom {
       flex: 0 0 20vh; /* 20%の高さ */
@@ -152,9 +172,15 @@
       </div>
       <!-- 右側：描写部 -->
       <div id="right-side">
-        <!-- Reset ボタンを図の右上に配置 -->
+        <!-- Reset ボタン -->
         <button id="resetButton">Reset</button>
         <canvas id="drawingCanvas"></canvas>
+        <!-- 描写グループ切替用のナビゲーションボタン -->
+        <div id="diagramNav">
+          <button id="prevDiagram">←</button>
+          <span id="diagramIndicator">Diagram 1</span>
+          <button id="nextDiagram">→</button>
+        </div>
       </div>
     </div>
     <!-- 下半分：文字入力ボタン群エリア -->
@@ -176,7 +202,7 @@
         <div style="flex-basis: 3.5%; height: 0;"></div>
         <button onclick="insertTextIntoCell('E')">E</button>
         <button onclick="insertTextIntoCell('T')">T</button>
-        <button onclick="insertTextIntoCell('T')">G</button>
+        <button onclick="insertTextIntoCell('G')">G</button>
         <div style="flex-basis: 3.5%; height: 0;"></div>
         <button onclick="insertTextIntoCell('電柱')">電柱</button>
         <button onclick="insertTextIntoCell('標')">標</button>
@@ -186,7 +212,7 @@
         <button onclick="insertTextIntoCell('車止')">車止</button>
         <button onclick="insertTextIntoCell('支線')">支線</button>
         <div style="flex-basis: 1%; height: 0;"></div>
-        <!-- 改行の代わりに空要素を挿入 -->
+        <!-- 改行の代わり -->
         <div style="flex-basis: 100%; height: 0;"></div>
         <button onclick="insertTextIntoCell('左境')">左境</button>
         <button onclick="insertTextIntoCell('左枡')">左枡</button>
@@ -194,16 +220,16 @@
         <button onclick="insertTextIntoCell('市')">市</button>
         <button onclick="insertTextIntoCell('民')">民</button>
         <button onclick="insertTextIntoCell('都市再生鋲')">都市再生鋲</button>
-        <button onclick="insertTextIntoCell('都市再生鋲')">基準点</button>
+        <button onclick="insertTextIntoCell('基準点')">基準点</button>
         <button onclick="insertTextIntoCell('右桝900700')">右桝900700</button>
-        <button onclick="insertTextIntoCell('右桝900700')">←例です。コードいじれば寸法で作れます</button>
+        <button onclick="insertTextIntoCell('←例です。コードいじれば寸法で作れます')">←例です。コードいじれば寸法で作れます</button>
         <button onclick="insertTextIntoCell('メジ')">メジ</button>
         <button onclick="insertTextIntoCell('桝')">桝</button>
         <div style="flex-basis: 1.5%; height: 0;"></div>
         <button onclick="insertTextIntoCell('右桝')">右桝</button>
         <button onclick="insertTextIntoCell('右境')">右境</button>
       </div>
-      <!-- 下部右下の操作ボタン群（Export, Full） -->
+      <!-- 下部右下の操作ボタン群 -->
       <div id="colored-buttons">
         <button id="exportButton" class="colored-button">Export</button>
         <button id="fullscreenButton" class="colored-button">Full</button>
@@ -212,8 +238,10 @@
   </div>
   
   <script>
-    // グローバル変数：最後にフォーカスしたセル
+    // グローバル変数
     let lastFocusedCell = null;
+    // 現在表示中の描写グループ（図形）のインデックス
+    let currentDiagramIndex = 0;
     
     // セルがフォーカスされたときに全選択する
     function selectCellContent() {
@@ -225,7 +253,7 @@
       sel.addRange(range);
     }
     
-    // キーボード（矢印キー・Enter）によるセル移動
+    // キーボード操作によるセル移動
     function navigationHandler(event) {
       let currentRow = parseInt(this.dataset.row);
       let currentCol = parseInt(this.dataset.col);
@@ -252,7 +280,7 @@
       }
     }
     
-    // 表の生成（10列：名称, 距離, X座標, 直径, コメント, 歩道(L), L側溝, 幅員, R側溝, 歩道(R)）
+    // テーブル生成（100行×10列）
     const tbody = document.getElementById('table-body');
     function generateTable() {
       tbody.innerHTML = "";
@@ -264,6 +292,7 @@
           cell.tabIndex = 0;
           cell.dataset.row = i;
           cell.dataset.col = col;
+          // サンプルとして一部セルに初期値
           if (i === 1 && col === 6) { cell.innerText = "0.5"; }
           if (i === 1 && col === 7) { cell.innerText = "5"; }
           if (i === 1 && col === 8) { cell.innerText = "0.5"; }
@@ -309,7 +338,7 @@
       }
     }
     
-    // 描写部（キャンバス）の更新
+    // 描写部（キャンバス）の更新（描写グループに対応）
     function updateCanvas() {
       const canvas = document.getElementById('drawingCanvas');
       const ctx = canvas.getContext('2d');
@@ -317,8 +346,40 @@
       const desiredZoom = 20;
       const scale = desiredZoom;
       const table = document.getElementById('excelTable');
-      const rows = table.tBodies[0].rows;
+      const allRows = table.tBodies[0].rows;
       
+      // グループ分割：名称セルに"***"があればそこで区切る
+      let segments = [];
+      let currentSegment = [];
+      for (let i = 0; i < allRows.length; i++) {
+        let label = allRows[i].cells[0].innerText.trim();
+        if (label === "***") {
+          if (currentSegment.length > 0) {
+            segments.push(currentSegment);
+          }
+          currentSegment = [];
+        } else {
+          currentSegment.push(allRows[i]);
+        }
+      }
+      if (currentSegment.length > 0) {
+        segments.push(currentSegment);
+      }
+      if (segments.length === 0) {
+        segments.push([]);
+      }
+      
+      // 現在の図形インデックスの範囲補正
+      if (currentDiagramIndex >= segments.length) {
+        currentDiagramIndex = segments.length - 1;
+      }
+      if (currentDiagramIndex < 0) {
+        currentDiagramIndex = 0;
+      }
+      
+      let rows = segments[currentDiagramIndex];
+      
+      // 各グループ内の最大距離を取得
       let maxDistance = 0;
       for (let i = 0; i < rows.length; i++) {
         let d = parseFloat(rows[i].cells[1].innerText);
@@ -334,23 +395,31 @@
       ctx.fillStyle = 'black';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      let originX = canvas.width / 2;
-      const originY = canvas.height - 50;
+      // パラメータ行を、各図形ごとに (currentDiagramIndex + 1) 行目に設定する
+      let paramRowIndex = currentDiagramIndex + 1;
+      if (rows.length <= paramRowIndex) {
+        paramRowIndex = 0;
+      }
+      let paramRow = rows[paramRowIndex];
       
-      const roadWidth = parseFloat(rows[1].cells[7].innerText) || 0;
-      let cellG = rows[1].cells[6].innerText.trim();
-      let cellI = rows[1].cells[8].innerText.trim();
+      let roadWidth = parseFloat(paramRow ? paramRow.cells[7].innerText : 0) || 0;
+      let cellG = paramRow ? paramRow.cells[6].innerText.trim() : "";
+      let cellI = paramRow ? paramRow.cells[8].innerText.trim() : "";
       const offsetG = cellG === "" ? null : parseFloat(cellG);
       const offsetI = cellI === "" ? null : parseFloat(cellI);
       
+      let originX = canvas.width / 2;
+      const originY = canvas.height - 50;
       originX = originX - (roadWidth * scale) / 2;
       
+      // 道路境界の描写
       ctx.strokeStyle = 'white';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(originX, originY);
       ctx.lineTo(originX, originY - ((maxDistance+5) * scale));
       ctx.stroke();
+      
       ctx.beginPath();
       ctx.moveTo(originX + roadWidth * scale, originY);
       ctx.lineTo(originX + roadWidth * scale, originY - ((maxDistance+5) * scale));
@@ -369,8 +438,8 @@
         ctx.stroke();
       }
       
-      let cellSideL = rows[1].cells[5].innerText.trim();
-      let cellSideR = rows[1].cells[9].innerText.trim();
+      let cellSideL = paramRow ? paramRow.cells[5].innerText.trim() : "";
+      let cellSideR = paramRow ? paramRow.cells[9].innerText.trim() : "";
       const sidewalkL = cellSideL === "" ? null : parseFloat(cellSideL);
       const sidewalkR = cellSideR === "" ? null : parseFloat(cellSideR);
       if (sidewalkL !== null && !isNaN(sidewalkL)) {
@@ -395,6 +464,7 @@
       const roadCenterX = originX + (roadWidth * scale) / 2;
       const colors = ["red", "yellow", "green", "cyan", "magenta"];
       
+      // グループ内の各行を描写
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         const label = row.cells[0].innerText.trim();
@@ -448,13 +518,36 @@
         }
       }
       container.scrollTop = container.scrollHeight;
+      updateDiagramNavigation(segments.length);
     }
     
+    // ナビゲーションボタンの状態更新
+    function updateDiagramNavigation(totalDiagrams) {
+      const indicator = document.getElementById("diagramIndicator");
+      indicator.innerText = `Diagram ${currentDiagramIndex + 1} of ${totalDiagrams}`;
+      document.getElementById("prevDiagram").disabled = currentDiagramIndex <= 0;
+      document.getElementById("nextDiagram").disabled = currentDiagramIndex >= totalDiagrams - 1;
+    }
+    
+    // ナビゲーションボタンのクリックイベント
+    document.getElementById("prevDiagram").addEventListener("click", () => {
+      if (currentDiagramIndex > 0) {
+        currentDiagramIndex--;
+        updateCanvas();
+      }
+    });
+    document.getElementById("nextDiagram").addEventListener("click", () => {
+      currentDiagramIndex++;
+      updateCanvas();
+    });
+    
+    // Excelエクスポート
     function exportToExcel() {
       let wb = XLSX.utils.table_to_book(document.getElementById('excelTable'), {sheet:"Sheet1"});
       XLSX.writeFile(wb, "export.xlsx");
     }
     
+    // テーブルリセット
     function resetTable() {
       if (confirm("本当にリセットしますか？")) {
         localStorage.removeItem("tableState");
@@ -463,6 +556,7 @@
       }
     }
     
+    // 現在フォーカス中のセルを取得
     function getFocusedCell() {
       let active = document.activeElement;
       if (active && active.tagName === "TD") return active;
@@ -475,20 +569,11 @@
       return null;
     }
     
+    // 指定テキストをセルに追加
     function insertTextIntoCell(text) {
       const cell = getFocusedCell();
       if (cell) {
         cell.innerText += text;
-        cell.focus();
-        updateCanvas();
-        saveTableState();
-      }
-    }
-    
-    function backspaceInCell() {
-      const cell = getFocusedCell();
-      if (cell) {
-        cell.innerText = cell.innerText.slice(0, -1);
         cell.focus();
         updateCanvas();
         saveTableState();
