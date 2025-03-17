@@ -2,8 +2,9 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <!-- viewport の設定 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <!-- iOS Webアプリ設定 -->
+  <!-- iOS用設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="縦画面やちょー">
@@ -13,7 +14,7 @@
   <!-- Excelエクスポート用ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    /* html, body を画面全体に固定＆スクロールを防止 */
+    /* html,body を画面全体に固定＆スクロールさせない */
     html, body {
       margin: 0;
       padding: 0;
@@ -23,138 +24,141 @@
       font-family: sans-serif;
       box-sizing: border-box;
     }
-    /* コンテナ：左右に分割（左:右＝3:7） */
+    /* コンテナは横方向に2カラム（左：図、右：表＋操作） */
     #container {
       display: flex;
       width: 100vw;
       height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
     }
-    /* 左側：図形表示エリア（比率3） */
+    /* 左側：図表示エリア。幅は40%（min-width:200px） */
     #left-area {
-      flex: 3;
-      position: relative;
+      flex: 0 0 auto;
+      width: 40%;
+      min-width: 200px;
       background-color: #000;
+      position: relative;
       overflow: hidden;
     }
     #left-area canvas {
       display: block;
       width: 100%;
-      height: auto;
+      height: 100%;
     }
-    /* 左側内の操作ボタン */
+    /* 左側内の操作ボタン（図エリア内） */
     #resetButton {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 1000;
-      font-size: 14px;
-      padding: 8px 12px;
+      top: 5px;
+      left: 5px;
+      font-size: 12px;
+      padding: 5px 8px;
       cursor: pointer;
       background-color: #eee;
       border: 1px solid #ccc;
-      border-radius: 4px;
+      border-radius: 3px;
+      z-index: 1000;
     }
     #diagram-buttons-bottom {
       position: absolute;
-      bottom: 10px;
-      left: 10px;
+      bottom: 5px;
+      left: 5px;
       z-index: 1000;
     }
     #diagram-buttons-bottom button {
-      font-size: 14px;
-      padding: 8px 12px;
+      font-size: 12px;
+      padding: 5px 8px;
       cursor: pointer;
       background-color: #eee;
       border: 1px solid #ccc;
-      border-radius: 4px;
-      margin-right: 5px;
+      border-radius: 3px;
+      margin-right: 3px;
     }
-    /* 右側：上下分割エリア（比率7） */
+    /* 右側：その他エリア。比率は指定せず、残り幅を自動確保 */
     #right-area {
-      flex: 7;
+      flex: 1;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
+      background-color: #f8f8f8;
     }
-    /* 右上：表エリア（高さは全体の20%程度） */
+    /* 表エリア：固定高さ（60px）＆横スクロール対応 */
     #table-container {
-      flex: 0 0 20%;
+      height: 60px;
       padding: 5px;
-      overflow: auto;
       border-bottom: 1px solid #ccc;
+      overflow-x: auto;
+      overflow-y: hidden;
     }
     #table-container table {
       border-collapse: collapse;
-      width: 100%;
+      min-width: 600px; /* 表の横幅は必要に応じて固定 */
     }
     #table-container th,
     #table-container td {
       border: 1px solid #ccc;
-      padding: 5px;
+      padding: 3px 5px;
       text-align: center;
-      min-width: 50px;
-      min-height: 24px;
+      white-space: nowrap;
+      font-size: 12px;
       user-select: none;
-    }
-    td {
-      cursor: pointer;
-      outline: none;
     }
     .selected {
       background-color: #caf;
     }
-    /* 右下：その他操作エリア */
+    /* 操作エリア：表以降の領域は全てボタン領域として固定 */
     #controls-container {
-      flex: 1;
-      padding: 10px;
+      height: calc(100% - 60px);
+      padding: 5px;
       overflow: hidden;
     }
     /* 入力行：全画面表示ボタン＋文字入力 */
     #input-row {
       display: flex;
-      gap: 10px;
-      margin-bottom: 10px;
+      gap: 5px;
+      margin-bottom: 5px;
     }
     #input-row button {
-      padding: 8px 12px;
-      font-size: 16px;
+      padding: 5px 8px;
+      font-size: 12px;
       cursor: pointer;
     }
     #input-row input[type="text"] {
       flex: 1;
-      padding: 8px;
-      font-size: 16px;
+      padding: 5px;
+      font-size: 12px;
     }
-    /* 入力ボタン群と制御ボタン群を左右に分ける */
+    /* 入力ボタン群と制御ボタン群を横に並べる */
     #input-buttons-wrapper {
       display: flex;
-      gap: 10px;
-      height: calc(100% - 60px); /* 入力行分を除く */
+      gap: 5px;
+      height: calc(100% - 30px);
     }
-    /* 文字入力ボタン群（左側）：10行×4列のグリッド */
+    /* 文字入力ボタン群は小さめ（10行×4列のグリッド） */
     #text-buttons {
       flex: 1;
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       grid-template-rows: repeat(10, 1fr);
-      gap: 5px;
-      overflow: auto;
+      gap: 3px;
+      overflow: hidden;
     }
     #text-buttons button {
-      padding: 8px;
-      font-size: 16px;
+      padding: 3px;
+      font-size: 10px;
       cursor: pointer;
       background-color: #eee;
       border: 1px solid #ccc;
-      border-radius: 4px;
+      border-radius: 3px;
     }
-    /* 制御ボタン群（右側）：十字キーとテンキーを縦方向に配置、右端寄せ */
+    /* 制御ボタン群（十字キーとテンキー）は従来のサイズを維持 */
     #control-buttons {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 5px;
       justify-content: flex-start;
     }
-    /* 十字キー */
     #arrowKeysContainer {
       display: flex;
       justify-content: center;
@@ -165,19 +169,18 @@
         ". up ."
         "left center right"
         ". down .";
-      gap: 5px;
+      gap: 3px;
     }
     #arrow-keys button {
       width: 40px;
       height: 40px;
-      font-size: 18px;
+      font-size: 12px;
       cursor: pointer;
     }
     #arrow-up    { grid-area: up; }
     #arrow-left  { grid-area: left; }
     #arrow-right { grid-area: right; }
     #arrow-down  { grid-area: down; }
-    /* テンキー */
     #numpadContainer {
       display: flex;
       justify-content: center;
@@ -185,30 +188,28 @@
     #numpad {
       display: grid;
       grid-template-columns: repeat(3, 50px);
-      gap: 5px;
+      gap: 3px;
     }
     #numpad button {
       width: 50px;
       height: 50px;
-      font-size: 16px;
+      font-size: 12px;
       cursor: pointer;
     }
   </style>
 </head>
 <body>
 <div id="container">
-  <!-- 左側エリア：図形表示 -->
+  <!-- 左側：図表示エリア -->
   <div id="left-area">
     <canvas id="drawingCanvas"></canvas>
-    <!-- 左上：リセットボタン -->
     <button id="resetButton">Reset</button>
-    <!-- 左下：Export & Full ボタン -->
     <div id="diagram-buttons-bottom">
       <button id="exportButton">Export</button>
       <button id="fullscreenButton">Full</button>
     </div>
   </div>
-  <!-- 右側エリア：上部に表、下部にその他操作 -->
+  <!-- 右側：表とその他操作 -->
   <div id="right-area">
     <div id="table-container">
       <table id="excelTable">
@@ -232,14 +233,11 @@
       </table>
     </div>
     <div id="controls-container">
-      <!-- 入力行 -->
       <div id="input-row">
         <button id="fullscreenPageButton">全画面表示</button>
         <input type="text" id="text-input" placeholder="セルの文字を入力">
       </div>
-      <!-- 入力ボタン群と制御ボタン群を左右に配置 -->
       <div id="input-buttons-wrapper">
-        <!-- 文字入力ボタン群：10行×4列 -->
         <div id="text-buttons">
           <button class="insertable-button">左境</button>
           <button class="insertable-button">左枡</button>
@@ -274,7 +272,6 @@
           <button class="insertable-button">+</button>
           <button class="insertable-button">-</button>
         </div>
-        <!-- 制御ボタン群：十字キーとテンキー -->
         <div id="control-buttons">
           <div id="arrowKeysContainer">
             <div id="arrow-keys">
@@ -301,7 +298,7 @@
             </div>
           </div>
         </div>
-      </div> <!-- #input-buttons-wrapper end -->
+      </div> <!-- end of #input-buttons-wrapper -->
     </div>
   </div>
 </div>
@@ -315,15 +312,14 @@
   const tbody = document.getElementById('table-body');
   const textInput = document.getElementById('text-input');
 
-  // テーブル初期状態生成
   function generateTable() {
     tableState = [];
     for (let i = 0; i < ROW_COUNT; i++) {
-      let rowData = [];
+      let row = [];
       for (let j = 0; j < COL_COUNT; j++) {
-        rowData.push("");
+        row.push("");
       }
-      tableState.push(rowData);
+      tableState.push(row);
     }
     // サンプル初期値（2行目）
     tableState[1][6] = "0.5";
@@ -331,16 +327,15 @@
     tableState[1][8] = "0.5";
   }
 
-  // テーブル描画
   function renderTable() {
     tbody.innerHTML = "";
     for (let i = 0; i < ROW_COUNT; i++) {
-      const tr = document.createElement('tr');
+      let tr = document.createElement('tr');
       for (let j = 0; j < COL_COUNT; j++) {
-        const td = document.createElement('td');
+        let td = document.createElement('td');
         td.dataset.row = i;
         td.dataset.col = j;
-        td.setAttribute("tabindex", "0");
+        td.tabIndex = 0;
         td.innerText = tableState[i][j];
         if (i === currentRow && j === currentCol) {
           td.classList.add("selected");
@@ -353,7 +348,6 @@
     }
   }
 
-  // セル選択時の処理
   function setSelectedCell(r, c) {
     currentRow = r;
     currentCol = c;
@@ -366,7 +360,6 @@
     if (cell) cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
   }
 
-  // テキスト入力ボックス変更時の処理
   function handleTextInputChange() {
     tableState[currentRow][currentCol] = textInput.value;
     renderTable();
@@ -375,7 +368,6 @@
   }
   textInput.addEventListener("input", handleTextInputChange);
 
-  // セル間移動（矢印キー、Enter）
   function navigationHandler(event) {
     let targetRow = currentRow;
     let targetCol = currentCol;
@@ -402,13 +394,11 @@
     if (targetCell) targetCell.focus();
   }
 
-  // 文字列を入力ボックスに追加して更新
   function insertStringIntoInput(str) {
     textInput.value += str;
     handleTextInputChange();
   }
 
-  // 保存／復元
   function saveTableState() {
     localStorage.setItem("tableState", JSON.stringify(tableState));
   }
@@ -422,20 +412,17 @@
     }
   }
 
-  // キャンバス描画ロジック
   function updateCanvas() {
     const canvas = document.getElementById('drawingCanvas');
     const ctx = canvas.getContext('2d');
     const container = document.getElementById('left-area');
-    // スケールを下げて拡大感を抑える
     const scale = 10;
     let maxDistance = 0;
-    for (let i = 0; i < ROW_COUNT; i++){
+    for (let i = 0; i < ROW_COUNT; i++) {
       let d = parseFloat(tableState[i][1]);
       if (!isNaN(d) && d > maxDistance) maxDistance = d;
     }
     if (maxDistance === 0) maxDistance = 100;
-    // container のサイズに合わせ canvas のサイズを設定
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
     ctx.fillStyle = 'black';
@@ -458,13 +445,13 @@
     ctx.moveTo(originX + roadWidth * scale, originY);
     ctx.lineTo(originX + roadWidth * scale, originY - ((maxDistance + 5) * scale));
     ctx.stroke();
-    if (!isNaN(offsetG) && offsetG !== 0){
+    if (!isNaN(offsetG) && offsetG !== 0) {
       ctx.beginPath();
       ctx.moveTo(originX + offsetG * scale, originY);
       ctx.lineTo(originX + offsetG * scale, originY - ((maxDistance + 5) * scale));
       ctx.stroke();
     }
-    if (!isNaN(offsetI) && offsetI !== 0){
+    if (!isNaN(offsetI) && offsetI !== 0) {
       ctx.beginPath();
       ctx.moveTo(originX + (roadWidth - offsetI) * scale, originY);
       ctx.lineTo(originX + (roadWidth - offsetI) * scale, originY - ((maxDistance + 5) * scale));
@@ -472,14 +459,14 @@
     }
     ctx.strokeStyle = 'yellow';
     ctx.lineWidth = 2;
-    if (!isNaN(sidewalkL) && sidewalkL !== 0){
+    if (!isNaN(sidewalkL) && sidewalkL !== 0) {
       let sidewalkLX = originX - sidewalkL * scale;
       ctx.beginPath();
       ctx.moveTo(sidewalkLX, originY);
       ctx.lineTo(sidewalkLX, originY - ((maxDistance + 5) * scale));
       ctx.stroke();
     }
-    if (!isNaN(sidewalkR) && sidewalkR !== 0){
+    if (!isNaN(sidewalkR) && sidewalkR !== 0) {
       let sidewalkRX = originX + (roadWidth + sidewalkR) * scale;
       ctx.beginPath();
       ctx.moveTo(sidewalkRX, originY);
@@ -488,7 +475,7 @@
     }
     const roadCenterX = originX + (roadWidth * scale) / 2;
     const colors = ["red", "yellow", "green", "cyan", "magenta"];
-    for (let i = 0; i < ROW_COUNT; i++){
+    for (let i = 0; i < ROW_COUNT; i++) {
       const label = tableState[i][0].trim();
       const yVal = parseFloat(tableState[i][1]);
       let xStr = tableState[i][2].trim();
@@ -530,21 +517,16 @@
     }
   }
 
-  // 各種イベント設定
   document.querySelectorAll(".insertable-button").forEach(btn => {
     btn.addEventListener("click", () => {
       insertStringIntoInput(btn.innerText);
     });
   });
 
-  document.getElementById("arrow-up")
-      .addEventListener("click", () => moveFocus(-1, 0));
-  document.getElementById("arrow-down")
-      .addEventListener("click", () => moveFocus(1, 0));
-  document.getElementById("arrow-left")
-      .addEventListener("click", () => moveFocus(0, -1));
-  document.getElementById("arrow-right")
-      .addEventListener("click", () => moveFocus(0, 1));
+  document.getElementById("arrow-up").addEventListener("click", () => moveFocus(-1, 0));
+  document.getElementById("arrow-down").addEventListener("click", () => moveFocus(1, 0));
+  document.getElementById("arrow-left").addEventListener("click", () => moveFocus(0, -1));
+  document.getElementById("arrow-right").addEventListener("click", () => moveFocus(0, 1));
 
   function moveFocus(dRow, dCol) {
     let newRow = currentRow + dRow;
@@ -568,19 +550,17 @@
     });
   });
 
-  // リセットボタンの処理
   function resetTable() {
-    if(confirm("本当にリセットしますか？")){
+    if (confirm("本当にリセットしますか？")) {
       localStorage.removeItem("tableState");
       generateTable();
       renderTable();
       updateCanvas();
-      setSelectedCell(0,0);
+      setSelectedCell(0, 0);
     }
   }
   document.getElementById("resetButton").addEventListener("click", resetTable);
 
-  // export ボタンの処理：HTMLテーブルをExcelファイル（xlsx）にエクスポート
   function exportToExcel() {
     const table = document.getElementById('excelTable');
     const workbook = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
@@ -588,7 +568,6 @@
   }
   document.getElementById("exportButton").addEventListener("click", exportToExcel);
 
-  // ページ全体の全画面表示
   document.getElementById("fullscreenPageButton").addEventListener("click", () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(err => {
@@ -599,7 +578,6 @@
     }
   });
 
-  // 図のフルスクリーン表示（キャンバスのみ）
   document.getElementById("fullscreenButton").addEventListener("click", () => {
     const drawingArea = document.getElementById("left-area");
     if (document.fullscreenElement) {
