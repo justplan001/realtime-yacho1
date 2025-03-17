@@ -119,6 +119,17 @@
       border-radius: 4px;
       z-index: 1000;
     }
+    /* 自由記述入力ボックスを全画面表示ボタンの右に常時表示 */
+    #freeInput {
+      position: absolute;
+      top: 10px;
+      left: 150px; /* 全画面表示ボタンの右側に配置 */
+      width: 300px;
+      font-size: 16px;
+      padding: 8px;
+      box-sizing: border-box;
+      display: block;
+    }
     /* 新規：挿入可能なボタン群（下部エリア内、上から50pxに配置） */
     #insertable-buttons {
       position: absolute;
@@ -137,7 +148,7 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-    /* ドラム式入力エリア */
+    /* ドラム式入力エリア（自由記述項目は削除） */
     #drum-input-area {
       display: flex;
       flex-direction: column;
@@ -188,17 +199,6 @@
       color: #007bff;
       font-weight: bold;
       background-color: #eef;
-    }
-    /* 自由記述入力ボックス */
-    #freeInput {
-      position: absolute;
-      top: 100px;
-      right: 50px;
-      width: 300px;
-      font-size: 16px;
-      padding: 8px;
-      box-sizing: border-box;
-      display: none;
     }
     /* 送信ボタン */
     #sendButton {
@@ -304,6 +304,8 @@
   <div id="bottom-area">
     <!-- ページ全体の全画面表示ボタン -->
     <button id="pageFullscreenButton">全画面表示</button>
+    <!-- 自由記述入力ボックス（常時表示） -->
+    <input id="freeInput" type="text" placeholder="自由記述入力">
     
     <!-- 新規：挿入可能なボタン群（A列へ書き込む） -->
     <div id="insertable-buttons">
@@ -332,7 +334,7 @@
       
     </div>
     
-    <!-- ドラム式入力エリア -->
+    <!-- ドラム式入力エリア（自由記述項目は削除） -->
     <div id="drum-input-area">
       <div id="drum-container">
         <div class="drum-list" id="drumList">
@@ -340,7 +342,6 @@
         </div>
         <div class="drum-center-line"></div>
       </div>
-      <input id="freeInput" type="text" placeholder="自由記述入力">
       <button id="sendButton">送信</button>
     </div>
     
@@ -387,6 +388,7 @@
   const COL_COUNT = 10;
   let currentRow = 0, currentCol = 0;
   const tbody = document.getElementById('table-body');
+  const freeInput = document.getElementById('freeInput');
 
   function generateTable() {
     tableState = [];
@@ -423,12 +425,14 @@
     }
   }
 
+  // 任意のセル選択時、自由記述入力ボックスにそのセルの内容を反映（全セル対応）
   function setSelectedCell(r, c) {
     currentRow = r;
     currentCol = c;
     renderTable();
     updateCanvas();
     saveTableState();
+    freeInput.value = tableState[currentRow][currentCol];
     const container = document.getElementById('table-container');
     const cell = container.querySelector(`td[data-row="${currentRow}"][data-col="${currentCol}"]`);
     if (cell) cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
@@ -474,18 +478,27 @@
     }
   }
 
-  // セル内容更新（上書き）
+  // セル内容更新（上書き） ※更新後、自由記述入力欄も最新値に更新
   function updateCellText(newText) {
     tableState[currentRow][currentCol] = newText;
     renderTable();
     updateCanvas();
     saveTableState();
+    freeInput.value = newText;
   }
 
   // セル内容に追加（末尾に）
   function appendCellText(str) {
     updateCellText(tableState[currentRow][currentCol] + str);
   }
+
+  // 自由記述入力欄の入力イベントで自動更新（全セル対応）
+  freeInput.addEventListener('input', () => {
+    tableState[currentRow][currentCol] = freeInput.value;
+    renderTable();
+    updateCanvas();
+    saveTableState();
+  });
 
   //////////// キャンバス描画処理 ////////////
   function updateCanvas() {
@@ -595,22 +608,19 @@
   }
 
   //////////// ドラム式入力処理 ////////////
+  // 「自由記述」項目は削除
   const drumItems = [
     "左境", "左枡", "車止", "支線", "標", "電柱", "右桝", "右境",
-"下", "D", "S", "SS", "消", "F", "SV", "W",
-"E", "T", "メジ", "杭", "都", "他", "市", "民",
-"終", "GR", "植樹", "ﾐﾗｰ", "角", "基準点", "G", "空",
-    "自由記述"
+    "下", "D", "S", "SS", "消", "F", "SV", "W",
+    "E", "T", "メジ", "杭", "都", "他", "市", "民",
+    "終", "GR", "植樹", "ﾐﾗｰ", "角", "基準点", "G", "空"
   ];
   const drumContainer = document.getElementById('drum-container');
   const drumList = document.getElementById('drumList');
-  const freeInput = document.getElementById('freeInput');
-  const sendButton = document.getElementById('sendButton');
   const itemHeight = 30;
   let currentOffset = 0;
   let isDragging = false, startY = 0, startOffset = 0;
   let currentIndex = 0; // 現在選択中の項目インデックス
-  let inFreeInputMode = false; // 自由記述モードか
 
   function createDrumItems() {
     drumList.innerHTML = '';
@@ -677,30 +687,11 @@
     });
   });
 
-  // ドラム式入力の送信ボタン処理（A列に書き込み）
-  sendButton.addEventListener('click', () => {
-    if (inFreeInputMode) {
-      const freeText = freeInput.value.trim();
-      // A列に切り替えてから更新
-      setSelectedCell(currentRow, 0);
-      updateCellText(freeText);
-      freeInput.style.display = 'none';
-      drumContainer.style.display = 'block';
-      inFreeInputMode = false;
-    } else {
-      const selectedValue = drumItems[currentIndex];
-      if (selectedValue === "自由記述") {
-        // 自由記述モードに切替え時、A列の現在値を引き継ぐ
-        freeInput.value = tableState[currentRow][0];
-        drumContainer.style.display = 'none';
-        freeInput.style.display = 'block';
-        freeInput.focus();
-        inFreeInputMode = true;
-      } else {
-        setSelectedCell(currentRow, 0);
-        updateCellText(selectedValue);
-      }
-    }
+  // ドラム式入力の送信ボタン処理（A列に書き込む）
+  document.getElementById("sendButton").addEventListener("click", () => {
+    const selectedValue = drumItems[currentIndex];
+    setSelectedCell(currentRow, 0);
+    updateCellText(selectedValue);
   });
 
   // テンキー＆四則演算ボタン処理
@@ -780,6 +771,3 @@
 </script>
 </body>
 </html>
-
-自由記述のボックスは全画面表示ボタンの右に常に表示しておいて、そこで今のセルに入力されてる文字を編集できるようにしておいて
-それに伴い、ドラム式から自由記述って選択肢はなくして、それに伴う処理も
