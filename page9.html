@@ -340,7 +340,7 @@
       <button class="insertable-button">G</button>
       <button class="insertable-button">空</button>
       <button class="insertable-button">***</button>
-<a></a><a></a><a></a><a></a>
+      <a></a><a></a><a></a><a></a>
       <button class="insertable-button">左境</button>
       <button class="insertable-button">左枡</button>
       <button class="insertable-button">右桝</button>
@@ -819,6 +819,18 @@
   document.getElementById("pageFullscreenButton").addEventListener("click", () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  });
+  
+  // Full ボタンの処理（図エリア全体を全画面表示）
+  document.getElementById("fullscreenButton").addEventListener("click", () => {
+    const container = document.getElementById("diagram-container");
+    if (!document.fullscreenElement) {
+      container.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
     } else {
       document.exitFullscreen();
     }
