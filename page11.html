@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>コンフィグ設定</title>
+  <title>コンフィグ設定 (ファイル入出力対応)</title>
   <style>
     body, html {
       margin: 0;
@@ -52,11 +52,15 @@
       resize: vertical;
     }
     /* ボタン類 */
-    #saveConfig, #resetDefaults {
+    #saveConfig, #resetDefaults, #exportConfig, #importConfig {
       padding: 10px 20px;
       font-size: 16px;
       cursor: pointer;
       margin-right: 10px;
+    }
+    /* 隠しファイル入力 */
+    #fileInput {
+      display: none;
     }
   </style>
 </head>
@@ -76,9 +80,13 @@
         <textarea id="drumTextArea" placeholder="1行に1つの選択肢&#10;例:&#10;左境&#10;左枡&#10;車止&#10;支線&#10;..."></textarea>
       </div>
     </div>
-    <!-- 保存と初期設定に戻すボタン -->
+    <!-- 保存、初期設定、エクスポート、インポートのボタン -->
     <button id="saveConfig">保存</button>
     <button id="resetDefaults">初期設定に戻す</button>
+    <button id="exportConfig">エクスポート (keyconfig.txt)</button>
+    <button id="importConfig">インポート (keyconfig.txt)</button>
+    <!-- 隠しファイル入力 -->
+    <input type="file" id="fileInput" accept=".txt">
   </div>
 
   <script>
@@ -168,6 +176,58 @@
     document.getElementById("saveConfig").addEventListener("click", () => {
       saveAllConfig();
       alert("設定を保存しました！");
+    });
+
+    // エクスポート処理：現在の設定を JSON 文字列にして「keyconfig.txt」でダウンロード
+    document.getElementById("exportConfig").addEventListener("click", () => {
+      const buttonConfig = localStorage.getItem(BUTTON_CONFIG_KEY) || JSON.stringify(defaultButtonLabels);
+      const drumConfig = localStorage.getItem(DRUM_CONFIG_KEY) || JSON.stringify(defaultDrumLabels);
+      const exportData = {
+        buttonConfig: JSON.parse(buttonConfig),
+        drumConfig: JSON.parse(drumConfig)
+      };
+      const exportJson = JSON.stringify(exportData, null, 2);
+      // Blob を生成してダウンロードリンクをクリック
+      const blob = new Blob([exportJson], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "keyconfig.txt";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // インポート処理：隠しファイル入力からファイルを読み込み、設定を反映
+    document.getElementById("importConfig").addEventListener("click", () => {
+      document.getElementById("fileInput").click();
+    });
+
+    document.getElementById("fileInput").addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const importData = JSON.parse(e.target.result);
+          if (importData.buttonConfig && Array.isArray(importData.buttonConfig) &&
+              importData.drumConfig && Array.isArray(importData.drumConfig)) {
+            localStorage.setItem(BUTTON_CONFIG_KEY, JSON.stringify(importData.buttonConfig));
+            localStorage.setItem(DRUM_CONFIG_KEY, JSON.stringify(importData.drumConfig));
+            populateButtonInputs();
+            populateDrumInput();
+            alert("設定をインポートしました。");
+          } else {
+            alert("ファイルの形式が正しくありません。");
+          }
+        } catch (e) {
+          alert("ファイルの解析に失敗しました。");
+        }
+      };
+      reader.readAsText(file);
+      // 読み込み後はファイル入力の内容をクリアしておく
+      event.target.value = "";
     });
 
     // 初期化
