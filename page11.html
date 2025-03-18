@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>コンフィグ設定</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: sans-serif;
+      background-color: #f5f5f5;
+    }
+    #container {
+      padding: 20px;
+    }
+    h2 {
+      margin-bottom: 10px;
+    }
+    .section {
+      margin-bottom: 40px;
+    }
+    /* 挿入可能なボタン（下部エリア）のグリッドレイアウト：32個 */
+    #button-config {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+    #button-config input {
+      width: 100%;
+      padding: 8px;
+      font-size: 16px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      text-align: center;
+    }
+    /* ドラム選択は1つのテキストエリアで改行区切り */
+    #drum-config {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #drum-config textarea {
+      width: 100%;
+      height: 200px;
+      font-size: 16px;
+      padding: 8px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: vertical;
+    }
+    /* ボタン類 */
+    #saveConfig, #resetDefaults {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div class="section">
+      <h2>挿入可能なボタン設定</h2>
+      <p>本編下部エリアに表示されるボタンのラベルを、以下の各入力ボックスに設定してください。（8列×4行＝32個）</p>
+      <div id="button-config">
+        <!-- ここに JS で入力ボックスを生成 -->
+      </div>
+    </div>
+    <div class="section">
+      <h2>ドラム式選択一覧設定</h2>
+      <p>ドラム式入力で使用する選択項目のラベルを、以下のテキストエリアに1行ずつ入力してください。</p>
+      <div id="drum-config">
+        <textarea id="drumTextArea" placeholder="1行に1つの選択肢&#10;例:&#10;左境&#10;左枡&#10;車止&#10;支線&#10;..."></textarea>
+      </div>
+    </div>
+    <!-- 保存と初期設定に戻すボタン -->
+    <button id="saveConfig">保存</button>
+    <button id="resetDefaults">初期設定に戻す</button>
+  </div>
+
+  <script>
+    // 定数：各設定の個数（ボタンは32個）
+    const BUTTON_COUNT = 32;
+    
+    // デフォルト値
+    const defaultButtonLabels = [
+      "左境", "左枡", "角", "桝", "標", "電柱", "右桝", "右境",
+      "下", "消", "W", "E", "市", "民", "杭", "基",
+      "S", "空", "AV", "T", "使用不可", "使用不可", "使用不可", "使用不可",
+      "SS", "SV", "G", "水取器", "使用不可", "使用不可", "使用不可", "使用不可"
+    ];
+    const defaultDrumLabels = [
+      "左境", "左枡", "車止", "支線", "標", "電柱", "右桝", "右境",
+      "下", "D", "S", "SS", "消", "F", "SV", "W",
+      "E", "T", "メジ", "杭", "都", "他", "市", "民",
+      "終", "GR", "植樹", "ﾐﾗｰ", "角", "基準点", "G", "空"
+    ];
+
+    // localStorage キー名
+    const BUTTON_CONFIG_KEY = "buttonConfig";
+    const DRUM_CONFIG_KEY = "drumConfig";
+
+    // 設定を localStorage から読み込み（存在しなければデフォルトを返す）
+    function loadConfig(key, defaultArr) {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          return defaultArr;
+        }
+      }
+      return defaultArr;
+    }
+
+    // 挿入可能なボタン用入力ボックス生成
+    function populateButtonInputs() {
+      const container = document.getElementById("button-config");
+      container.innerHTML = "";
+      const currentValues = loadConfig(BUTTON_CONFIG_KEY, defaultButtonLabels);
+      for (let i = 0; i < BUTTON_COUNT; i++) {
+        const input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = "ラベル";
+        input.value = currentValues[i] || "";
+        // 入力変更時は自動保存（任意）
+        input.addEventListener("input", saveAllConfig);
+        container.appendChild(input);
+      }
+    }
+    
+    // ドラム選択用テキストエリアの初期化
+    function populateDrumInput() {
+      const textArea = document.getElementById("drumTextArea");
+      const currentValues = loadConfig(DRUM_CONFIG_KEY, defaultDrumLabels);
+      // 改行区切りにして表示
+      textArea.value = currentValues.join("\n");
+      // 入力変更時は自動保存（任意）
+      textArea.addEventListener("input", saveAllConfig);
+    }
+
+    // 保存処理：両方の設定を保存
+    function saveAllConfig() {
+      const buttonInputs = document.querySelectorAll("#button-config input");
+      const drumText = document.getElementById("drumTextArea").value;
+      const buttonLabels = Array.from(buttonInputs).map(input => input.value.trim());
+      // ドラム設定は改行で分割
+      const drumLabels = drumText.split(/\r?\n/).map(s => s.trim()).filter(s => s !== "");
+      localStorage.setItem(BUTTON_CONFIG_KEY, JSON.stringify(buttonLabels));
+      localStorage.setItem(DRUM_CONFIG_KEY, JSON.stringify(drumLabels));
+    }
+
+    // 「初期設定に戻す」ボタンの処理
+    document.getElementById("resetDefaults").addEventListener("click", () => {
+      if(confirm("本当に初期設定に戻しますか？")) {
+        localStorage.setItem(BUTTON_CONFIG_KEY, JSON.stringify(defaultButtonLabels));
+        localStorage.setItem(DRUM_CONFIG_KEY, JSON.stringify(defaultDrumLabels));
+        populateButtonInputs();
+        populateDrumInput();
+        alert("初期設定に戻しました。");
+      }
+    });
+
+    // 保存ボタンのイベント
+    document.getElementById("saveConfig").addEventListener("click", () => {
+      saveAllConfig();
+      alert("設定を保存しました！");
+    });
+
+    // 初期化
+    window.addEventListener("load", () => {
+      populateButtonInputs();
+      populateDrumInput();
+    });
+  </script>
+</body>
+</html>
