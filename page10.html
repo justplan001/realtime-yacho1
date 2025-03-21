@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="縦画面やちょー">
   <link rel="apple-touch-icon" href="path/to/your-icon.png">
   
-  <title>縦画面やちょー</title>
+  <title>縦画面やちょー - 複数レイヤー対応版</title>
   <!-- Excelエクスポート用ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
@@ -27,7 +27,7 @@
       flex-direction: column;
       height: 100vh;
     }
-    /* 上部エリア：左右に50:50で分割 */
+    /* 上部エリア：表と図 */
     #top-area {
       flex: 0 0 25vh;
       display: flex;
@@ -98,6 +98,22 @@
       right: 10px;
       z-index: 2000;
     }
+    /* レイヤー移動ボタン（図内左上に配置） */
+    #layerControl {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 2000;
+      background: rgba(255,255,255,0.8);
+      padding: 5px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    #layerControl button {
+      padding: 4px 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
     /* 下部エリア：操作エリア */
     #bottom-area {
       flex: 1;
@@ -147,7 +163,7 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-    /* 以下、ドラム式入力、テンキー、四則演算、十字キー等のスタイル（省略せずそのまま） */
+    /* 以下、ドラム式入力、テンキー、四則演算、十字キー等のスタイル（そのまま） */
     #drum-input-area {
       position: absolute;
       right: 180px;
@@ -302,6 +318,12 @@
       <button id="resetButton" class="topButton">Reset</button>
       <button id="exportButton" class="topButton">Export</button>
       <button id="fullscreenButton" class="topButton">Full</button>
+      <!-- レイヤー移動コントロール（図内左上） -->
+      <div id="layerControl">
+        <button id="layerDown">-</button>
+        <span id="currentLayerDisplay">Layer 1</span>
+        <button id="layerUp">+</button>
+      </div>
     </div>
   </div>
   <!-- 下部エリア：操作エリア -->
@@ -333,15 +355,15 @@
       <button id="btn17" class="insertable-button">仮ラベル</button>
       <button id="btn18" class="insertable-button">仮ラベル</button>
       <button id="btn19" class="insertable-button">仮ラベル</button>
-<a></a><a></a><a></a><a></a>      
+      <a></a><a></a><a></a><a></a>      
       <button id="btn24" class="insertable-button">仮ラベル</button>
       <button id="btn25" class="insertable-button">仮ラベル</button>
       <button id="btn26" class="insertable-button">仮ラベル</button>
       <button id="btn27" class="insertable-button">仮ラベル</button>
-<a></a><a></a><a></a><a></a>
+      <a></a><a></a><a></a><a></a>
     </div>
     
-    <!-- ドラム式入力エリア -->
+    <!-- 以下、ドラム式入力、テンキー、四則演算、十字キー等はそのまま -->
     <div id="drum-input-area">
       <div id="drum-container-wrapper">
         <div class="drum-container" id="drum-container-left">
@@ -359,7 +381,6 @@
       </div>
     </div>
     
-    <!-- テンキー＆四則演算 -->
     <div id="numpadArea">
       <div id="operatorButtons">
         <button class="operator-button">+</button>
@@ -383,7 +404,6 @@
       </div>
     </div>
     
-    <!-- 十字キー -->
     <div id="arrowKeysContainer">
       <div id="arrow-keys">
         <button id="arrow-up">↑</button>
@@ -397,8 +417,38 @@
 
 <script>
   //========================
-  // コンフィグ読み込み処理
+  // グローバル定数・変数
   //========================
+  const ROW_COUNT = 100;
+  const COL_COUNT = 10;
+  // 各レイヤーごとに状態を保持するオブジェクトを生成
+  function generateNewTableState() {
+    const table = [];
+    for (let i = 0; i < ROW_COUNT; i++) {
+      const row = [];
+      for (let j = 0; j < COL_COUNT; j++) {
+        row.push("");
+      }
+      table.push(row);
+    }
+    // サンプル初期値（2行目）
+    table[1][6] = "0.5";
+    table[1][7] = "5";
+    table[1][8] = "0.5";
+    return table;
+  }
+  // 各レイヤーの状態：{ tableState, currentRow, currentCol }
+  const layers = [];
+  for (let i = 0; i < 10; i++){
+    layers.push({
+      tableState: generateNewTableState(),
+      currentRow: 0,
+      currentCol: 0
+    });
+  }
+  let currentLayer = 0;  // 現在選択中のレイヤー（0～9）
+
+  // 挿入可能ボタンのデフォルトラベル
   const defaultButtonLabels = [
       "左境", "左枡", "角", "桝", "標", "電柱", "右桝", "右境",
       "下", "消", "W", "E", "市", "民", "杭", "基",
@@ -417,42 +467,26 @@
       return defaultArr;
   }
   const buttonConfig = loadConfig("buttonConfig", defaultButtonLabels);
-  
+
   //========================
   // 挿入可能ボタンクリック時処理
   //========================
   function insertText(text) {
-    setSelectedCell(currentRow, 0);
+    setSelectedCell(layers[currentLayer].currentRow, 0);
     updateCellText(text);
   }
   
   //========================
-  // テーブル・キャンバス処理
+  // テーブル・キャンバス処理（レイヤー対応版）
   //========================
-  let tableState = [];
-  const ROW_COUNT = 100;
-  const COL_COUNT = 10;
-  let currentRow = 0, currentCol = 0;
   const tbody = document.getElementById('table-body');
   const freeInput = document.getElementById('freeInput');
   
-  function generateTable() {
-    tableState = [];
-    for (let i = 0; i < ROW_COUNT; i++) {
-      let rowData = [];
-      for (let j = 0; j < COL_COUNT; j++) {
-        rowData.push("");
-      }
-      tableState.push(rowData);
-    }
-    // サンプル初期値（2行目）
-    tableState[1][6] = "0.5";
-    tableState[1][7] = "5";
-    tableState[1][8] = "0.5";
-  }
-  
   function renderTable() {
     tbody.innerHTML = "";
+    const tableState = layers[currentLayer].tableState;
+    const currentRow = layers[currentLayer].currentRow;
+    const currentCol = layers[currentLayer].currentCol;
     for (let i = 0; i < ROW_COUNT; i++) {
       const tr = document.createElement('tr');
       for (let j = 0; j < COL_COUNT; j++) {
@@ -472,31 +506,31 @@
   }
   
   function setSelectedCell(r, c) {
-    currentRow = r;
-    currentCol = c;
+    layers[currentLayer].currentRow = r;
+    layers[currentLayer].currentCol = c;
     renderTable();
     updateCanvas();
-    saveTableState();
-    freeInput.value = tableState[currentRow][currentCol];
+    saveLayerState(currentLayer);
+    freeInput.value = layers[currentLayer].tableState[r][c];
     const container = document.getElementById('table-container');
-    const cell = container.querySelector(`td[data-row="${currentRow}"][data-col="${currentCol}"]`);
+    const cell = container.querySelector(`td[data-row="${r}"][data-col="${c}"]`);
     if (cell) cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
   }
   
   function navigationHandler(event) {
-    let targetRow = currentRow;
-    let targetCol = currentCol;
+    let targetRow = layers[currentLayer].currentRow;
+    let targetCol = layers[currentLayer].currentCol;
     if (event.key === "Enter") {
-      targetRow = currentRow + 1;
+      targetRow = layers[currentLayer].currentRow + 1;
       event.preventDefault();
     } else if (event.key === "ArrowUp") {
-      targetRow = currentRow - 1;
+      targetRow = layers[currentLayer].currentRow - 1;
     } else if (event.key === "ArrowDown") {
-      targetRow = currentRow + 1;
+      targetRow = layers[currentLayer].currentRow + 1;
     } else if (event.key === "ArrowLeft") {
-      targetCol = currentCol - 1;
+      targetCol = layers[currentLayer].currentCol - 1;
     } else if (event.key === "ArrowRight") {
-      targetCol = currentCol + 1;
+      targetCol = layers[currentLayer].currentCol + 1;
     } else {
       return;
     }
@@ -509,44 +543,48 @@
     if (targetCell) targetCell.focus();
   }
   
-  function saveTableState() {
-    localStorage.setItem("tableState", JSON.stringify(tableState));
+  function saveLayerState(layerIndex) {
+    localStorage.setItem("tableState_layer" + layerIndex, JSON.stringify(layers[layerIndex].tableState));
   }
   
-  function loadTableState() {
-    const saved = localStorage.getItem("tableState");
+  function loadLayerState(layerIndex) {
+    const saved = localStorage.getItem("tableState_layer" + layerIndex);
     if (saved) {
       const data = JSON.parse(saved);
       if (data && data.length === ROW_COUNT && data[0].length === COL_COUNT) {
-        tableState = data;
+        layers[layerIndex].tableState = data;
       }
     }
   }
   
   function updateCellText(newText) {
-    tableState[currentRow][currentCol] = newText;
+    layers[currentLayer].tableState[layers[currentLayer].currentRow][layers[currentLayer].currentCol] = newText;
     renderTable();
     updateCanvas();
-    saveTableState();
+    saveLayerState(currentLayer);
     freeInput.value = newText;
   }
   
   function appendCellText(str) {
-    updateCellText(tableState[currentRow][currentCol] + str);
+    updateCellText(layers[currentLayer].tableState[layers[currentLayer].currentRow][layers[currentLayer].currentCol] + str);
   }
   
   freeInput.addEventListener('input', () => {
-    tableState[currentRow][currentCol] = freeInput.value;
+    layers[currentLayer].tableState[layers[currentLayer].currentRow][layers[currentLayer].currentCol] = freeInput.value;
     renderTable();
     updateCanvas();
-    saveTableState();
+    saveLayerState(currentLayer);
   });
   
+  //========================
+  // 図形描写（キャンバス更新）
+  //========================
   function updateCanvas() {
     const canvas = document.getElementById('drawingCanvas');
     const ctx = canvas.getContext('2d');
     const container = document.getElementById('diagram-container');
     const scale = 20;
+    const tableState = layers[currentLayer].tableState;
     let maxDistance = 0;
     for (let i = 0; i < ROW_COUNT; i++){
       let d = parseFloat(tableState[i][1]);
@@ -613,22 +651,28 @@
       let xVal = (xStr === "") ? roadWidth : parseFloat(xStr);
       if (xVal < 0) xVal = roadWidth - Math.abs(xVal);
       if (isNaN(xVal)) continue;
-      const diamVal = parseFloat(tableState[i][3]);
-      const comment = tableState[i][4].trim();
+      
+      // 修正：D列とE列の扱いを入れ替え
+      const comment = tableState[i][3].trim();       // D列をコメントとして利用
+      const diamVal = parseFloat(tableState[i][4]);    // E列を円の描写に利用
+      
       const xPos = originX + (xVal * scale);
       const yPos = originY - (yVal * scale);
       const color = colors[i % colors.length];
+      
       ctx.strokeStyle = color;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(originX, yPos);
       ctx.lineTo(xPos, yPos);
       ctx.stroke();
+      
       const pointRadius = 0.1 * scale;
       ctx.beginPath();
       ctx.arc(xPos, yPos, pointRadius, 0, 2 * Math.PI);
       ctx.fillStyle = color;
       ctx.fill();
+      
       if (!isNaN(diamVal) && diamVal > 0) {
         const circleRadius = (diamVal / 2) * scale;
         ctx.beginPath();
@@ -637,6 +681,7 @@
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
+      
       let displayText = label;
       if (comment) displayText += " (" + comment + ")";
       ctx.font = '30px sans-serif';
@@ -649,7 +694,7 @@
   }
   
   //========================
-  // ドラム式入力処理
+  // ドラム式入力処理（そのまま）
   //========================
   let drumItems = loadConfig("drumConfig", [
       "左境", "左枡", "車止", "支線", "標", "電柱", "右桝", "右境",
@@ -759,11 +804,11 @@
   
   // ドラム送信ボタン
   document.getElementById("sendButtonLeft").addEventListener("click", () => {
-    setSelectedCell(currentRow, currentCol);
+    setSelectedCell(layers[currentLayer].currentRow, layers[currentLayer].currentCol);
     updateCellText(drumItems[currentIndexLeft]);
   });
   document.getElementById("sendButtonRight").addEventListener("click", () => {
-    setSelectedCell(currentRow, currentCol);
+    setSelectedCell(layers[currentLayer].currentRow, layers[currentLayer].currentCol);
     updateCellText(drumItems[currentIndexRight]);
   });
   
@@ -777,7 +822,7 @@
     btn.addEventListener("click", () => {
       const value = btn.innerText;
       if (value === "⌫") {
-        const currentText = tableState[currentRow][currentCol];
+        const currentText = layers[currentLayer].tableState[layers[currentLayer].currentRow][layers[currentLayer].currentCol];
         updateCellText(currentText.slice(0, -1));
       } else {
         appendCellText(value);
@@ -795,57 +840,101 @@
   document.getElementById("arrow-right")
       .addEventListener("click", () => moveFocus(0, 1));
   function moveFocus(dRow, dCol) {
-    let newRow = currentRow + dRow;
-    let newCol = currentCol + dCol;
-    if(newRow < 0) newRow = 0;
-    if(newRow >= ROW_COUNT) newRow = ROW_COUNT - 1;
-    if(newCol < 0) newCol = 0;
-    if(newCol >= COL_COUNT) newCol = COL_COUNT - 1;
+    let newRow = layers[currentLayer].currentRow + dRow;
+    let newCol = layers[currentLayer].currentCol + dCol;
+    if (newRow < 0) newRow = 0;
+    if (newRow >= ROW_COUNT) newRow = ROW_COUNT - 1;
+    if (newCol < 0) newCol = 0;
+    if (newCol >= COL_COUNT) newCol = COL_COUNT - 1;
     setSelectedCell(newRow, newCol);
   }
   
   // reset ボタン
   function resetTable() {
-    if(confirm("本当にリセットしますか？")){
-      localStorage.removeItem("tableState");
-      generateTable();
+    if (confirm("本当にリセットしますか？")) {
+      localStorage.removeItem("tableState_layer" + currentLayer);
+      layers[currentLayer].tableState = generateNewTableState();
       renderTable();
       updateCanvas();
-      setSelectedCell(0,0);
+      setSelectedCell(0, 0);
     }
   }
   document.getElementById("resetButton").addEventListener("click", resetTable);
   
-  // export ボタン：HTMLテーブルをExcelへ
-  function exportToExcel() {
-    const table = document.getElementById('excelTable');
-    const workbook = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
-    
-    // 以前のファイル名を取得（なければ 'export' をデフォルトに）
-    let defaultFilename = localStorage.getItem('exportFilename') || 'export';
-    
-    // ユーザーにファイル名を入力してもらう（拡張子は自動で追加されるので編集不可）
-    let inputFilename = prompt("保存するファイル名を入力してください（拡張子は自動で付与されます）", defaultFilename);
-    if (inputFilename === null) {
-      // キャンセルされた場合は処理中断
-      return;
+  // export ボタン：全レイヤー分のデータを1ファイルにエクスポート
+  function exportToExcelAllLayers() {
+    // シート全体を構築するため、十分なサイズの2次元配列を用意
+    const totalRows = 1001;
+    const totalCols = 10; // A～J
+    let sheetData = [];
+    for (let r = 0; r < totalRows; r++){
+      sheetData[r] = new Array(totalCols).fill("");
     }
     
-    // ユーザーが「.xlsx」付きで入力していた場合、取り除く
+    // ヘッダー行（行1＝index 0）を設定
+    sheetData[0] = ["名称", "距離", "X座標", "コメント", "直径", "歩道(L)", "L側溝", "幅員", "R側溝", "歩道(R)"];
+    
+    // --- A～E列：各レイヤーの入力内容を連結して出力 ---
+    // まず、レイヤー1（index 0）の内容をヘッダー行の下（index 1 以降）に貼り付け
+    let layer1 = layers[0].tableState;
+    let lastRow = 0;
+    for (let r = 0; r < ROW_COUNT; r++){
+      for (let c = 0; c < 5; c++){ // A～E
+        sheetData[r + 1][c] = layer1[r][c];
+      }
+      if (layer1[r][0] !== "") {
+        lastRow = r;
+      }
+    }
+    // レイヤー1の末尾直下に区切り「***」を挿入
+    sheetData[lastRow + 2][0] = "***";
+    let appendRow = lastRow + 3;
+    
+    // レイヤー2～10のA～E列のデータを順次貼り付け
+    for (let layerIndex = 1; layerIndex < layers.length; layerIndex++){
+      let tableState = layers[layerIndex].tableState;
+      let lastRowInLayer = 0;
+      for (let r = 0; r < ROW_COUNT; r++){
+        for (let c = 0; c < 5; c++){
+          sheetData[appendRow + r][c] = tableState[r][c];
+        }
+        if (tableState[r][0] !== ""){
+          lastRowInLayer = r;
+        }
+      }
+      // 貼り付けたレイヤーの末尾の次の行に区切り「***」
+      sheetData[appendRow + lastRowInLayer + 1][0] = "***";
+      appendRow += lastRowInLayer + 2;
+    }
+    
+    // --- F～J列：横断面情報（クロスセクション情報）の出力 ---
+    // 各レイヤーの横断面情報として、ここでは各レイヤーの tableState の1行目（例）からF～J列を抜粋し、
+    // レイヤー1はエクスポートファイルの3行目（index 2）、レイヤー2は4行目（index 3）、…、レイヤー10は12行目（index 11）に配置
+    for (let layerIndex = 0; layerIndex < layers.length; layerIndex++){
+      let crossSection = layers[layerIndex].tableState[1];
+      let targetRow = layerIndex + 2; // layerIndex=0 → row index 2 (Excel行3)
+      for (let c = 5; c < 10; c++){
+        sheetData[targetRow][c] = crossSection[c];
+      }
+    }
+    
+    // ワークブック作成とシートへの変換
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+    
+    // ファイル名入力処理
+    let defaultFilename = localStorage.getItem('exportFilename') || 'export';
+    let inputFilename = prompt("保存するファイル名を入力してください（拡張子は自動で付与されます）", defaultFilename);
+    if (inputFilename === null) return;
     if (inputFilename.toLowerCase().endsWith('.xlsx')) {
       inputFilename = inputFilename.slice(0, -5);
     }
-    
-    // 入力されたファイル名をローカルストレージに保存（次回の初期値として利用）
     localStorage.setItem('exportFilename', inputFilename);
-    
-    // 最終的なファイル名に拡張子を追加
     const finalFilename = inputFilename + ".xlsx";
-    
-    // エクセルファイルとして保存
     XLSX.writeFile(workbook, finalFilename);
   }
-  document.getElementById("exportButton").addEventListener("click", exportToExcel);
+  document.getElementById("exportButton").addEventListener("click", exportToExcelAllLayers);
   
   // ページ全体の全画面表示
   document.getElementById("pageFullscreenButton").addEventListener("click", () => {
@@ -870,87 +959,48 @@
   
   window.addEventListener('resize', updateCanvas);
   
-  // ページ読み込み時に初期化とコンフィグ反映
+  // レイヤー移動コントロール（図内左上）
+  document.getElementById("layerUp").addEventListener("click", () => {
+    if (currentLayer < layers.length - 1) {
+      currentLayer++;
+      loadLayerState(currentLayer);
+      renderTable();
+      updateCanvas();
+      freeInput.value = layers[currentLayer].tableState[layers[currentLayer].currentRow][layers[currentLayer].currentCol];
+      updateLayerDisplay();
+    }
+  });
+  document.getElementById("layerDown").addEventListener("click", () => {
+    if (currentLayer > 0) {
+      currentLayer--;
+      loadLayerState(currentLayer);
+      renderTable();
+      updateCanvas();
+      freeInput.value = layers[currentLayer].tableState[layers[currentLayer].currentRow][layers[currentLayer].currentCol];
+      updateLayerDisplay();
+    }
+  });
+  function updateLayerDisplay(){
+    document.getElementById("currentLayerDisplay").innerText = "Layer " + (currentLayer + 1);
+  }
+  
+  // ページ読み込み時の初期化
   window.onload = function(){
-    generateTable();
-    loadTableState();
+    for (let i = 0; i < layers.length; i++){
+      loadLayerState(i);
+    }
     renderTable();
     updateCanvas();
     setSelectedCell(0, 0);
+    updateLayerDisplay();
     
-    // 各ボタンにコンフィグのラベルとクリック処理を設定
-    document.getElementById("btn0").innerText = buttonConfig[0];
-    document.getElementById("btn0").onclick = function(){ insertText(buttonConfig[0]); };
-  
-    document.getElementById("btn1").innerText = buttonConfig[1];
-    document.getElementById("btn1").onclick = function(){ insertText(buttonConfig[1]); };
-  
-    document.getElementById("btn2").innerText = buttonConfig[2];
-    document.getElementById("btn2").onclick = function(){ insertText(buttonConfig[2]); };
-  
-    document.getElementById("btn3").innerText = buttonConfig[3];
-    document.getElementById("btn3").onclick = function(){ insertText(buttonConfig[3]); };
-  
-    document.getElementById("btn4").innerText = buttonConfig[4];
-    document.getElementById("btn4").onclick = function(){ insertText(buttonConfig[4]); };
-  
-    document.getElementById("btn5").innerText = buttonConfig[5];
-    document.getElementById("btn5").onclick = function(){ insertText(buttonConfig[5]); };
-  
-    document.getElementById("btn6").innerText = buttonConfig[6];
-    document.getElementById("btn6").onclick = function(){ insertText(buttonConfig[6]); };
-  
-    document.getElementById("btn7").innerText = buttonConfig[7];
-    document.getElementById("btn7").onclick = function(){ insertText(buttonConfig[7]); };
-  
-    document.getElementById("btn8").innerText = buttonConfig[8];
-    document.getElementById("btn8").onclick = function(){ insertText(buttonConfig[8]); };
-  
-    document.getElementById("btn9").innerText = buttonConfig[9];
-    document.getElementById("btn9").onclick = function(){ insertText(buttonConfig[9]); };
-  
-    document.getElementById("btn10").innerText = buttonConfig[10];
-    document.getElementById("btn10").onclick = function(){ insertText(buttonConfig[10]); };
-  
-    document.getElementById("btn11").innerText = buttonConfig[11];
-    document.getElementById("btn11").onclick = function(){ insertText(buttonConfig[11]); };
-  
-    document.getElementById("btn12").innerText = buttonConfig[12];
-    document.getElementById("btn12").onclick = function(){ insertText(buttonConfig[12]); };
-  
-    document.getElementById("btn13").innerText = buttonConfig[13];
-    document.getElementById("btn13").onclick = function(){ insertText(buttonConfig[13]); };
-  
-    document.getElementById("btn14").innerText = buttonConfig[14];
-    document.getElementById("btn14").onclick = function(){ insertText(buttonConfig[14]); };
-  
-    document.getElementById("btn15").innerText = buttonConfig[15];
-    document.getElementById("btn15").onclick = function(){ insertText(buttonConfig[15]); };
-  
-    document.getElementById("btn16").innerText = buttonConfig[16];
-    document.getElementById("btn16").onclick = function(){ insertText(buttonConfig[16]); };
-  
-    document.getElementById("btn17").innerText = buttonConfig[17];
-    document.getElementById("btn17").onclick = function(){ insertText(buttonConfig[17]); };
-  
-    document.getElementById("btn18").innerText = buttonConfig[18];
-    document.getElementById("btn18").onclick = function(){ insertText(buttonConfig[18]); };
-  
-    document.getElementById("btn19").innerText = buttonConfig[19];
-    document.getElementById("btn19").onclick = function(){ insertText(buttonConfig[19]); };
-  
-    document.getElementById("btn24").innerText = buttonConfig[24];
-    document.getElementById("btn24").onclick = function(){ insertText(buttonConfig[24]); };
-  
-    document.getElementById("btn25").innerText = buttonConfig[25];
-    document.getElementById("btn25").onclick = function(){ insertText(buttonConfig[25]); };
-  
-    document.getElementById("btn26").innerText = buttonConfig[26];
-    document.getElementById("btn26").onclick = function(){ insertText(buttonConfig[26]); };
-  
-    document.getElementById("btn27").innerText = buttonConfig[27];
-    document.getElementById("btn27").onclick = function(){ insertText(buttonConfig[27]); };
-  
+    for (let i = 0; i < buttonConfig.length; i++){
+      const btn = document.getElementById("btn" + i);
+      if (btn){
+        btn.innerText = buttonConfig[i];
+        btn.onclick = function(){ insertText(buttonConfig[i]); };
+      }
+    }
   };
 </script>
 </body>
