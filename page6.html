@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <!-- viewport の設定 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- iOS用設定 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="縦画面やちょー">
+  <link rel="apple-touch-icon" href="path/to/your-icon.png">
+  
+  <title>縦画面やちょー</title>
+  <!-- Excelエクスポート用ライブラリ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    /* html,body を画面全体に固定＆スクロールさせない */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: sans-serif;
+      box-sizing: border-box;
+    }
+    /* コンテナは横方向に2カラム（左：図、右：表＋操作） */
+    #container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+    /* 左側：図表示エリア。幅は40%（min-width:200px） */
+    #left-area {
+      flex: 0 0 auto;
+      width: 40%;
+      min-width: 200px;
+      background-color: #000;
+      position: relative;
+      overflow: hidden;
+    }
+    #left-area canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    /* 左側内の操作ボタン（図エリア内） */
+    #resetButton {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      font-size: 12px;
+      padding: 5px 8px;
+      cursor: pointer;
+      background-color: #eee;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      z-index: 1000;
+    }
+    #diagram-buttons-bottom {
+      position: absolute;
+      bottom: 5px;
+      left: 5px;
+      z-index: 1000;
+    }
+    #diagram-buttons-bottom button {
+      font-size: 12px;
+      padding: 5px 8px;
+      cursor: pointer;
+      background-color: #eee;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      margin-right: 3px;
+    }
+    /* 右側：その他エリア。比率は指定せず、残り幅を自動確保 */
+    #right-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background-color: #f8f8f8;
+    }
+    /* 表エリア：固定高さ（60px）＆横スクロール対応 */
+    #table-container {
+      height: 60px;
+      padding: 5px;
+      border-bottom: 1px solid #ccc;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    #table-container table {
+      border-collapse: collapse;
+      min-width: 600px; /* 表の横幅は必要に応じて固定 */
+    }
+    #table-container th,
+    #table-container td {
+      border: 1px solid #ccc;
+      padding: 3px 5px;
+      text-align: center;
+      white-space: nowrap;
+      font-size: 12px;
+      user-select: none;
+    }
+    .selected {
+      background-color: #caf;
+    }
+    /* 操作エリア：表以降の領域は全てボタン領域として固定 */
+    #controls-container {
+      height: calc(100% - 60px);
+      padding: 5px;
+      overflow: hidden;
+    }
+    /* 入力行：全画面表示ボタン＋文字入力 */
+    #input-row {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 5px;
+    }
+    #input-row button {
+      padding: 5px 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    #input-row input[type="text"] {
+      flex: 1;
+      padding: 5px;
+      font-size: 12px;
+    }
+    /* 入力ボタン群と制御ボタン群を横に並べる */
+    #input-buttons-wrapper {
+      display: flex;
+      gap: 5px;
+      height: calc(100% - 30px);
+    }
+    /* 文字入力ボタン群は小さめ（10行×4列のグリッド） */
+    #text-buttons {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(10, 1fr);
+      gap: 3px;
+      overflow: hidden;
+    }
+    #text-buttons button {
+      padding: 3px;
+      font-size: 10px;
+      cursor: pointer;
+      background-color: #eee;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+    }
+    /* 制御ボタン群（十字キーとテンキー）は従来のサイズを維持 */
+    #control-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      justify-content: flex-start;
+    }
+    #arrowKeysContainer {
+      display: flex;
+      justify-content: center;
+    }
+    #arrow-keys {
+      display: grid;
+      grid-template-areas:
+        ". up ."
+        "left center right"
+        ". down .";
+      gap: 3px;
+    }
+    #arrow-keys button {
+      width: 40px;
+      height: 40px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    #arrow-up    { grid-area: up; }
+    #arrow-left  { grid-area: left; }
+    #arrow-right { grid-area: right; }
+    #arrow-down  { grid-area: down; }
+    #numpadContainer {
+      display: flex;
+      justify-content: center;
+    }
+    #numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 50px);
+      gap: 3px;
+    }
+    #numpad button {
+      width: 50px;
+      height: 50px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<div id="container">
+  <!-- 左側：図表示エリア -->
+  <div id="left-area">
+    <canvas id="drawingCanvas"></canvas>
+    <button id="resetButton">Reset</button>
+    <div id="diagram-buttons-bottom">
+      <button id="exportButton">Export</button>
+      <button id="fullscreenButton">Full</button>
+    </div>
+  </div>
+  <!-- 右側：表とその他操作 -->
+  <div id="right-area">
+    <div id="table-container">
+      <table id="excelTable">
+        <thead>
+          <tr>
+            <th>名称</th>
+            <th>距離</th>
+            <th>X座標</th>
+            <th>直径</th>
+            <th>コメント</th>
+            <th>歩道(L)</th>
+            <th>L側溝</th>
+            <th>幅員</th>
+            <th>R側溝</th>
+            <th>歩道(R)</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <!-- 表データはJSで自動生成 -->
+        </tbody>
+      </table>
+    </div>
+    <div id="controls-container">
+      <div id="input-row">
+        <button id="fullscreenPageButton">全画面表示</button>
+        <input type="text" id="text-input" placeholder="セルの文字を入力">
+      </div>
+      <div id="input-buttons-wrapper">
+        <div id="text-buttons">
+          <button class="insertable-button">左境</button>
+          <button class="insertable-button">左枡</button>
+          <button class="insertable-button">車止</button>
+          <button class="insertable-button">支線</button>
+          <button class="insertable-button">標</button>
+          <button class="insertable-button">電柱</button>
+          <button class="insertable-button">右桝</button>
+          <button class="insertable-button">右境</button>
+          <button class="insertable-button">下</button>
+          <button class="insertable-button">D</button>
+          <button class="insertable-button">S</button>
+          <button class="insertable-button">SS</button>
+          <button class="insertable-button">消</button>
+          <button class="insertable-button">F</button>
+          <button class="insertable-button">SV</button>
+          <button class="insertable-button">W</button>
+          <button class="insertable-button">E</button>
+          <button class="insertable-button">T</button>
+          <button class="insertable-button">メジ</button>
+          <button class="insertable-button">杭</button>
+          <button class="insertable-button">都</button>
+          <button class="insertable-button">他</button>
+          <button class="insertable-button">市</button>
+          <button class="insertable-button">民</button>
+          <button class="insertable-button">終</button>
+          <button class="insertable-button">GR</button>
+          <button class="insertable-button">植樹</button>
+          <button class="insertable-button">ﾐﾗｰ</button>
+          <button class="insertable-button">角</button>
+          <button class="insertable-button">*</button>
+          <button class="insertable-button">+</button>
+          <button class="insertable-button">-</button>
+        </div>
+        <div id="control-buttons">
+          <div id="arrowKeysContainer">
+            <div id="arrow-keys">
+              <button id="arrow-up">↑</button>
+              <button id="arrow-left">←</button>
+              <button id="arrow-right">→</button>
+              <button id="arrow-down">↓</button>
+            </div>
+          </div>
+          <div id="numpadContainer">
+            <div id="numpad">
+              <button>7</button>
+              <button>8</button>
+              <button>9</button>
+              <button>4</button>
+              <button>5</button>
+              <button>6</button>
+              <button>1</button>
+              <button>2</button>
+              <button>3</button>
+              <button>0</button>
+              <button>.</button>
+              <button>⌫</button>
+            </div>
+          </div>
+        </div>
+      </div> <!-- end of #input-buttons-wrapper -->
+    </div>
+  </div>
+</div>
+
+<script>
+  // グローバル変数：テーブル状態管理
+  let tableState = [];
+  const ROW_COUNT = 100;
+  const COL_COUNT = 10;
+  let currentRow = 0, currentCol = 0;
+  const tbody = document.getElementById('table-body');
+  const textInput = document.getElementById('text-input');
+
+  function generateTable() {
+    tableState = [];
+    for (let i = 0; i < ROW_COUNT; i++) {
+      let row = [];
+      for (let j = 0; j < COL_COUNT; j++) {
+        row.push("");
+      }
+      tableState.push(row);
+    }
+    // サンプル初期値（2行目）
+    tableState[1][6] = "0.5";
+    tableState[1][7] = "5";
+    tableState[1][8] = "0.5";
+  }
+
+  function renderTable() {
+    tbody.innerHTML = "";
+    for (let i = 0; i < ROW_COUNT; i++) {
+      let tr = document.createElement('tr');
+      for (let j = 0; j < COL_COUNT; j++) {
+        let td = document.createElement('td');
+        td.dataset.row = i;
+        td.dataset.col = j;
+        td.tabIndex = 0;
+        td.innerText = tableState[i][j];
+        if (i === currentRow && j === currentCol) {
+          td.classList.add("selected");
+        }
+        td.addEventListener("click", () => { setSelectedCell(i, j); });
+        td.addEventListener("keydown", navigationHandler);
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+  }
+
+  function setSelectedCell(r, c) {
+    currentRow = r;
+    currentCol = c;
+    textInput.value = tableState[r][c];
+    renderTable();
+    updateCanvas();
+    saveTableState();
+    const container = document.getElementById('table-container');
+    const cell = container.querySelector(`td[data-row="${currentRow}"][data-col="${currentCol}"]`);
+    if (cell) cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+  }
+
+  function handleTextInputChange() {
+    tableState[currentRow][currentCol] = textInput.value;
+    renderTable();
+    updateCanvas();
+    saveTableState();
+  }
+  textInput.addEventListener("input", handleTextInputChange);
+
+  function navigationHandler(event) {
+    let targetRow = currentRow;
+    let targetCol = currentCol;
+    if (event.key === "Enter") {
+      targetRow = currentRow + 1;
+      event.preventDefault();
+    } else if (event.key === "ArrowUp") {
+      targetRow = currentRow - 1;
+    } else if (event.key === "ArrowDown") {
+      targetRow = currentRow + 1;
+    } else if (event.key === "ArrowLeft") {
+      targetCol = currentCol - 1;
+    } else if (event.key === "ArrowRight") {
+      targetCol = currentCol + 1;
+    } else {
+      return;
+    }
+    if (targetRow < 0) targetRow = 0;
+    if (targetRow >= ROW_COUNT) targetRow = ROW_COUNT - 1;
+    if (targetCol < 0) targetCol = 0;
+    if (targetCol >= COL_COUNT) targetCol = COL_COUNT - 1;
+    setSelectedCell(targetRow, targetCol);
+    const targetCell = document.querySelector(`[data-row="${targetRow}"][data-col="${targetCol}"]`);
+    if (targetCell) targetCell.focus();
+  }
+
+  function insertStringIntoInput(str) {
+    textInput.value += str;
+    handleTextInputChange();
+  }
+
+  function saveTableState() {
+    localStorage.setItem("tableState", JSON.stringify(tableState));
+  }
+  function loadTableState() {
+    const saved = localStorage.getItem("tableState");
+    if (saved) {
+      const data = JSON.parse(saved);
+      if (data && data.length === ROW_COUNT && data[0].length === COL_COUNT) {
+        tableState = data;
+      }
+    }
+  }
+
+  function updateCanvas() {
+    const canvas = document.getElementById('drawingCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('left-area');
+    const scale = 10;
+    let maxDistance = 0;
+    for (let i = 0; i < ROW_COUNT; i++) {
+      let d = parseFloat(tableState[i][1]);
+      if (!isNaN(d) && d > maxDistance) maxDistance = d;
+    }
+    if (maxDistance === 0) maxDistance = 100;
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    let originX = canvas.width / 2;
+    const originY = canvas.height - 50;
+    const roadWidth = parseFloat(tableState[1][7]) || 0;
+    let offsetG = parseFloat(tableState[1][6]) || 0;
+    let offsetI = parseFloat(tableState[1][8]) || 0;
+    let sidewalkL = parseFloat(tableState[1][5]) || 0;
+    let sidewalkR = parseFloat(tableState[1][9]) || 0;
+    originX = originX - (roadWidth * scale) / 2;
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(originX, originY);
+    ctx.lineTo(originX, originY - ((maxDistance + 5) * scale));
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(originX + roadWidth * scale, originY);
+    ctx.lineTo(originX + roadWidth * scale, originY - ((maxDistance + 5) * scale));
+    ctx.stroke();
+    if (!isNaN(offsetG) && offsetG !== 0) {
+      ctx.beginPath();
+      ctx.moveTo(originX + offsetG * scale, originY);
+      ctx.lineTo(originX + offsetG * scale, originY - ((maxDistance + 5) * scale));
+      ctx.stroke();
+    }
+    if (!isNaN(offsetI) && offsetI !== 0) {
+      ctx.beginPath();
+      ctx.moveTo(originX + (roadWidth - offsetI) * scale, originY);
+      ctx.lineTo(originX + (roadWidth - offsetI) * scale, originY - ((maxDistance + 5) * scale));
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'yellow';
+    ctx.lineWidth = 2;
+    if (!isNaN(sidewalkL) && sidewalkL !== 0) {
+      let sidewalkLX = originX - sidewalkL * scale;
+      ctx.beginPath();
+      ctx.moveTo(sidewalkLX, originY);
+      ctx.lineTo(sidewalkLX, originY - ((maxDistance + 5) * scale));
+      ctx.stroke();
+    }
+    if (!isNaN(sidewalkR) && sidewalkR !== 0) {
+      let sidewalkRX = originX + (roadWidth + sidewalkR) * scale;
+      ctx.beginPath();
+      ctx.moveTo(sidewalkRX, originY);
+      ctx.lineTo(sidewalkRX, originY - ((maxDistance + 5) * scale));
+      ctx.stroke();
+    }
+    const roadCenterX = originX + (roadWidth * scale) / 2;
+    const colors = ["red", "yellow", "green", "cyan", "magenta"];
+    for (let i = 0; i < ROW_COUNT; i++) {
+      const label = tableState[i][0].trim();
+      const yVal = parseFloat(tableState[i][1]);
+      let xStr = tableState[i][2].trim();
+      if (isNaN(yVal)) continue;
+      let xVal = (xStr === "") ? roadWidth : parseFloat(xStr);
+      if (xVal < 0) xVal = roadWidth - Math.abs(xVal);
+      if (isNaN(xVal)) continue;
+      const diamVal = parseFloat(tableState[i][3]);
+      const comment = tableState[i][4].trim();
+      const xPos = originX + (xVal * scale);
+      const yPos = originY - (yVal * scale);
+      const color = colors[i % colors.length];
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(originX, yPos);
+      ctx.lineTo(xPos, yPos);
+      ctx.stroke();
+      const pointRadius = 0.1 * scale;
+      ctx.beginPath();
+      ctx.arc(xPos, yPos, pointRadius, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
+      if (!isNaN(diamVal) && diamVal > 0) {
+        const circleRadius = (diamVal / 2) * scale;
+        ctx.beginPath();
+        ctx.arc(xPos, yPos, circleRadius, 0, 2 * Math.PI);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      let displayText = label;
+      if (comment) displayText += " (" + comment + ")";
+      ctx.font = '15px sans-serif';
+      ctx.fillStyle = color;
+      let textWidth = ctx.measureText(displayText).width;
+      let textX = (xPos >= roadCenterX) ? xPos + pointRadius + 2 : xPos - pointRadius - 2 - textWidth;
+      ctx.fillText(displayText, textX, yPos);
+    }
+  }
+
+  document.querySelectorAll(".insertable-button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      insertStringIntoInput(btn.innerText);
+    });
+  });
+
+  document.getElementById("arrow-up").addEventListener("click", () => moveFocus(-1, 0));
+  document.getElementById("arrow-down").addEventListener("click", () => moveFocus(1, 0));
+  document.getElementById("arrow-left").addEventListener("click", () => moveFocus(0, -1));
+  document.getElementById("arrow-right").addEventListener("click", () => moveFocus(0, 1));
+
+  function moveFocus(dRow, dCol) {
+    let newRow = currentRow + dRow;
+    let newCol = currentCol + dCol;
+    if(newRow < 0) newRow = 0;
+    if(newRow >= ROW_COUNT) newRow = ROW_COUNT - 1;
+    if(newCol < 0) newCol = 0;
+    if(newCol >= COL_COUNT) newCol = COL_COUNT - 1;
+    setSelectedCell(newRow, newCol);
+  }
+
+  document.querySelectorAll("#numpad button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const value = btn.innerText;
+      if (value === "⌫") {
+        textInput.value = textInput.value.slice(0, -1);
+        handleTextInputChange();
+      } else {
+        insertStringIntoInput(value);
+      }
+    });
+  });
+
+  function resetTable() {
+    if (confirm("本当にリセットしますか？")) {
+      localStorage.removeItem("tableState");
+      generateTable();
+      renderTable();
+      updateCanvas();
+      setSelectedCell(0, 0);
+    }
+  }
+  document.getElementById("resetButton").addEventListener("click", resetTable);
+
+  function exportToExcel() {
+    const table = document.getElementById('excelTable');
+    const workbook = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
+    XLSX.writeFile(workbook, "export.xlsx");
+  }
+  document.getElementById("exportButton").addEventListener("click", exportToExcel);
+
+  document.getElementById("fullscreenPageButton").addEventListener("click", () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error(`全画面表示エラー: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  });
+
+  document.getElementById("fullscreenButton").addEventListener("click", () => {
+    const drawingArea = document.getElementById("left-area");
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      drawingArea.requestFullscreen();
+    }
+  });
+
+  window.addEventListener('resize', updateCanvas);
+  window.onload = () => {
+    generateTable();
+    loadTableState();
+    renderTable();
+    updateCanvas();
+    setSelectedCell(0, 0);
+  };
+</script>
+</body>
+</html>
