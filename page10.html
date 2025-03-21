@@ -820,7 +820,30 @@
   function exportToExcel() {
     const table = document.getElementById('excelTable');
     const workbook = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
-    XLSX.writeFile(workbook, "export.xlsx");
+    
+    // 以前のファイル名を取得（なければ 'export' をデフォルトに）
+    let defaultFilename = localStorage.getItem('exportFilename') || 'export';
+    
+    // ユーザーにファイル名を入力してもらう（拡張子は自動で追加されるので編集不可）
+    let inputFilename = prompt("保存するファイル名を入力してください（拡張子は自動で付与されます）", defaultFilename);
+    if (inputFilename === null) {
+      // キャンセルされた場合は処理中断
+      return;
+    }
+    
+    // ユーザーが「.xlsx」付きで入力していた場合、取り除く
+    if (inputFilename.toLowerCase().endsWith('.xlsx')) {
+      inputFilename = inputFilename.slice(0, -5);
+    }
+    
+    // 入力されたファイル名をローカルストレージに保存（次回の初期値として利用）
+    localStorage.setItem('exportFilename', inputFilename);
+    
+    // 最終的なファイル名に拡張子を追加
+    const finalFilename = inputFilename + ".xlsx";
+    
+    // エクセルファイルとして保存
+    XLSX.writeFile(workbook, finalFilename);
   }
   document.getElementById("exportButton").addEventListener("click", exportToExcel);
   
@@ -916,8 +939,6 @@
     document.getElementById("btn19").innerText = buttonConfig[19];
     document.getElementById("btn19").onclick = function(){ insertText(buttonConfig[19]); };
   
-
-  
     document.getElementById("btn24").innerText = buttonConfig[24];
     document.getElementById("btn24").onclick = function(){ insertText(buttonConfig[24]); };
   
@@ -930,7 +951,6 @@
     document.getElementById("btn27").innerText = buttonConfig[27];
     document.getElementById("btn27").onclick = function(){ insertText(buttonConfig[27]); };
   
-
   };
 </script>
 </body>
