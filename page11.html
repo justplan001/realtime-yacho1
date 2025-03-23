@@ -62,9 +62,24 @@
     #fileInput {
       display: none;
     }
+    /* 図形リセットボタン（右上固定・赤） */
+    #diagramResetButton {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background-color: red;
+      color: white;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      z-index: 1000;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
+  <!-- 右上に図形リセットボタンを配置 -->
+  <button id="diagramResetButton">Reset Diagram</button>
   <div id="container">
     <div class="section">
       <h2>挿入可能なボタン設定</h2>
@@ -161,14 +176,14 @@
       localStorage.setItem(DRUM_CONFIG_KEY, JSON.stringify(drumLabels));
     }
 
-    // 「初期設定に戻す」ボタンの処理
+    // 「初期設定に戻す」ボタンの処理（キーコンフィグのみリセット）
     document.getElementById("resetDefaults").addEventListener("click", () => {
-      if(confirm("本当に初期設定に戻しますか？")) {
+      if(confirm("本当にキーコンフィグを初期設定に戻しますか？")) {
         localStorage.setItem(BUTTON_CONFIG_KEY, JSON.stringify(defaultButtonLabels));
         localStorage.setItem(DRUM_CONFIG_KEY, JSON.stringify(defaultDrumLabels));
         populateButtonInputs();
         populateDrumInput();
-        alert("初期設定に戻しました。");
+        alert("キーコンフィグを初期設定に戻しました。");
       }
     });
 
@@ -228,6 +243,40 @@
       reader.readAsText(file);
       // 読み込み後はファイル入力の内容をクリアしておく
       event.target.value = "";
+    });
+
+    // ここから、図（表）のリセット処理用
+    // 100行×10列の空の表状態を生成し、
+    // A1,B1,C1（行0,列0～2）に "", "0", "0"
+    // G2,H2,I2（行1,列6～8）に "0.5", "4", "0.5" をセットする
+    function generateEmptyTableState() {
+      const table = [];
+      for (let i = 0; i < 100; i++) {
+        const row = [];
+        for (let j = 0; j < 10; j++) {
+          row.push("");
+        }
+        table.push(row);
+      }
+      // A1, B1, C1 → 行0, 列0～2
+      table[0][1] = "0";
+      table[0][2] = "0";
+      // G2, H2, I2 → 行1, 列6,7,8 (Excel表記: G2,H2,I2)
+      table[1][6] = "0.5";
+      table[1][7] = "4";
+      table[1][8] = "0.5";
+      return table;
+    }
+
+    // Reset Diagram ボタンの処理：全レイヤーの表をリセットする
+    document.getElementById("diagramResetButton").addEventListener("click", () => {
+      if(confirm("本当に図をリセットしますか？\n全レイヤーのA1,B1,C1およびG2,H2,I2に初期値が設定されます。")) {
+        for (let i = 0; i < 10; i++) {
+          const newState = generateEmptyTableState();
+          localStorage.setItem("tableState_layer" + i, JSON.stringify(newState));
+        }
+        alert("図をリセットしました。");
+      }
     });
 
     // 初期化
