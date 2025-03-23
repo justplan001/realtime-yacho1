@@ -2,18 +2,17 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- iOS Webアプリ設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="縦画面やちょー">
   <link rel="apple-touch-icon" href="path/to/your-icon.png">
-  
   <title>縦画面やちょー - 複数レイヤー対応版</title>
   <!-- Excelエクスポート用ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    /* 全体設定 */
+    /* 基本設定 */
     html, body {
       margin: 0;
       padding: 0;
@@ -21,24 +20,23 @@
       font-family: sans-serif;
       box-sizing: border-box;
     }
-    /* コンテナ：上部25vh（左右分割）／下部残り（操作エリア） */
+    /* 全体レイアウト：上部＝トップエリア／下部＝ボタン入力エリア＋図操作エリア */
     #container {
       display: flex;
       flex-direction: column;
       height: 100vh;
     }
-    /* 上部エリア：表と図 */
+    /* トップエリア：左右に分割（表と図）。初期高さ20vh */
     #top-area {
-      flex: 0 0 25vh;
       display: flex;
-      flex-direction: row;
+      height: 20vh;
+      transition: height 0.3s ease;
       border-bottom: 1px solid #ccc;
-      overflow: hidden;
     }
     #table-container, #diagram-container {
       flex: 1;
-      padding: 5px;
       overflow: auto;
+      padding: 5px;
       -webkit-overflow-scrolling: touch;
     }
     #table-container {
@@ -58,102 +56,55 @@
       min-height: 24px;
       user-select: none;
     }
-    td {
-      cursor: pointer;
-      outline: none;
-    }
-    .selected {
-      background-color: #caf;
-    }
-    /* 図（キャンバス）のスタイル */
-    #diagram-container {
-      position: relative;
-      overflow: auto;
-    }
+    td { cursor: pointer; outline: none; }
+    .selected { background-color: #caf; }
+    /* 図のキャンバス */
     #diagram-container canvas {
       background-color: #000;
       display: block;
+      width: 100%;
     }
-    /* 図内操作ボタン */
-    .topButton {
-      font-size: 14px;
-      padding: 8px 12px;
-      cursor: pointer;
-      background-color: #eee;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      position: absolute;
-      z-index: 1000;
-    }
-    #resetButton {
-      top: 10px;
-      right: 10px;
-    }
-    #exportButton {
-      bottom: 40px;
-      right: 10px;
-    }
-    #fullscreenButton {
-      bottom: 10px;
-      right: 10px;
-      z-index: 2000;
-    }
-    /* レイヤー移動ボタン（図内左上に配置） */
-    #layerControl {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 2000;
-      background: rgba(255,255,255,0.8);
-      padding: 5px;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    #layerControl button {
-      padding: 4px 8px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    /* 下部エリア：操作エリア */
+    /* 下部エリア：ボタン入力エリアと図操作エリアを縦に配置 */
     #bottom-area {
       flex: 1;
-      position: relative;
-      padding: 10px;
-      overflow: auto;
+      display: flex;
+      flex-direction: column;
     }
-    /* ページ全体の全画面表示ボタン */
+    /* ボタン入力エリア */
+    #button-input-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 5px;
+      border-bottom: 1px solid #ccc;
+    }
+    /* ① 自由記述入力＋全画面表示ボタン（セル編集用） */
+    #text-input-area {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 5px;
+    }
     #pageFullscreenButton {
-      position: absolute;
-      top: 10px;
-      left: 10px;
       padding: 8px 12px;
       font-size: 16px;
       cursor: pointer;
       background-color: #eee;
       border: 1px solid #ccc;
       border-radius: 4px;
-      z-index: 1000;
     }
-    /* 自由記述入力ボックス */
     #freeInput {
-      position: absolute;
-      top: 10px;
-      left: 150px;
-      width: 200px;
-      font-size: 16px;
+      flex: 1;
       padding: 8px;
+      font-size: 16px;
       box-sizing: border-box;
-      display: block;
     }
-    /* 挿入可能なボタン群（個別記述） */
+    /* ② 挿入可能なボタン群：横8、縦4（計32個） */
     #insertable-buttons {
-      position: absolute;
-      top: 60px;
-      left: 10px;
-      right: 10px;
       display: grid;
       grid-template-columns: repeat(8, 1fr);
       gap: 5px;
+      margin-bottom: 5px;
     }
     #insertable-buttons button {
       padding: 8px;
@@ -163,34 +114,35 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-    /* 以下、ドラム式入力、テンキー、四則演算、十字キー等のスタイル（そのまま） */
-    #drum-input-area {
-      position: absolute;
-      right: 180px;
-      bottom: 30px;
+    /* ③ 下段の左右配置エリア */
+    #lower-controls {
       display: flex;
-      flex-direction: column;
-      gap: 10px;
-      align-items: center;
+      margin-top: auto;
     }
+    /* 左：ドラム式入力エリア */
+    #drum-container {
+      width: 50%;
+    }
+    /* ドラムコンテナラッパーを2列のグリッドに変更 */
     #drum-container-wrapper {
-      display: flex;
-      width: 200px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
       gap: 10px;
     }
     .drum-container {
-      flex: 1;
       height: 150px;
       overflow: hidden;
       border: 1px solid #ccc;
       border-radius: 8px;
       background: #fafafa;
+      position: relative;
       user-select: none;
       touch-action: none;
-      position: relative;
+      z-index: 10; /* 他の要素に隠れないように */
     }
     .drum-list {
       position: absolute;
+      top: 0;
       left: 0;
       right: 0;
       transition: transform 0.1s ease-out;
@@ -203,6 +155,14 @@
       font-size: 16px;
       color: #333;
     }
+    /* 選択中のアイテムを強調 */
+    .drum-item.selected {
+      color: #007bff;
+      font-weight: bold;
+      background-color: #eef;
+      border: 2px solid #007bff;
+      box-sizing: border-box;
+    }
     .drum-center-line {
       position: absolute;
       top: 50%;
@@ -214,15 +174,12 @@
       border-bottom: 2px solid #007bff;
       pointer-events: none;
     }
-    .drum-item.selected {
-      color: #007bff;
-      font-weight: bold;
-      background-color: #eef;
-    }
+    /* 下：送信ボタン（2個分） */
     #drum-send-buttons-wrapper {
-      width: 200px;
-      display: flex;
-      justify-content: space-around;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 5px;
     }
     .drum-send-button {
       padding: 6px 10px;
@@ -232,15 +189,40 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-    #numpadArea {
+    /* 右：テンキー＋四則演算＋十字キーエリア（幅75%、右寄せ） */
+    #numpad-container {
+      width: 75%;
       position: absolute;
-      bottom: 10px;
-      right: 10px;
+      bottom: 40px;  /* 下から40px */
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
     }
-    #operatorButtons {
+    /* 十字キー */
+    #arrowKeysContainer {
+      margin-bottom: 5px;
+    }
+    #arrow-keys {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-areas:
+        ". up ."
+        "left center right"
+        ". down .";
       gap: 5px;
+    }
+    #arrow-keys button {
+      width: 40px;
+      height: 40px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    #arrow-up    { grid-area: up; }
+    #arrow-left  { grid-area: left; }
+    #arrow-right { grid-area: right; }
+    #arrow-down  { grid-area: down; }
+    /* 四則演算 */
+    #operatorButtons {
       margin-bottom: 5px;
     }
     #operatorButtons button {
@@ -251,45 +233,50 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
+    /* テンキー */
     #numpad {
       display: grid;
-      grid-template-columns: repeat(3, 50px);
+      grid-template-columns: repeat(3, 1fr);
       gap: 5px;
     }
     #numpad button {
-      width: 50px;
-      height: 50px;
+      padding: 8px;
       font-size: 16px;
       cursor: pointer;
+      background-color: #eee;
+      border: 1px solid #ccc;
+      border-radius: 4px;
     }
-    #arrowKeysContainer {
-      position: absolute;
-      bottom: 280px;
-      right: 25px;
-    }
-    #arrowKeysContainer #arrow-keys {
-      display: grid;
-      grid-template-areas:
-        ". up ."
-        "left center right"
-        ". down .";
-      gap: 5px;
-    }
-    #arrowKeysContainer button {
-      width: 40px;
+    /* 図操作エリア：固定高さ40px */
+    #control-area {
       height: 40px;
-      font-size: 18px;
-      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 10px;
+      background-color: #f0f0f0;
+      padding-left: 5px;
     }
-    #arrow-up    { grid-area: up; }
-    #arrow-left  { grid-area: left; }
-    #arrow-right { grid-area: right; }
-    #arrow-down  { grid-area: down; }
+    #control-area button {
+      padding: 8px 12px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #eee;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    /* レイヤー操作 */
+    #layerControl {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #currentLayerDisplay { font-size: 16px; }
   </style>
 </head>
 <body>
 <div id="container">
-  <!-- 上部エリア：表と図 -->
+  <!-- トップエリア：表と図 -->
   <div id="top-area">
     <div id="table-container">
       <table id="excelTable">
@@ -314,102 +301,110 @@
     </div>
     <div id="diagram-container">
       <canvas id="drawingCanvas"></canvas>
-      <!-- 図内操作ボタン -->
-      <button id="resetButton" class="topButton">Reset</button>
-      <button id="exportButton" class="topButton">Export</button>
-      <button id="fullscreenButton" class="topButton">Full</button>
-      <!-- レイヤー移動コントロール（図内左上） -->
-      <div id="layerControl">
-        <button id="layerDown">-</button>
-        <span id="currentLayerDisplay">Layer 1</span>
-        <button id="layerUp">+</button>
-      </div>
     </div>
   </div>
-  <!-- 下部エリア：操作エリア -->
+  <!-- 下部エリア：ボタン入力エリア＋図操作エリア -->
   <div id="bottom-area">
-    <button id="pageFullscreenButton">全画面表示</button>
-    <input id="freeInput" type="text" placeholder="自由記述入力">
-    
-    <!-- 挿入可能なボタン群（個別記述） -->
-    <div id="insertable-buttons">
-      <button id="btn0" class="insertable-button">仮ラベル</button>
-      <button id="btn1" class="insertable-button">仮ラベル</button>
-      <button id="btn2" class="insertable-button">仮ラベル</button>
-      <button id="btn3" class="insertable-button">仮ラベル</button>
-      <button id="btn4" class="insertable-button">仮ラベル</button>
-      <button id="btn5" class="insertable-button">仮ラベル</button>
-      <button id="btn6" class="insertable-button">仮ラベル</button>
-      <button id="btn7" class="insertable-button">仮ラベル</button>
-      
-      <button id="btn8" class="insertable-button">仮ラベル</button>
-      <button id="btn9" class="insertable-button">仮ラベル</button>
-      <button id="btn10" class="insertable-button">仮ラベル</button>
-      <button id="btn11" class="insertable-button">仮ラベル</button>
-      <button id="btn12" class="insertable-button">仮ラベル</button>
-      <button id="btn13" class="insertable-button">仮ラベル</button>
-      <button id="btn14" class="insertable-button">仮ラベル</button>
-      <button id="btn15" class="insertable-button">仮ラベル</button>
-      
-      <button id="btn16" class="insertable-button">仮ラベル</button>
-      <button id="btn17" class="insertable-button">仮ラベル</button>
-      <button id="btn18" class="insertable-button">仮ラベル</button>
-      <button id="btn19" class="insertable-button">仮ラベル</button>
-      <a></a><a></a><a></a><a></a>      
-      <button id="btn24" class="insertable-button">仮ラベル</button>
-      <button id="btn25" class="insertable-button">仮ラベル</button>
-      <button id="btn26" class="insertable-button">仮ラベル</button>
-      <button id="btn27" class="insertable-button">仮ラベル</button>
-      <a></a><a></a><a></a><a></a>
-    </div>
-    
-    <!-- 以下、ドラム式入力、テンキー、四則演算、十字キー等はそのまま -->
-    <div id="drum-input-area">
-      <div id="drum-container-wrapper">
-        <div class="drum-container" id="drum-container-left">
-          <div class="drum-list" id="drumListLeft"></div>
-          <div class="drum-center-line"></div>
+    <!-- ボタン入力エリア -->
+    <div id="button-input-area">
+      <!-- 自由記述入力＋全画面表示ボタン（セル編集用） -->
+      <div id="text-input-area">
+        <button id="pageFullscreenButton">全画面表示</button>
+        <input id="freeInput" type="text" placeholder="セルの値を編集">
+      </div>
+      <!-- 挿入可能なボタン群（32個） -->
+      <div id="insertable-buttons">
+        <button id="btn0" class="insertable-button">仮ラベル</button>
+        <button id="btn1" class="insertable-button">仮ラベル</button>
+        <button id="btn2" class="insertable-button">仮ラベル</button>
+        <button id="btn3" class="insertable-button">仮ラベル</button>
+        <button id="btn4" class="insertable-button">仮ラベル</button>
+        <button id="btn5" class="insertable-button">仮ラベル</button>
+        <button id="btn6" class="insertable-button">仮ラベル</button>
+        <button id="btn7" class="insertable-button">仮ラベル</button>
+        <button id="btn8" class="insertable-button">仮ラベル</button>
+        <button id="btn9" class="insertable-button">仮ラベル</button>
+        <button id="btn10" class="insertable-button">仮ラベル</button>
+        <button id="btn11" class="insertable-button">仮ラベル</button>
+        <button id="btn12" class="insertable-button">仮ラベル</button>
+        <button id="btn13" class="insertable-button">仮ラベル</button>
+        <button id="btn14" class="insertable-button">仮ラベル</button>
+        <button id="btn15" class="insertable-button">仮ラベル</button>
+        <button id="btn16" class="insertable-button">仮ラベル</button>
+        <button id="btn17" class="insertable-button">仮ラベル</button>
+        <button id="btn18" class="insertable-button">仮ラベル</button>
+        <button id="btn19" class="insertable-button">仮ラベル</button>
+        <a></a><a></a><a></a><a></a>
+        <button id="btn24" class="insertable-button">仮ラベル</button>
+        <button id="btn25" class="insertable-button">仮ラベル</button>
+        <button id="btn26" class="insertable-button">仮ラベル</button>
+        <button id="btn27" class="insertable-button">仮ラベル</button>
+        <a></a><a></a><a></a><a></a>
+      </div>
+      <!-- 下段の左右配置エリア -->
+      <div id="lower-controls">
+        <!-- 左：ドラム式入力エリア -->
+        <div id="drum-container">
+          <div id="drum-container-wrapper">
+            <div class="drum-container" id="drum-container-1">
+              <div class="drum-list" id="drumList1"></div>
+              <div class="drum-center-line"></div>
+            </div>
+            <div class="drum-container" id="drum-container-2">
+              <div class="drum-list" id="drumList2"></div>
+              <div class="drum-center-line"></div>
+            </div>
+          </div>
+          <!-- 送信ボタン（2個分） -->
+          <div id="drum-send-buttons-wrapper">
+            <button id="sendButton1" class="drum-send-button">送信1</button>
+            <button id="sendButton2" class="drum-send-button">送信2</button>
+          </div>
         </div>
-        <div class="drum-container" id="drum-container-right">
-          <div class="drum-list" id="drumListRight"></div>
-          <div class="drum-center-line"></div>
+        <!-- 右：テンキー＋四則演算＋十字キーエリア（幅75%、右寄せ） -->
+        <div id="numpad-container">
+          <!-- 十字キー -->
+          <div id="arrowKeysContainer">
+            <div id="arrow-keys">
+              <button id="arrow-up">↑</button>
+              <button id="arrow-left">←</button>
+              <button id="arrow-right">→</button>
+              <button id="arrow-down">↓</button>
+            </div>
+          </div>
+          <!-- 四則演算 -->
+          <div id="operatorButtons">
+            <button class="operator-button">+</button>
+            <button class="operator-button">/</button>
+            <button class="operator-button">*</button>
+            <button class="operator-button">-</button>
+          </div>
+          <!-- テンキー -->
+          <div id="numpad">
+            <button>7</button>
+            <button>8</button>
+            <button>9</button>
+            <button>4</button>
+            <button>5</button>
+            <button>6</button>
+            <button>1</button>
+            <button>2</button>
+            <button>3</button>
+            <button>0</button>
+            <button>.</button>
+            <button>⌫</button>
+          </div>
         </div>
       </div>
-      <div id="drum-send-buttons-wrapper">
-        <button id="sendButtonLeft" class="drum-send-button">送信(左)</button>
-        <button id="sendButtonRight" class="drum-send-button">送信(右)</button>
-      </div>
     </div>
-    
-    <div id="numpadArea">
-      <div id="operatorButtons">
-        <button class="operator-button">+</button>
-        <button class="operator-button">/</button>
-        <button class="operator-button">*</button>
-        <button class="operator-button">-</button>
-      </div>
-      <div id="numpad">
-        <button>7</button>
-        <button>8</button>
-        <button>9</button>
-        <button>4</button>
-        <button>5</button>
-        <button>6</button>
-        <button>1</button>
-        <button>2</button>
-        <button>3</button>
-        <button>0</button>
-        <button>.</button>
-        <button>⌫</button>
-      </div>
-    </div>
-    
-    <div id="arrowKeysContainer">
-      <div id="arrow-keys">
-        <button id="arrow-up">↑</button>
-        <button id="arrow-left">←</button>
-        <button id="arrow-right">→</button>
-        <button id="arrow-down">↓</button>
+    <!-- 図操作エリア -->
+    <div id="control-area">
+      <button id="toggleButtonArea">Full</button>
+      <button id="exportButton">Export</button>
+      <div id="layerControl">
+        <button id="layerDown">-</button>
+        <span id="currentLayerDisplay">1</span>
+        <button id="layerUp">+</button>
       </div>
     </div>
   </div>
@@ -421,12 +416,11 @@
   //========================
   const ROW_COUNT = 100;
   const COL_COUNT = 10;
-  // 各レイヤーごとに状態を保持するオブジェクトを生成
   function generateNewTableState() {
     const table = [];
-    for (let i = 0; i < ROW_COUNT; i++) {
+    for (let i = 0; i < ROW_COUNT; i++){
       const row = [];
-      for (let j = 0; j < COL_COUNT; j++) {
+      for (let j = 0; j < COL_COUNT; j++){
         row.push("");
       }
       table.push(row);
@@ -437,7 +431,6 @@
     table[1][8] = "0.5";
     return table;
   }
-  // 各レイヤーの状態：{ tableState, currentRow, currentCol }
   const layers = [];
   for (let i = 0; i < 10; i++){
     layers.push({
@@ -446,57 +439,45 @@
       currentCol: 0
     });
   }
-  let currentLayer = 0;  // 現在選択中のレイヤー（0～9）
-
-  // 挿入可能ボタンのデフォルトラベル
+  let currentLayer = 0;
   const defaultButtonLabels = [
-      "左境", "左枡", "角", "桝", "標", "電柱", "右桝", "右境",
-      "下", "消", "W", "E", "市", "民", "杭", "基",
-      "S", "空", "AV", "T", "使用不可", "使用不可", "使用不可", "使用不可",
-      "SS", "SV", "G", "水取器", "使用不可", "使用不可", "使用不可", "使用不可"
+    "左境", "左枡", "角", "桝", "標", "電柱", "右桝", "右境",
+    "下", "消", "W", "E", "市", "民", "杭", "基",
+    "S", "空", "AV", "T", "使用不可", "使用不可", "使用不可", "使用不可",
+    "SS", "SV", "G", "水取器", "使用不可", "使用不可", "使用不可", "使用不可"
   ];
   function loadConfig(key, defaultArr) {
-      const saved = localStorage.getItem(key);
-      if (saved) {
-          try {
-              return JSON.parse(saved);
-          } catch (e) {
-              return defaultArr;
-          }
-      }
-      return defaultArr;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      try { return JSON.parse(saved); } catch(e) { return defaultArr; }
+    }
+    return defaultArr;
   }
   const buttonConfig = loadConfig("buttonConfig", defaultButtonLabels);
 
-  //========================
-  // 挿入可能ボタンクリック時処理
-  //========================
+  // 挿入可能ボタンクリック
   function insertText(text) {
-    setSelectedCell(layers[currentLayer].currentRow, 0);
+    setSelectedCell(layers[currentLayer].currentRow, layers[currentLayer].currentCol);
     updateCellText(text);
   }
-  
+
   //========================
-  // テーブル・キャンバス処理（レイヤー対応版）
+  // 表・キャンバス処理
   //========================
-  const tbody = document.getElementById('table-body');
-  const freeInput = document.getElementById('freeInput');
-  
+  const tbody = document.getElementById("table-body");
   function renderTable() {
     tbody.innerHTML = "";
     const tableState = layers[currentLayer].tableState;
     const currentRow = layers[currentLayer].currentRow;
     const currentCol = layers[currentLayer].currentCol;
-    for (let i = 0; i < ROW_COUNT; i++) {
-      const tr = document.createElement('tr');
-      for (let j = 0; j < COL_COUNT; j++) {
-        const td = document.createElement('td');
+    for (let i = 0; i < ROW_COUNT; i++){
+      const tr = document.createElement("tr");
+      for (let j = 0; j < COL_COUNT; j++){
+        const td = document.createElement("td");
         td.dataset.row = i;
         td.dataset.col = j;
         td.innerText = tableState[i][j];
-        if (i === currentRow && j === currentCol) {
-          td.classList.add("selected");
-        }
+        if (i === currentRow && j === currentCol) { td.classList.add("selected"); }
         td.addEventListener("click", () => { setSelectedCell(i, j); });
         td.addEventListener("keydown", navigationHandler);
         tr.appendChild(td);
@@ -504,36 +485,26 @@
       tbody.appendChild(tr);
     }
   }
-  
   function setSelectedCell(r, c) {
     layers[currentLayer].currentRow = r;
     layers[currentLayer].currentCol = c;
     renderTable();
     updateCanvas();
     saveLayerState(currentLayer);
-    freeInput.value = layers[currentLayer].tableState[r][c];
-    const container = document.getElementById('table-container');
+    const container = document.getElementById("table-container");
     const cell = container.querySelector(`td[data-row="${r}"][data-col="${c}"]`);
-    if (cell) cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    if (cell) cell.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+    document.getElementById("freeInput").value = layers[currentLayer].tableState[r][c];
   }
-  
   function navigationHandler(event) {
     let targetRow = layers[currentLayer].currentRow;
     let targetCol = layers[currentLayer].currentCol;
-    if (event.key === "Enter") {
-      targetRow = layers[currentLayer].currentRow + 1;
-      event.preventDefault();
-    } else if (event.key === "ArrowUp") {
-      targetRow = layers[currentLayer].currentRow - 1;
-    } else if (event.key === "ArrowDown") {
-      targetRow = layers[currentLayer].currentRow + 1;
-    } else if (event.key === "ArrowLeft") {
-      targetCol = layers[currentLayer].currentCol - 1;
-    } else if (event.key === "ArrowRight") {
-      targetCol = layers[currentLayer].currentCol + 1;
-    } else {
-      return;
-    }
+    if (event.key === "Enter") { targetRow++; event.preventDefault(); }
+    else if (event.key === "ArrowUp") { targetRow--; }
+    else if (event.key === "ArrowDown") { targetRow++; }
+    else if (event.key === "ArrowLeft") { targetCol--; }
+    else if (event.key === "ArrowRight") { targetCol++; }
+    else { return; }
     if (targetRow < 0) targetRow = 0;
     if (targetRow >= ROW_COUNT) targetRow = ROW_COUNT - 1;
     if (targetCol < 0) targetCol = 0;
@@ -542,11 +513,9 @@
     const targetCell = document.querySelector(`td[data-row="${targetRow}"][data-col="${targetCol}"]`);
     if (targetCell) targetCell.focus();
   }
-  
   function saveLayerState(layerIndex) {
     localStorage.setItem("tableState_layer" + layerIndex, JSON.stringify(layers[layerIndex].tableState));
   }
-  
   function loadLayerState(layerIndex) {
     const saved = localStorage.getItem("tableState_layer" + layerIndex);
     if (saved) {
@@ -556,33 +525,23 @@
       }
     }
   }
-  
   function updateCellText(newText) {
     layers[currentLayer].tableState[layers[currentLayer].currentRow][layers[currentLayer].currentCol] = newText;
     renderTable();
     updateCanvas();
     saveLayerState(currentLayer);
-    freeInput.value = newText;
   }
-  
   function appendCellText(str) {
     updateCellText(layers[currentLayer].tableState[layers[currentLayer].currentRow][layers[currentLayer].currentCol] + str);
   }
-  
-  freeInput.addEventListener('input', () => {
-    layers[currentLayer].tableState[layers[currentLayer].currentRow][layers[currentLayer].currentCol] = freeInput.value;
-    renderTable();
-    updateCanvas();
-    saveLayerState(currentLayer);
-  });
-  
+
   //========================
-  // 図形描写（キャンバス更新）
+  // キャンバス描画処理
   //========================
   function updateCanvas() {
-    const canvas = document.getElementById('drawingCanvas');
-    const ctx = canvas.getContext('2d');
-    const container = document.getElementById('diagram-container');
+    const canvas = document.getElementById("drawingCanvas");
+    const ctx = canvas.getContext("2d");
+    const container = document.getElementById("diagram-container");
     const scale = 20;
     const tableState = layers[currentLayer].tableState;
     let maxDistance = 0;
@@ -593,7 +552,7 @@
     if (maxDistance === 0) maxDistance = 100;
     canvas.width = container.clientWidth;
     canvas.height = (maxDistance + 5) * scale + 50;
-    ctx.fillStyle = 'black';
+    ctx.fillStyle = "black";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     let originX = canvas.width / 2;
     const originY = canvas.height - 50;
@@ -603,7 +562,7 @@
     let sidewalkL = parseFloat(tableState[1][5]) || 0;
     let sidewalkR = parseFloat(tableState[1][9]) || 0;
     originX = originX - (roadWidth * scale) / 2;
-    ctx.strokeStyle = 'white';
+    ctx.strokeStyle = "white";
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(originX, originY);
@@ -625,7 +584,7 @@
       ctx.lineTo(originX + (roadWidth - offsetI) * scale, originY - ((maxDistance + 5) * scale));
       ctx.stroke();
     }
-    ctx.strokeStyle = 'yellow';
+    ctx.strokeStyle = "yellow";
     ctx.lineWidth = 2;
     if (!isNaN(sidewalkL) && sidewalkL !== 0){
       let sidewalkLX = originX - sidewalkL * scale;
@@ -651,28 +610,16 @@
       let xVal = (xStr === "") ? roadWidth : parseFloat(xStr);
       if (xVal < 0) xVal = roadWidth - Math.abs(xVal);
       if (isNaN(xVal)) continue;
-      
-      // 修正：D列とE列の扱いを入れ替え
-      const comment = tableState[i][3].trim();       // D列をコメントとして利用
-      const diamVal = parseFloat(tableState[i][4]);    // E列を円の描写に利用
-      
+      const comment = tableState[i][3].trim();
+      const diamVal = parseFloat(tableState[i][4]);
       const xPos = originX + (xVal * scale);
       const yPos = originY - (yVal * scale);
       const color = colors[i % colors.length];
-      
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(originX, yPos);
-      ctx.lineTo(xPos, yPos);
-      ctx.stroke();
-      
       const pointRadius = 0.1 * scale;
       ctx.beginPath();
       ctx.arc(xPos, yPos, pointRadius, 0, 2 * Math.PI);
       ctx.fillStyle = color;
       ctx.fill();
-      
       if (!isNaN(diamVal) && diamVal > 0) {
         const circleRadius = (diamVal / 2) * scale;
         ctx.beginPath();
@@ -681,142 +628,118 @@
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
-      
       let displayText = label;
       if (comment) displayText += " (" + comment + ")";
-      ctx.font = '30px sans-serif';
+      ctx.font = "15px sans-serif";
       ctx.fillStyle = color;
       let textWidth = ctx.measureText(displayText).width;
       let textX = (xPos >= roadCenterX) ? xPos + pointRadius + 2 : xPos - pointRadius - 2 - textWidth;
       ctx.fillText(displayText, textX, yPos);
     }
-    container.scrollTop = container.scrollHeight;
+    container.scrollTop = 0;
   }
-  
+
   //========================
-  // ドラム式入力処理（そのまま）
+  // 挿入可能ボタン設定（32個）
+  //========================
+  for (let i = 0; i < 32; i++){
+    const btn = document.getElementById("btn" + i);
+    if (btn){
+      btn.innerText = buttonConfig[i] || "仮ラベル";
+      btn.addEventListener("click", () => { insertText(btn.innerText); });
+    }
+  }
+
+  //========================
+  // ドラム式入力処理（pointerイベント版）
   //========================
   let drumItems = loadConfig("drumConfig", [
-      "左境", "左枡", "車止", "支線", "標", "電柱", "右桝", "右境",
-      "下", "D", "S", "SS", "消", "F", "SV", "W",
-      "E", "T", "メジ", "杭", "都", "他", "市", "民",
-      "終", "GR", "植樹", "ﾐﾗｰ", "角", "基準点", "G", "空"
+    "左境", "左枡", "車止", "支線", "標", "電柱", "右桝", "右境",
+    "下", "D", "S", "SS", "消", "F", "SV", "W",
+    "E", "T", "メジ", "杭", "都", "他", "市", "民",
+    "終", "GR", "植樹", "ﾐﾗｰ", "角", "基準点", "G", "空"
   ]);
-  
+  function initDrumInput(suffix) {
+    const container = document.getElementById("drum-container-" + suffix);
+    const list = document.getElementById("drumList" + suffix);
+    let currentOffset = 0;
+    let isDragging = false;
+    let startY = 0;
+    let startOffset = 0;
+    let currentIndex = 0;
+    function updateSelected() {
+      const centerY = container.clientHeight / 2;
+      const listCoord = centerY - currentOffset;
+      let index = Math.floor(listCoord / 30);
+      if (index < 0) index = 0;
+      if (index >= drumItems.length) index = drumItems.length - 1;
+      currentIndex = index;
+      list.querySelectorAll(".drum-item").forEach((el, i) => {
+        if (i === index) {
+          el.classList.add("selected");
+        } else {
+          el.classList.remove("selected");
+        }
+      });
+    }
+    container.addEventListener("pointerdown", e => {
+      e.preventDefault();
+      isDragging = true;
+      startY = e.clientY;
+      startOffset = currentOffset;
+    });
+    container.addEventListener("pointermove", e => {
+      if (!isDragging) return;
+      e.preventDefault();
+      const dy = e.clientY - startY;
+      currentOffset = startOffset + dy;
+      list.style.transform = `translateY(${currentOffset}px)`;
+      updateSelected();
+    });
+    container.addEventListener("pointerup", e => {
+      if (!isDragging) return;
+      e.preventDefault();
+      isDragging = false;
+      currentOffset = Math.round(currentOffset / 30) * 30;
+      list.style.transform = `translateY(${currentOffset}px)`;
+      updateSelected();
+    });
+    // pointercancel にも対応
+    container.addEventListener("pointercancel", e => {
+      isDragging = false;
+    });
+    return { container, list, getCurrentIndex: () => currentIndex };
+  }
+  // 初期化：2つのドラム入力を用意
+  const drumInput1 = initDrumInput("1");
+  const drumInput2 = initDrumInput("2");
+  // 各ドラムリストに項目をセット
   function createDrumItems(container) {
-    container.innerHTML = '';
+    container.innerHTML = "";
     drumItems.forEach(item => {
-      const div = document.createElement('div');
-      div.className = 'drum-item';
+      const div = document.createElement("div");
+      div.className = "drum-item";
       div.innerText = item;
       container.appendChild(div);
     });
   }
-  
-  const drumContainerLeft = document.getElementById('drum-container-left');
-  const drumListLeft = document.getElementById('drumListLeft');
-  let currentOffsetLeft = 0;
-  let isDraggingLeft = false, startYLeft = 0, startOffsetLeft = 0;
-  let currentIndexLeft = 0;
-  
-  const drumContainerRight = document.getElementById('drum-container-right');
-  const drumListRight = document.getElementById('drumListRight');
-  let currentOffsetRight = 0;
-  let isDraggingRight = false, startYRight = 0, startOffsetRight = 0;
-  let currentIndexRight = 0;
-  
-  createDrumItems(drumListLeft);
-  createDrumItems(drumListRight);
-  
-  function updateSelected(container, offset, setter) {
-    const centerY = container.clientHeight / 2;
-    const listCoord = centerY - offset;
-    let index = Math.floor(listCoord / 30);
-    if (index < 0) index = 0;
-    if (index >= drumItems.length) index = drumItems.length - 1;
-    setter(index);
-    container.querySelectorAll('.drum-item').forEach((el, i) => {
-      el.classList.toggle('selected', i === index);
-    });
-  }
-  
-  function onPointerDownLeft(e) {
-    isDraggingLeft = true;
-    startYLeft = e.touches ? e.touches[0].clientY : e.clientY;
-    startOffsetLeft = currentOffsetLeft;
-    drumListLeft.style.transition = 'none';
-  }
-  function onPointerMoveLeft(e) {
-    if (!isDraggingLeft) return;
-    const y = e.touches ? e.touches[0].clientY : e.clientY;
-    const dy = y - startYLeft;
-    currentOffsetLeft = startOffsetLeft + dy;
-    drumListLeft.style.transform = `translateY(${currentOffsetLeft}px)`;
-    updateSelected(drumContainerLeft, currentOffsetLeft, (index) => currentIndexLeft = index);
-  }
-  function onPointerUpLeft(e) {
-    if (!isDraggingLeft) return;
-    isDraggingLeft = false;
-    drumListLeft.style.transition = 'transform 0.2s ease-out';
-    currentOffsetLeft = Math.round(currentOffsetLeft / 30) * 30;
-    drumListLeft.style.transform = `translateY(${currentOffsetLeft}px)`;
-    updateSelected(drumContainerLeft, currentOffsetLeft, (index) => currentIndexLeft = index);
-  }
-  drumContainerLeft.addEventListener('mousedown', onPointerDownLeft);
-  drumContainerLeft.addEventListener('mousemove', onPointerMoveLeft);
-  drumContainerLeft.addEventListener('mouseup', onPointerUpLeft);
-  drumContainerLeft.addEventListener('mouseleave', onPointerUpLeft);
-  drumContainerLeft.addEventListener('touchstart', onPointerDownLeft);
-  drumContainerLeft.addEventListener('touchmove', onPointerMoveLeft);
-  drumContainerLeft.addEventListener('touchend', onPointerUpLeft);
-  drumContainerLeft.addEventListener('touchcancel', onPointerUpLeft);
-  
-  function onPointerDownRight(e) {
-    isDraggingRight = true;
-    startYRight = e.touches ? e.touches[0].clientY : e.clientY;
-    startOffsetRight = currentOffsetRight;
-    drumListRight.style.transition = 'none';
-  }
-  function onPointerMoveRight(e) {
-    if (!isDraggingRight) return;
-    const y = e.touches ? e.touches[0].clientY : e.clientY;
-    const dy = y - startYRight;
-    currentOffsetRight = startOffsetRight + dy;
-    drumListRight.style.transform = `translateY(${currentOffsetRight}px)`;
-    updateSelected(drumContainerRight, currentOffsetRight, (index) => currentIndexRight = index);
-  }
-  function onPointerUpRight(e) {
-    if (!isDraggingRight) return;
-    isDraggingRight = false;
-    drumListRight.style.transition = 'transform 0.2s ease-out';
-    currentOffsetRight = Math.round(currentOffsetRight / 30) * 30;
-    drumListRight.style.transform = `translateY(${currentOffsetRight}px)`;
-    updateSelected(drumContainerRight, currentOffsetRight, (index) => currentIndexRight = index);
-  }
-  drumContainerRight.addEventListener('mousedown', onPointerDownRight);
-  drumContainerRight.addEventListener('mousemove', onPointerMoveRight);
-  drumContainerRight.addEventListener('mouseup', onPointerUpRight);
-  drumContainerRight.addEventListener('mouseleave', onPointerUpRight);
-  drumContainerRight.addEventListener('touchstart', onPointerDownRight);
-  drumContainerRight.addEventListener('touchmove', onPointerMoveRight);
-  drumContainerRight.addEventListener('touchend', onPointerUpRight);
-  drumContainerRight.addEventListener('touchcancel', onPointerUpRight);
-  
-  // ドラム送信ボタン
-  document.getElementById("sendButtonLeft").addEventListener("click", () => {
+  createDrumItems(drumInput1.list);
+  createDrumItems(drumInput2.list);
+  // 各送信ボタンの処理（2個分）
+  document.getElementById("sendButton1").addEventListener("click", () => {
     setSelectedCell(layers[currentLayer].currentRow, layers[currentLayer].currentCol);
-    updateCellText(drumItems[currentIndexLeft]);
+    updateCellText(drumItems[drumInput1.getCurrentIndex()]);
   });
-  document.getElementById("sendButtonRight").addEventListener("click", () => {
+  document.getElementById("sendButton2").addEventListener("click", () => {
     setSelectedCell(layers[currentLayer].currentRow, layers[currentLayer].currentCol);
-    updateCellText(drumItems[currentIndexRight]);
+    updateCellText(drumItems[drumInput2.getCurrentIndex()]);
   });
-  
-  // テンキー＆四則演算
+
+  //========================
+  // テンキー、四則演算、十字キーのイベント登録
+  //========================
   document.querySelectorAll("#operatorButtons button").forEach(btn => {
-    btn.addEventListener("click", () => {
-      appendCellText(btn.innerText);
-    });
+    btn.addEventListener("click", () => { appendCellText(btn.innerText); });
   });
   document.querySelectorAll("#numpad button").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -829,16 +752,10 @@
       }
     });
   });
-  
-  // 矢印キー
-  document.getElementById("arrow-up")
-      .addEventListener("click", () => moveFocus(-1, 0));
-  document.getElementById("arrow-down")
-      .addEventListener("click", () => moveFocus(1, 0));
-  document.getElementById("arrow-left")
-      .addEventListener("click", () => moveFocus(0, -1));
-  document.getElementById("arrow-right")
-      .addEventListener("click", () => moveFocus(0, 1));
+  document.getElementById("arrow-up").addEventListener("click", () => moveFocus(-1, 0));
+  document.getElementById("arrow-down").addEventListener("click", () => moveFocus(1, 0));
+  document.getElementById("arrow-left").addEventListener("click", () => moveFocus(0, -1));
+  document.getElementById("arrow-right").addEventListener("click", () => moveFocus(0, 1));
   function moveFocus(dRow, dCol) {
     let newRow = layers[currentLayer].currentRow + dRow;
     let newCol = layers[currentLayer].currentCol + dCol;
@@ -848,49 +765,66 @@
     if (newCol >= COL_COUNT) newCol = COL_COUNT - 1;
     setSelectedCell(newRow, newCol);
   }
-  
-  // reset ボタン
-  function resetTable() {
-    if (confirm("本当にリセットしますか？")) {
-      localStorage.removeItem("tableState_layer" + currentLayer);
-      layers[currentLayer].tableState = generateNewTableState();
+
+  //========================
+  // 図操作エリアイベント
+  //========================
+  document.getElementById("exportButton").addEventListener("click", exportToExcelAllLayers);
+  document.getElementById("pageFullscreenButton").addEventListener("click", () => {
+    if (!document.fullscreenElement){
+      document.documentElement.requestFullscreen();
+    } else { document.exitFullscreen(); }
+  });
+  document.getElementById("toggleButtonArea").addEventListener("click", () => {
+    const btnArea = document.getElementById("button-input-area");
+    const topArea = document.getElementById("top-area");
+    if (btnArea.style.display === "none") {
+      btnArea.style.display = "flex";
+      topArea.style.height = "20vh";
+    } else {
+      btnArea.style.display = "none";
+      topArea.style.height = (window.innerHeight - 40) + "px"; // control-area固定40px
+    }
+  });
+  document.getElementById("layerUp").addEventListener("click", () => {
+    if (currentLayer < layers.length - 1){
+      currentLayer++;
+      loadLayerState(currentLayer);
       renderTable();
       updateCanvas();
-      setSelectedCell(0, 0);
+      updateLayerDisplay();
     }
+  });
+  document.getElementById("layerDown").addEventListener("click", () => {
+    if (currentLayer > 0){
+      currentLayer--;
+      loadLayerState(currentLayer);
+      renderTable();
+      updateCanvas();
+      updateLayerDisplay();
+    }
+  });
+  function updateLayerDisplay(){
+    document.getElementById("currentLayerDisplay").innerText = (currentLayer + 1);
   }
-  document.getElementById("resetButton").addEventListener("click", resetTable);
-  
-  // export ボタン：全レイヤー分のデータを1ファイルにエクスポート
   function exportToExcelAllLayers() {
-    // シート全体を構築するため、十分なサイズの2次元配列を用意
     const totalRows = 1001;
-    const totalCols = 10; // A～J
+    const totalCols = 10;
     let sheetData = [];
     for (let r = 0; r < totalRows; r++){
       sheetData[r] = new Array(totalCols).fill("");
     }
-    
-    // ヘッダー行（行1＝index 0）を設定
     sheetData[0] = ["名称", "距離", "X座標", "コメント", "直径", "歩道(L)", "L側溝", "幅員", "R側溝", "歩道(R)"];
-    
-    // --- A～E列：各レイヤーの入力内容を連結して出力 ---
-    // まず、レイヤー1（index 0）の内容をヘッダー行の下（index 1 以降）に貼り付け
     let layer1 = layers[0].tableState;
     let lastRow = 0;
     for (let r = 0; r < ROW_COUNT; r++){
-      for (let c = 0; c < 5; c++){ // A～E
+      for (let c = 0; c < 5; c++){
         sheetData[r + 1][c] = layer1[r][c];
       }
-      if (layer1[r][0] !== "") {
-        lastRow = r;
-      }
+      if (layer1[r][0] !== "") { lastRow = r; }
     }
-    // レイヤー1の末尾直下に区切り「***」を挿入
     sheetData[lastRow + 2][0] = "***";
     let appendRow = lastRow + 3;
-    
-    // レイヤー2～10のA～E列のデータを順次貼り付け
     for (let layerIndex = 1; layerIndex < layers.length; layerIndex++){
       let tableState = layers[layerIndex].tableState;
       let lastRowInLayer = 0;
@@ -898,109 +832,46 @@
         for (let c = 0; c < 5; c++){
           sheetData[appendRow + r][c] = tableState[r][c];
         }
-        if (tableState[r][0] !== ""){
-          lastRowInLayer = r;
-        }
+        if (tableState[r][0] !== "") { lastRowInLayer = r; }
       }
-      // 貼り付けたレイヤーの末尾の次の行に区切り「***」
       sheetData[appendRow + lastRowInLayer + 1][0] = "***";
       appendRow += lastRowInLayer + 2;
     }
-    
-    // --- F～J列：横断面情報（クロスセクション情報）の出力 ---
-    // 各レイヤーの横断面情報として、ここでは各レイヤーの tableState の1行目（例）からF～J列を抜粋し、
-    // レイヤー1はエクスポートファイルの3行目（index 2）、レイヤー2は4行目（index 3）、…、レイヤー10は12行目（index 11）に配置
     for (let layerIndex = 0; layerIndex < layers.length; layerIndex++){
       let crossSection = layers[layerIndex].tableState[1];
-      let targetRow = layerIndex + 2; // layerIndex=0 → row index 2 (Excel行3)
+      let targetRow = layerIndex + 2;
       for (let c = 5; c < 10; c++){
         sheetData[targetRow][c] = crossSection[c];
       }
     }
-    
-    // ワークブック作成とシートへの変換
     const workbook = XLSX.utils.book_new();
     const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
     XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-    
-    // ファイル名入力処理
-    let defaultFilename = localStorage.getItem('exportFilename') || 'export';
+    let defaultFilename = localStorage.getItem("exportFilename") || "export";
     let inputFilename = prompt("保存するファイル名を入力してください（拡張子は自動で付与されます）", defaultFilename);
     if (inputFilename === null) return;
-    if (inputFilename.toLowerCase().endsWith('.xlsx')) {
+    if (inputFilename.toLowerCase().endsWith(".xlsx")){
       inputFilename = inputFilename.slice(0, -5);
     }
-    localStorage.setItem('exportFilename', inputFilename);
+    localStorage.setItem("exportFilename", inputFilename);
     const finalFilename = inputFilename + ".xlsx";
     XLSX.writeFile(workbook, finalFilename);
   }
-  document.getElementById("exportButton").addEventListener("click", exportToExcelAllLayers);
-  
-  // ページ全体の全画面表示
-  document.getElementById("pageFullscreenButton").addEventListener("click", () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-    } else {
-      document.exitFullscreen();
-    }
+
+  //========================
+  // 自由記述入力ボックスのセル反映処理
+  //========================
+  document.getElementById("freeInput").addEventListener("input", function() {
+    updateCellText(this.value);
   });
-  
-  // 図エリア全画面表示
-  document.getElementById("fullscreenButton").addEventListener("click", () => {
-    const container = document.getElementById("diagram-container");
-    if (!document.fullscreenElement) {
-      container.requestFullscreen().catch(err => {
-        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
-      });
-    } else {
-      document.exitFullscreen();
-    }
-  });
-  
-  window.addEventListener('resize', updateCanvas);
-  
-  // レイヤー移動コントロール（図内左上）
-  document.getElementById("layerUp").addEventListener("click", () => {
-    if (currentLayer < layers.length - 1) {
-      currentLayer++;
-      loadLayerState(currentLayer);
-      renderTable();
-      updateCanvas();
-      freeInput.value = layers[currentLayer].tableState[layers[currentLayer].currentRow][layers[currentLayer].currentCol];
-      updateLayerDisplay();
-    }
-  });
-  document.getElementById("layerDown").addEventListener("click", () => {
-    if (currentLayer > 0) {
-      currentLayer--;
-      loadLayerState(currentLayer);
-      renderTable();
-      updateCanvas();
-      freeInput.value = layers[currentLayer].tableState[layers[currentLayer].currentRow][layers[currentLayer].currentCol];
-      updateLayerDisplay();
-    }
-  });
-  function updateLayerDisplay(){
-    document.getElementById("currentLayerDisplay").innerText = "Layer " + (currentLayer + 1);
-  }
-  
-  // ページ読み込み時の初期化
+
   window.onload = function(){
     for (let i = 0; i < layers.length; i++){
       loadLayerState(i);
     }
     renderTable();
     updateCanvas();
-    setSelectedCell(0, 0);
     updateLayerDisplay();
-    
-    for (let i = 0; i < buttonConfig.length; i++){
-      const btn = document.getElementById("btn" + i);
-      if (btn){
-        btn.innerText = buttonConfig[i];
-        btn.onclick = function(){ insertText(buttonConfig[i]); };
-      }
-    }
   };
 </script>
 </body>
