@@ -2,11 +2,30 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>画像プレビューと永続化</title>
+  <title>画像プレビューと拡大表示</title>
   <style>
-    img {
+    /* サムネイルのスタイル */
+    #preview img {
       width: 100px;
       margin: 10px;
+      cursor: pointer;
+    }
+    /* モーダルのスタイル */
+    #modal {
+      display: none; /* 初期状態は非表示 */
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    #modal img {
+      max-width: 90%;
+      max-height: 90%;
     }
   </style>
 </head>
@@ -16,11 +35,16 @@
   <!-- リセットボタン -->
   <button id="resetButton">リセット</button>
   
-  <!-- 画像を表示するエリア -->
+  <!-- サムネイル表示エリア -->
   <div id="preview"></div>
+  
+  <!-- モーダル（拡大表示用） -->
+  <div id="modal">
+    <img id="modalImage" src="" alt="拡大画像">
+  </div>
 
   <script>
-    // localStorageに保存された画像データを読み込み、表示する関数
+    // 保存されている画像データを読み込み、サムネイル表示する関数
     function loadSavedImages() {
       const savedData = localStorage.getItem('savedImages');
       if (savedData) {
@@ -30,12 +54,28 @@
         imageDataArray.forEach(src => {
           const img = document.createElement('img');
           img.src = src;
+          img.addEventListener('click', function() {
+            openModal(src);
+          });
           preview.appendChild(img);
         });
       }
     }
 
-    // ファイルが選択されたときのイベントリスナー
+    // モーダルを開いて画像を表示する関数
+    function openModal(src) {
+      const modal = document.getElementById('modal');
+      const modalImage = document.getElementById('modalImage');
+      modalImage.src = src;
+      modal.style.display = 'flex';
+    }
+
+    // モーダルを閉じる関数
+    function closeModal() {
+      document.getElementById('modal').style.display = 'none';
+    }
+
+    // ファイル入力で画像が選択されたときの処理
     document.getElementById('fileInput').addEventListener('change', function(event) {
       const files = event.target.files;
       const preview = document.getElementById('preview');
@@ -52,23 +92,31 @@
           imageDataArray.push(dataUrl);
           const img = document.createElement('img');
           img.src = dataUrl;
+          // サムネイルクリックでモーダルを表示
+          img.addEventListener('click', function() {
+            openModal(dataUrl);
+          });
           preview.appendChild(img);
           filesProcessed++;
-          // 全てのファイルの読み込みが終わったらlocalStorageに保存
+          // 全ファイルの読み込みが完了したらlocalStorageに保存
           if (filesProcessed === files.length) {
             localStorage.setItem('savedImages', JSON.stringify(imageDataArray));
           }
         }
-        
         reader.readAsDataURL(file);
       }
     });
 
-    // リセットボタンが押されたときの処理
+    // リセットボタンでlocalStorageと表示エリアをクリア
     document.getElementById('resetButton').addEventListener('click', function() {
-      localStorage.removeItem('savedImages');      // 保存データを削除
-      document.getElementById('preview').innerHTML = ''; // 表示エリアをクリア
-      document.getElementById('fileInput').value = '';   // ファイル入力をリセット
+      localStorage.removeItem('savedImages');
+      document.getElementById('preview').innerHTML = '';
+      document.getElementById('fileInput').value = '';
+    });
+
+    // モーダルクリックで閉じる
+    document.getElementById('modal').addEventListener('click', function() {
+      closeModal();
     });
 
     // ページ読み込み時に保存された画像を表示
