@@ -156,13 +156,19 @@
       position: relative;
     }
     /* 左：ドラム式入力エリア */
+    /* ドラムを横並びにするため、親要素をflexコンテナに */
     #drum-container {
       width: 50%;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-around;
+      align-items: flex-start;
     }
-    #drum-container-wrapper {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
+    /* 各ドラムとその送信ボタンをラップする要素（縦方向） */
+    .drum-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     .drum-container {
       height: 150px;
@@ -174,6 +180,7 @@
       user-select: none;
       touch-action: none;
       z-index: 10;
+      width: 700%;
     }
     .drum-list {
       position: absolute;
@@ -266,22 +273,15 @@
       border-radius: 4px;
     }
     /* ③-2 コントロールエリア：最下段（Full/Export/レイヤ操作） */
+    /* 下部バーの高さをボタンと同じ高さ（40px）に調整 */
     #control-area {
-      flex: 1;
+      height: 40px;
       display: flex;
       align-items: center;
       justify-content: flex-start;
       gap: 10px;
       background-color: #f0f0f0;
       padding-left: 5px;
-    }
-    #control-area button {
-      padding: 8px 12px;
-      font-size: 16px;
-      cursor: pointer;
-      background-color: #eee;
-      border: 1px solid #ccc;
-      border-radius: 4px;
     }
     /* レイヤー操作 */
     #layerControl {
@@ -371,19 +371,18 @@
         <div id="lower-controls">
           <!-- 左：ドラム式入力エリア -->
           <div id="drum-container">
-            <div id="drum-container-wrapper">
+            <div class="drum-wrapper">
               <div class="drum-container" id="drum-container-1">
                 <div class="drum-list" id="drumList1"></div>
                 <div class="drum-center-line"></div>
               </div>
+              <button id="sendButton1" class="drum-send-button">送信1</button>
+            </div>
+            <div class="drum-wrapper">
               <div class="drum-container" id="drum-container-2">
                 <div class="drum-list" id="drumList2"></div>
                 <div class="drum-center-line"></div>
               </div>
-            </div>
-            <!-- 送信ボタン（2個分） -->
-            <div id="drum-send-buttons-wrapper">
-              <button id="sendButton1" class="drum-send-button">送信1</button>
               <button id="sendButton2" class="drum-send-button">送信2</button>
             </div>
           </div>
@@ -628,18 +627,88 @@
       }
       const roadCenterX = originX + (roadWidth * scale) / 2;
       const colors = ["red", "yellow", "green", "cyan", "magenta"];
+      
+      // 共通で使用する H 列の値（左境・メジ・右境用）
+      let commonOffset = parseFloat(tableState[1][7]);
+      
       for (let i = 0; i < ROW_COUNT; i++){
         const label = tableState[i][0].trim();
         const yVal = parseFloat(tableState[i][1]);
-        let xStr = tableState[i][2].trim();
         if (isNaN(yVal)) continue;
-        let xVal = (xStr === "") ? roadWidth : parseFloat(xStr);
-        if (xVal < 0) xVal = roadWidth - Math.abs(xVal);
+        const yPos = originY - (yVal * scale);
+        
+        // 「メジ」：起点から共通オフセット分だけ右へ線を引く
+        if (label === "メジ") {
+          if (!isNaN(commonOffset)) {
+            const startX = originX;
+            const endX = originX + (commonOffset * scale);
+            ctx.beginPath();
+            ctx.moveTo(startX, yPos);
+            ctx.lineTo(endX, yPos);
+            ctx.strokeStyle = "red";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.font = "15px sans-serif";
+            ctx.fillStyle = "red";
+            let textWidth = ctx.measureText(label).width;
+            let textX = endX + 2;
+            ctx.fillText(label, textX, yPos);
+          }
+          continue;
+        }
+        // 「左境」：起点から-3分だけ左へ線を引く
+        if (label === "左境") {
+          const startX = originX;
+          const endX = originX - (3 * scale);
+          ctx.beginPath();
+          ctx.moveTo(startX, yPos);
+          ctx.lineTo(endX, yPos);
+          ctx.strokeStyle = "red";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.font = "15px sans-serif";
+          ctx.fillStyle = "red";
+          let textWidth = ctx.measureText(label).width;
+          let textX = endX - textWidth - 2;
+          ctx.fillText(label, textX, yPos);
+          continue;
+        }
+        // 「右境」：共通オフセットの位置から＋3分だけ右へ線を引く
+        if (label === "右境") {
+          if (!isNaN(commonOffset)) {
+            const startX = originX + (commonOffset * scale);
+            const endX = originX + ((commonOffset + 3) * scale);
+            ctx.beginPath();
+            ctx.moveTo(startX, yPos);
+            ctx.lineTo(endX, yPos);
+            ctx.strokeStyle = "red";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.font = "15px sans-serif";
+            ctx.fillStyle = "red";
+            let textWidth = ctx.measureText(label).width;
+            let textX = endX + 2;
+            ctx.fillText(label, textX, yPos);
+          }
+          continue;
+        }
+        
+        // 通常の描画処理（点と文字）
+        let xVal;
+        if (label === "右桝") {
+          // 右桝の場合、C列は無視して必ず共通の幅員値を使用
+          xVal = !isNaN(commonOffset) ? commonOffset : roadWidth;
+        } else if (label === "左枡") {
+          // 左枡は、常に 0 を使用
+          xVal = 0;
+        } else {
+          let xStr = tableState[i][2].trim();
+          xVal = (xStr === "") ? roadWidth : parseFloat(xStr);
+          if (xVal < 0) xVal = roadWidth - Math.abs(xVal);
+        }
         if (isNaN(xVal)) continue;
-        const comment = tableState[i][3].trim();
         const diamVal = parseFloat(tableState[i][4]);
         const xPos = originX + (xVal * scale);
-        const yPos = originY - (yVal * scale);
         const color = colors[i % colors.length];
         const pointRadius = 0.1 * scale;
         ctx.beginPath();
@@ -655,6 +724,7 @@
           ctx.stroke();
         }
         let displayText = label;
+        const comment = tableState[i][3].trim();
         if (comment) displayText += " (" + comment + ")";
         ctx.font = "15px sans-serif";
         ctx.fillStyle = color;
@@ -801,16 +871,22 @@
       } else { document.exitFullscreen(); }
     });
     document.getElementById("toggleButtonArea").addEventListener("click", () => {
-      const btnArea = document.getElementById("button-input-area");
-      const topArea = document.getElementById("top-area");
-      if (btnArea.style.display === "none") {
-        btnArea.style.display = "flex";
-        topArea.style.height = "20vh";
-      } else {
-        btnArea.style.display = "none";
-        topArea.style.height = (window.innerHeight - 40) + "px"; // control-area固定40px
-      }
-    });
+  const btnArea = document.getElementById("button-input-area");
+  const topArea = document.getElementById("top-area");
+  const imageViewer = document.getElementById("image-viewer-area");
+  if (btnArea.style.display === "none") {
+    // 通常モード：表と図を含む全体レイアウト（画像閲覧エリアも表示）
+    btnArea.style.display = "flex";
+    imageViewer.style.display = "block"; // 画像閲覧エリアを表示
+    topArea.style.height = "20vh";
+  } else {
+    // Fullモード：表と図のみ表示、画像閲覧エリア非表示
+    btnArea.style.display = "none";
+    imageViewer.style.display = "none";
+    topArea.style.height = (window.innerHeight - 40) + "px"; // 下部コントロールバー固定40px
+  }
+});
+
     document.getElementById("layerUp").addEventListener("click", () => {
       if (currentLayer < layers.length - 1){
         currentLayer++;
