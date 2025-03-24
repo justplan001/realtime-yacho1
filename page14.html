@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>JustPlan-RealTimeDemo（レイヤー対応版）</title>
+  <!-- Excelエクスポート用ライブラリ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    /* 基本設定 */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: sans-serif;
+      box-sizing: border-box;
+      background-color: white;
+    }
+    /* コンテナ：上部（表＋図）／下部（テキスト入力ボタン群）の2分割 */
+    #container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    /* 上部エリア：通常80vh、Full時は100vh */
+    #top {
+      flex-basis: 80vh;
+      display: flex;
+      overflow: hidden;
+      transition: flex-basis 0.3s ease;
+    }
+    /* 左側：表 */
+    #left-side {
+      flex: 6;
+      overflow: auto;
+      border-right: 1px solid #ccc;
+    }
+    #left-side table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    #left-side th, #left-side td {
+      border: 1px solid #ccc;
+      padding: 5px;
+      text-align: center;
+      min-width: 50px;
+    }
+    #left-side td {
+      cursor: text;
+    }
+    /* 右側：図描写部 */
+    #right-side {
+      flex: 4;
+      position: relative;
+      overflow: auto;
+    }
+    #drawingCanvas {
+      display: block;
+      pointer-events: none;
+    }
+    /* Reset ボタン（図の右上） */
+    #right-side #resetButton {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      font-size: 14px;
+      padding: 8px 12px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      color: white;
+      background-color: red;
+    }
+    /* 下部エリア：テキスト入力ボタン群（通常表示 20vh） */
+    #bottom {
+      flex-basis: 20vh;
+      position: relative;
+      background-color: white;
+      overflow: hidden;
+      border-top: 1px solid #ccc;
+      transition: flex-basis 0.3s ease, opacity 0.3s ease;
+    }
+    /* テキスト入力ボタン群 */
+    #text-buttons {
+      position: absolute;
+      top: 30px;
+      left: 5px;
+      right: 5px;
+      bottom: 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px;
+      overflow-x: auto;
+      box-sizing: border-box;
+    }
+    #text-buttons button {
+      font-size: 16px;
+      padding: 8px 12px;
+      cursor: pointer;
+      background-color: #eee;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    /* 固定コントロールパネル：常に右下に固定 */
+    #fixed-control-panel {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      z-index: 9999;
+      pointer-events: auto;
+    }
+    #fixed-control-panel button,
+    #fixed-control-panel #layerControl button {
+      font-size: 14px;
+      padding: 8px 12px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      color: white;
+    }
+    #toggleButtonArea { background-color: #aaa; }
+    #exportButton { background-color: green; }
+    #layerControl button { background-color: #444; }
+    #currentLayerDisplay { font-size: 16px; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <!-- 上部エリア：表と図 -->
+    <div id="top">
+      <div id="left-side">
+        <table id="excelTable">
+          <thead>
+            <tr>
+              <th>名称</th>
+              <th>距離</th>
+              <th>X座標</th>
+              <th>直径</th>
+              <th>コメント</th>
+              <th>歩道(L)</th>
+              <th>L側溝</th>
+              <th>幅員</th>
+              <th>R側溝</th>
+              <th>歩道(R)</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <!-- 表生成部分（レイヤーごとの状態から動的生成） -->
+          </tbody>
+        </table>
+      </div>
+      <div id="right-side">
+        <button id="resetButton">Reset</button>
+        <canvas id="drawingCanvas"></canvas>
+      </div>
+    </div>
+    <!-- 下部エリア：テキスト入力ボタン群 -->
+    <div id="bottom">
+      <div id="text-buttons">
+        <button onclick="insertTextIntoCell('下')">下</button>
+        <button onclick="insertTextIntoCell('D')">D</button>
+        <button onclick="insertTextIntoCell('S')">S</button>
+        <button onclick="insertTextIntoCell('SS')">SS</button>
+        <div style="flex-basis: 1%; height: 0;"></div>
+        <button onclick="insertTextIntoCell('消')">消</button>
+        <button onclick="insertTextIntoCell('F')">F</button>
+        <button onclick="insertTextIntoCell('SV')">SV</button>
+        <button onclick="insertTextIntoCell('W')">W</button>
+        <button onclick="insertTextIntoCell('止水')">止水</button>
+        <div style="flex-basis: 3.5%; height: 0;"></div>
+        <button onclick="insertTextIntoCell('E')">E</button>
+        <button onclick="insertTextIntoCell('T')">T</button>
+        <button onclick="insertTextIntoCell('G')">G</button>
+        <div style="flex-basis: 3.5%; height: 0;"></div>
+        <button onclick="insertTextIntoCell('電柱')">電柱</button>
+        <button onclick="insertTextIntoCell('標')">標</button>
+        <button onclick="insertTextIntoCell('信')">信</button>
+        <button onclick="insertTextIntoCell('EP')">EP</button>
+        <button onclick="insertTextIntoCell('H')">H</button>
+        <button onclick="insertTextIntoCell('車止')">車止</button>
+        <button onclick="insertTextIntoCell('支線')">支線</button>
+        <div style="flex-basis: 1%; height: 0;"></div>
+        <div style="flex-basis: 100%; height: 0;"></div>
+        <button onclick="insertTextIntoCell('左境')">左境</button>
+        <button onclick="insertTextIntoCell('左枡')">左枡</button>
+        <div style="flex-basis: 1%; height: 0;"></div>
+        <button onclick="insertTextIntoCell('市')">市</button>
+        <button onclick="insertTextIntoCell('民')">民</button>
+        <button onclick="insertTextIntoCell('都市再生鋲')">都市再生鋲</button>
+        <button onclick="insertTextIntoCell('基準点')">基準点</button>
+        <button onclick="insertTextIntoCell('右桝900700')">右桝900700</button>
+        <button onclick="insertTextIntoCell('例：コードで寸法作成')">例：コードで寸法作成</button>
+        <button onclick="insertTextIntoCell('メジ')">メジ</button>
+        <button onclick="insertTextIntoCell('桝')">桝</button>
+        <div style="flex-basis: 1.5%; height: 0;"></div>
+        <button onclick="insertTextIntoCell('右桝')">右桝</button>
+        <button onclick="insertTextIntoCell('右境')">右境</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 固定コントロールパネル（右下固定）：Full, Export, レイヤ移動 -->
+  <div id="fixed-control-panel">
+    <button id="toggleButtonArea">Full</button>
+    <button id="exportButton" class="colored-button">Export</button>
+    <div id="layerControl">
+      <button id="layerDown">-</button>
+      <span id="currentLayerDisplay">1</span>
+      <button id="layerUp">+</button>
+    </div>
+  </div>
+  
+  <script>
+    // --- セル編集・移動の共通処理 ---
+    let lastFocusedCell = null;
+    function selectCellContent() {
+      lastFocusedCell = this;
+      const range = document.createRange();
+      range.selectNodeContents(this);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    function navigationHandler(event) {
+      let currentRow = parseInt(this.dataset.row);
+      let currentCol = parseInt(this.dataset.col);
+      let targetRow = currentRow;
+      let targetCol = currentCol;
+      if (event.key === "Enter") {
+        targetRow = currentRow + 1;
+        event.preventDefault();
+      } else if (event.key === "ArrowUp") {
+        targetRow = currentRow - 1;
+      } else if (event.key === "ArrowDown") {
+        targetRow = currentRow + 1;
+      } else if (event.key === "ArrowLeft") {
+        targetCol = currentCol - 1;
+      } else if (event.key === "ArrowRight") {
+        targetCol = currentCol + 1;
+      } else {
+        return;
+      }
+      if (targetRow < 0) targetRow = 0;
+      if (targetRow >= ROW_COUNT) targetRow = ROW_COUNT - 1;
+      if (targetCol < 0) targetCol = 0;
+      if (targetCol >= COL_COUNT) targetCol = COL_COUNT - 1;
+      setSelectedCell(targetRow, targetCol);
+      const targetCell = document.querySelector(`td[data-row="${targetRow}"][data-col="${targetCol}"]`);
+      if (targetCell) targetCell.focus();
+    }
+    
+    // --- 表・レイヤー関連 ---
+    const ROW_COUNT = 100;
+    const COL_COUNT = 10;
+    let layers = [];
+    let currentLayer = 0;
+    function generateNewTableState() {
+      const table = [];
+      for (let i = 0; i < ROW_COUNT; i++){
+        const row = [];
+        for (let j = 0; j < COL_COUNT; j++){
+          row.push("");
+        }
+        table.push(row);
+      }
+      // サンプル初期値（2行目：L側溝, 幅員, R側溝）
+      table[1][6] = "0.5";
+      table[1][7] = "5";
+      table[1][8] = "0.5";
+      return table;
+    }
+    function initLayers() {
+      const savedCount = localStorage.getItem("layersCount");
+      if (savedCount === null) {
+        layers.push({
+          tableState: generateNewTableState(),
+          currentRow: 0,
+          currentCol: 0
+        });
+        localStorage.setItem("layersCount", 1);
+        saveLayerState(0);
+      } else {
+        const count = parseInt(savedCount);
+        for (let i = 0; i < count; i++){
+          const layer = {
+            tableState: generateNewTableState(),
+            currentRow: 0,
+            currentCol: 0
+          };
+          loadLayerState(i, layer);
+          layers.push(layer);
+        }
+      }
+    }
+    function saveLayerState(layerIndex) {
+      localStorage.setItem("tableState_layer" + layerIndex, JSON.stringify(layers[layerIndex].tableState));
+    }
+    function loadLayerState(layerIndex, layer) {
+      const saved = localStorage.getItem("tableState_layer" + layerIndex);
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data && data.length === ROW_COUNT && data[0].length === COL_COUNT) {
+          layer.tableState = data;
+        }
+      }
+    }
+    function renderTable() {
+      const tbody = document.getElementById("table-body");
+      tbody.innerHTML = "";
+      const tableState = layers[currentLayer].tableState;
+      const currentRow = layers[currentLayer].currentRow;
+      const currentCol = layers[currentLayer].currentCol;
+      for (let i = 0; i < ROW_COUNT; i++){
+        const tr = document.createElement("tr");
+        for (let j = 0; j < COL_COUNT; j++){
+          const td = document.createElement("td");
+          td.dataset.row = i;
+          td.dataset.col = j;
+          td.contentEditable = "true";
+          td.tabIndex = 0;
+          td.innerText = tableState[i][j];
+          if (i === currentRow && j === currentCol) {
+            td.classList.add("selected");
+          }
+          td.addEventListener("click", () => { setSelectedCell(i, j); });
+          td.addEventListener("keydown", navigationHandler);
+          td.addEventListener("focus", selectCellContent);
+          td.addEventListener("input", function(){
+            tableState[i][j] = td.innerText;
+            saveLayerState(currentLayer);
+            updateCanvas();
+          });
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+    }
+    // 修正：セル選択後、再描画後に対象セルへフォーカスを戻す
+    function setSelectedCell(r, c) {
+      layers[currentLayer].currentRow = r;
+      layers[currentLayer].currentCol = c;
+      renderTable();
+      updateCanvas();
+      saveLayerState(currentLayer);
+      document.getElementById("currentLayerDisplay").innerText = currentLayer + 1;
+      const newCell = document.querySelector(`td[data-row="${r}"][data-col="${c}"]`);
+      if(newCell) {
+        newCell.focus();
+      }
+    }
+    
+    // --- セル操作 ---
+    function insertTextIntoCell(text) {
+      const r = layers[currentLayer].currentRow;
+      const c = layers[currentLayer].currentCol;
+      layers[currentLayer].tableState[r][c] += text;
+      renderTable();
+      updateCanvas();
+      saveLayerState(currentLayer);
+    }
+    function backspaceInCell() {
+      const r = layers[currentLayer].currentRow;
+      const c = layers[currentLayer].currentCol;
+      layers[currentLayer].tableState[r][c] = layers[currentLayer].tableState[r][c].slice(0, -1);
+      renderTable();
+      updateCanvas();
+      saveLayerState(currentLayer);
+    }
+    
+    // --- 描写部更新 ---
+    function updateCanvas() {
+      const canvas = document.getElementById("drawingCanvas");
+      const ctx = canvas.getContext("2d");
+      const container = document.getElementById("right-side");
+      const desiredZoom = 20;
+      const scale = desiredZoom;
+      const tableState = layers[currentLayer].tableState;
+      let maxDistance = 0;
+      for (let i = 0; i < ROW_COUNT; i++){
+        let d = parseFloat(tableState[i][1]);
+        if (!isNaN(d) && d > maxDistance) maxDistance = d;
+      }
+      if (maxDistance === 0) maxDistance = 100;
+      canvas.width = container.clientWidth;
+      canvas.height = (maxDistance + 5) * scale + 50;
+      
+      ctx.fillStyle = "black";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      let originX = canvas.width / 2;
+      const originY = canvas.height - 50;
+      const roadWidth = parseFloat(tableState[1][7]) || 0;
+      let offsetG = parseFloat(tableState[1][6]) || 0;
+      let offsetI = parseFloat(tableState[1][8]) || 0;
+      let sidewalkL = parseFloat(tableState[1][5]) || 0;
+      let sidewalkR = parseFloat(tableState[1][9]) || 0;
+      let commonOffset = roadWidth;
+      
+      originX = originX - (roadWidth * scale) / 2;
+      
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(originX, originY);
+      ctx.lineTo(originX, originY - ((maxDistance + 5) * scale));
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(originX + roadWidth * scale, originY);
+      ctx.lineTo(originX + roadWidth * scale, originY - ((maxDistance + 5) * scale));
+      ctx.stroke();
+      
+      if (!isNaN(offsetG) && offsetG !== 0) {
+        ctx.beginPath();
+        ctx.moveTo(originX + offsetG * scale, originY);
+        ctx.lineTo(originX + offsetG * scale, originY - ((maxDistance + 5) * scale));
+        ctx.stroke();
+      }
+      if (!isNaN(offsetI) && offsetI !== 0) {
+        ctx.beginPath();
+        ctx.moveTo(originX + (roadWidth - offsetI) * scale, originY);
+        ctx.lineTo(originX + (roadWidth - offsetI) * scale, originY - ((maxDistance + 5) * scale));
+        ctx.stroke();
+      }
+      
+      ctx.strokeStyle = "yellow";
+      ctx.lineWidth = 2;
+      if (!isNaN(sidewalkL) && sidewalkL !== 0) {
+        let sidewalkLX = originX - sidewalkL * scale;
+        ctx.beginPath();
+        ctx.moveTo(sidewalkLX, originY);
+        ctx.lineTo(sidewalkLX, originY - ((maxDistance + 5) * scale));
+        ctx.stroke();
+      }
+      if (!isNaN(sidewalkR) && sidewalkR !== 0) {
+        let sidewalkRX = originX + (roadWidth + sidewalkR) * scale;
+        ctx.beginPath();
+        ctx.moveTo(sidewalkRX, originY);
+        ctx.lineTo(sidewalkRX, originY - ((maxDistance + 5) * scale));
+        ctx.stroke();
+      }
+      
+      const roadCenterX = originX + (roadWidth * scale) / 2;
+      const colors = ["red", "yellow", "green", "cyan", "magenta"];
+      
+      for (let i = 0; i < ROW_COUNT; i++){
+        const label = tableState[i][0].trim();
+        const yVal = parseFloat(tableState[i][1]);
+        if (isNaN(yVal)) continue;
+        const yPos = originY - (yVal * scale);
+        
+        // 特殊ラベル処理
+        if (label === "メジ") {
+          const startX = originX;
+          const endX = originX + (commonOffset * scale);
+          ctx.beginPath();
+          ctx.moveTo(startX, yPos);
+          ctx.lineTo(endX, yPos);
+          ctx.strokeStyle = "red";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.font = "15px sans-serif";
+          ctx.fillStyle = "red";
+          ctx.fillText(label, endX + 2, yPos);
+          continue;
+        }
+        if (label === "左境") {
+          const startX = originX;
+          const endX = originX - (3 * scale);
+          ctx.beginPath();
+          ctx.moveTo(startX, yPos);
+          ctx.lineTo(endX, yPos);
+          ctx.strokeStyle = "red";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.font = "15px sans-serif";
+          ctx.fillStyle = "red";
+          ctx.fillText(label, endX - ctx.measureText(label).width - 2, yPos);
+          continue;
+        }
+        if (label === "右境") {
+          const startX = originX + (commonOffset * scale);
+          const endX = originX + ((commonOffset + 3) * scale);
+          ctx.beginPath();
+          ctx.moveTo(startX, yPos);
+          ctx.lineTo(endX, yPos);
+          ctx.strokeStyle = "red";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.font = "15px sans-serif";
+          ctx.fillStyle = "red";
+          ctx.fillText(label, endX + 2, yPos);
+          continue;
+        }
+        
+        let xVal;
+        if (label === "右桝") {
+          xVal = !isNaN(commonOffset) ? commonOffset : roadWidth;
+        } else if (label === "左枡") {
+          xVal = 0;
+        } else {
+          let xStr = tableState[i][2].trim();
+          xVal = (xStr === "") ? roadWidth : parseFloat(xStr);
+          if (xVal < 0) { xVal = roadWidth - Math.abs(xVal); }
+        }
+        if (isNaN(xVal)) continue;
+        const comment = tableState[i][4].trim();
+        const diamVal = parseFloat(tableState[i][3]);
+        const xPos = originX + (xVal * scale);
+        const color = colors[i % colors.length];
+        const pointRadius = 0.1 * scale;
+        ctx.beginPath();
+        ctx.arc(xPos, yPos, pointRadius, 0, 2 * Math.PI);
+        ctx.fillStyle = color;
+        ctx.fill();
+        if (!isNaN(diamVal) && diamVal > 0) {
+          const circleRadius = (diamVal / 2) * scale;
+          ctx.beginPath();
+          ctx.arc(xPos, yPos, circleRadius, 0, 2 * Math.PI);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+        let displayText = label;
+        if (comment) displayText += " (" + comment + ")";
+        ctx.font = "30px sans-serif";
+        ctx.fillStyle = color;
+        let textWidth = ctx.measureText(displayText).width;
+        let textX = (xPos >= roadCenterX) ? xPos + pointRadius + 2 : xPos - pointRadius - 2 - textWidth;
+        ctx.fillText(displayText, textX, yPos);
+      }
+      container.scrollTop = container.scrollHeight;
+    }
+    
+    // --- エクスポート（全レイヤー対応） ---
+    function exportToExcelAllLayers() {
+      const totalRows = 1001;
+      const totalCols = 10;
+      let sheetData = [];
+      for (let r = 0; r < totalRows; r++){
+        sheetData[r] = new Array(totalCols).fill("");
+      }
+      sheetData[0] = ["名称", "距離", "X座標", "直径", "コメント", "歩道(L)", "L側溝", "幅員", "R側溝", "歩道(R)"];
+      // 1レイヤ目のデータ
+      let layer1 = layers[0].tableState;
+      let lastRow = 0;
+      for (let r = 0; r < ROW_COUNT; r++){
+        for (let c = 0; c < 5; c++){
+          sheetData[r + 1][c] = layer1[r][c];
+        }
+        if (layer1[r][0] !== "") { lastRow = r; }
+      }
+      sheetData[lastRow + 2][0] = "***";
+      let appendRow = lastRow + 3;
+      for (let layerIndex = 1; layerIndex < layers.length; layerIndex++){
+        let tableState = layers[layerIndex].tableState;
+        let lastRowInLayer = 0;
+        for (let r = 0; r < ROW_COUNT; r++){
+          for (let c = 0; c < 5; c++){
+            sheetData[appendRow + r][c] = tableState[r][c];
+          }
+          if (tableState[r][0] !== "") { lastRowInLayer = r; }
+        }
+        sheetData[appendRow + lastRowInLayer + 1][0] = "***";
+        appendRow += lastRowInLayer + 2;
+      }
+      // 各レイヤーの断面情報（例：2行目）を1レイヤ目の特定行に挿入
+      for (let layerIndex = 0; layerIndex < layers.length; layerIndex++){
+        let crossSection = layers[layerIndex].tableState[1];
+        let targetRow = layerIndex + 2;
+        for (let c = 5; c < 10; c++){
+          sheetData[targetRow][c] = crossSection[c];
+        }
+      }
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+      let defaultFilename = localStorage.getItem("exportFilename") || "export";
+      let inputFilename = prompt("保存するファイル名を入力してください（拡張子は自動で付与されます）", defaultFilename);
+      if (inputFilename === null) return;
+      if (inputFilename.toLowerCase().endsWith(".xlsx")){
+        inputFilename = inputFilename.slice(0, -5);
+      }
+      localStorage.setItem("exportFilename", inputFilename);
+      const finalFilename = inputFilename + ".xlsx";
+      XLSX.writeFile(workbook, finalFilename);
+    }
+    
+    // --- Full モード切替（下部エリアの表示／非表示） ---
+    document.getElementById("toggleButtonArea").addEventListener("click", () => {
+      const bottomArea = document.getElementById("bottom");
+      const topArea = document.getElementById("top");
+      if (bottomArea.style.display === "none") {
+        bottomArea.style.display = "flex";
+        topArea.style.flexBasis = "80vh";
+      } else {
+        bottomArea.style.display = "none";
+        topArea.style.flexBasis = "100vh";
+      }
+    });
+    
+    // --- レイヤー移動 ---
+    document.getElementById("layerUp").addEventListener("click", () => {
+      if (currentLayer < layers.length - 1) {
+        currentLayer++;
+      } else {
+        let newLayer = {
+          tableState: generateNewTableState(),
+          currentRow: 0,
+          currentCol: 0
+        };
+        layers.push(newLayer);
+        localStorage.setItem("layersCount", layers.length);
+        currentLayer++;
+      }
+      renderTable();
+      updateCanvas();
+      document.getElementById("currentLayerDisplay").innerText = currentLayer + 1;
+    });
+    document.getElementById("layerDown").addEventListener("click", () => {
+      if (currentLayer > 0) {
+        currentLayer--;
+        renderTable();
+        updateCanvas();
+        document.getElementById("currentLayerDisplay").innerText = currentLayer + 1;
+      }
+    });
+    
+    // --- その他ボタン ---
+    document.getElementById("exportButton").addEventListener("click", exportToExcelAllLayers);
+    document.getElementById("resetButton").addEventListener("click", () => {
+      if (confirm("本当にリセットしますか？")) {
+        localStorage.clear();
+        layers = [];
+        currentLayer = 0;
+        initLayers();
+        renderTable();
+        updateCanvas();
+      }
+    });
+    
+    window.addEventListener("resize", updateCanvas);
+    window.onload = function() {
+      initLayers();
+      renderTable();
+      updateCanvas();
+    };
+  </script>
+</body>
+</html>
