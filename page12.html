@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>画像プレビューと永続化</title>
+  <style>
+    img {
+      width: 100px;
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <!-- 画像選択用のファイル入力 -->
+  <input type="file" accept="image/*" multiple id="fileInput">
+  <!-- リセットボタン -->
+  <button id="resetButton">リセット</button>
+  
+  <!-- 画像を表示するエリア -->
+  <div id="preview"></div>
+
+  <script>
+    // localStorageに保存された画像データを読み込み、表示する関数
+    function loadSavedImages() {
+      const savedData = localStorage.getItem('savedImages');
+      if (savedData) {
+        const imageDataArray = JSON.parse(savedData);
+        const preview = document.getElementById('preview');
+        preview.innerHTML = '';
+        imageDataArray.forEach(src => {
+          const img = document.createElement('img');
+          img.src = src;
+          preview.appendChild(img);
+        });
+      }
+    }
+
+    // ファイルが選択されたときのイベントリスナー
+    document.getElementById('fileInput').addEventListener('change', function(event) {
+      const files = event.target.files;
+      const preview = document.getElementById('preview');
+      preview.innerHTML = '';
+      let imageDataArray = [];
+      let filesProcessed = 0;
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+          const dataUrl = e.target.result;
+          imageDataArray.push(dataUrl);
+          const img = document.createElement('img');
+          img.src = dataUrl;
+          preview.appendChild(img);
+          filesProcessed++;
+          // 全てのファイルの読み込みが終わったらlocalStorageに保存
+          if (filesProcessed === files.length) {
+            localStorage.setItem('savedImages', JSON.stringify(imageDataArray));
+          }
+        }
+        
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // リセットボタンが押されたときの処理
+    document.getElementById('resetButton').addEventListener('click', function() {
+      localStorage.removeItem('savedImages');      // 保存データを削除
+      document.getElementById('preview').innerHTML = ''; // 表示エリアをクリア
+      document.getElementById('fileInput').value = '';   // ファイル入力をリセット
+    });
+
+    // ページ読み込み時に保存された画像を表示
+    window.onload = function() {
+      loadSavedImages();
+    }
+  </script>
+</body>
+</html>
