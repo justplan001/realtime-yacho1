@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>JustPlan-RealTimeDemo（レイヤー対応版）</title>
+  <title>やちょうPC版v1.00(20250401)</title>
   <!-- Excelエクスポート用ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
@@ -141,8 +141,9 @@
               <th>名称</th>
               <th>距離</th>
               <th>X座標</th>
-              <th>直径</th>
+              <!-- コメントと直径の順番を入れ替え -->
               <th>コメント</th>
+              <th>直径</th>
               <th>歩道(L)</th>
               <th>L側溝</th>
               <th>幅員</th>
@@ -359,7 +360,10 @@
     function insertTextIntoCell(text) {
       const r = layers[currentLayer].currentRow;
       const c = layers[currentLayer].currentCol;
-      layers[currentLayer].tableState[r][c] += text;
+      let currentValue = layers[currentLayer].tableState[r][c];
+      // 先頭の改行や不要な空白を取り除く
+      currentValue = currentValue.replace(/^\s*[\r\n]+/, '');
+      layers[currentLayer].tableState[r][c] = currentValue + text;
       renderTable();
       updateCanvas();
       saveLayerState(currentLayer);
@@ -509,8 +513,9 @@
           if (xVal < 0) { xVal = roadWidth - Math.abs(xVal); }
         }
         if (isNaN(xVal)) continue;
-        const comment = tableState[i][4].trim();
-        const diamVal = parseFloat(tableState[i][3]);
+        // コメントと直径を入れ替え
+        const comment = tableState[i][3].trim();
+        const diamVal = parseFloat(tableState[i][4]);
         const xPos = originX + (xVal * scale);
         const color = colors[i % colors.length];
         const pointRadius = 0.1 * scale;
@@ -545,7 +550,7 @@
       for (let r = 0; r < totalRows; r++){
         sheetData[r] = new Array(totalCols).fill("");
       }
-      sheetData[0] = ["名称", "距離", "X座標", "直径", "コメント", "歩道(L)", "L側溝", "幅員", "R側溝", "歩道(R)"];
+      sheetData[0] = ["名称", "距離", "X座標", "コメント", "直径", "歩道(L)", "L側溝", "幅員", "R側溝", "歩道(R)"];
       // 1レイヤ目のデータ
       let layer1 = layers[0].tableState;
       let lastRow = 0;
