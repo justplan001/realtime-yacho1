@@ -2,14 +2,13 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <!-- 初期状態ではズーム禁止 -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- iOS Webアプリ設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="縦画面やちょー">
   <link rel="apple-touch-icon" href="path/to/your-icon.png">
-  <title>やちょうv1.00(20250401)</title>
+  <title>縦画面やちょー - 複数レイヤー対応版</title>
   <!-- Excelエクスポート用ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
@@ -157,6 +156,7 @@
       position: relative;
     }
     /* 左：ドラム式入力エリア */
+    /* ドラムを横並びにするため、親要素をflexコンテナに */
     #drum-container {
       width: 50%;
       display: flex;
@@ -170,11 +170,11 @@
       flex-direction: column;
       align-items: center;
     }
-    .drum-wrapper button {
-      pointer-events: auto; 
-      position: relative;
-      z-index: 20;
-    }
+.drum-wrapper button {
+  pointer-events: auto; 
+  position: relative;
+  z-index: 20; /* ドラムより高くすることでボタンの優先度を上げる */
+}
     .drum-container {
       height: 150px;
       overflow: hidden;
@@ -278,6 +278,7 @@
       border-radius: 4px;
     }
     /* ③-2 コントロールエリア：最下段（Full/Export/レイヤ操作） */
+    /* 下部バーの高さをボタンと同じ高さ（40px）に調整 */
     #control-area {
       height: 40px;
       display: flex;
@@ -348,12 +349,12 @@
           <button id="btn1" class="insertable-button">仮ラベル</button>
           <button id="btn2" class="insertable-button">仮ラベル</button>
           <button id="btn3" class="insertable-button">仮ラベル</button>
-          <a></a><a></a><a></a><a></a>
+ <a></a><a></a><a></a><a></a>
           <button id="btn8" class="insertable-button">仮ラベル</button>
           <button id="btn9" class="insertable-button">仮ラベル</button>
           <button id="btn10" class="insertable-button">仮ラベル</button>
           <button id="btn11" class="insertable-button">仮ラベル</button>
-          <a></a><a></a><a></a><a></a>
+ <a></a><a></a><a></a><a></a>
           <button id="btn16" class="insertable-button">仮ラベル</button>
           <button id="btn17" class="insertable-button">仮ラベル</button>
           <button id="btn18" class="insertable-button">仮ラベル</button>
@@ -869,21 +870,21 @@
       } else { document.exitFullscreen(); }
     });
     document.getElementById("toggleButtonArea").addEventListener("click", () => {
-      const btnArea = document.getElementById("button-input-area");
-      const topArea = document.getElementById("top-area");
-      const imageViewer = document.getElementById("image-viewer-area");
-      if (btnArea.style.display === "none") {
-        // 通常モード：表と図を含む全体レイアウト（画像閲覧エリアも表示）
-        btnArea.style.display = "flex";
-        imageViewer.style.display = "block"; // 画像閲覧エリアを表示
-        topArea.style.height = "20vh";
-      } else {
-        // Fullモード：表と図のみ表示、画像閲覧エリア非表示
-        btnArea.style.display = "none";
-        imageViewer.style.display = "none";
-        topArea.style.height = (window.innerHeight - 40) + "px"; // 下部コントロールバー固定40px
-      }
-    });
+  const btnArea = document.getElementById("button-input-area");
+  const topArea = document.getElementById("top-area");
+  const imageViewer = document.getElementById("image-viewer-area");
+  if (btnArea.style.display === "none") {
+    // 通常モード：表と図を含む全体レイアウト（画像閲覧エリアも表示）
+    btnArea.style.display = "flex";
+    imageViewer.style.display = "block"; // 画像閲覧エリアを表示
+    topArea.style.height = "20vh";
+  } else {
+    // Fullモード：表と図のみ表示、画像閲覧エリア非表示
+    btnArea.style.display = "none";
+    imageViewer.style.display = "none";
+    topArea.style.height = (window.innerHeight - 40) + "px"; // 下部コントロールバー固定40px
+  }
+});
 
     document.getElementById("layerUp").addEventListener("click", () => {
       if (currentLayer < layers.length - 1){
@@ -992,23 +993,14 @@
         });
       }
     }
-    // 修正：モーダル表示時はmeta viewportをズーム可能に変更
     function openModal(src) {
-      const metaViewport = document.querySelector('meta[name="viewport"]');
-      metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-      
       const modal = document.getElementById('modal');
       const modalImage = document.getElementById('modalImage');
       modalImage.src = src;
       modal.style.display = 'flex';
     }
-    // 修正：モーダル閉じる際にmeta viewportを元に戻す
     function closeModal() {
-      const modal = document.getElementById('modal');
-      modal.style.display = 'none';
-      
-      const metaViewport = document.querySelector('meta[name="viewport"]');
-      metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+      document.getElementById('modal').style.display = 'none';
     }
     document.getElementById('fileInput').addEventListener('change', function(event) {
       const files = event.target.files;
