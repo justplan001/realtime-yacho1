@@ -64,14 +64,15 @@
       display: block;
       width: 100%;
     }
-    /* ② 画像閲覧エリア（初期値10vh） */
+    /* ② 画像閲覧エリア（初期状態は非表示） */
     #image-viewer-area {
-      height: 3vh;
+      display: none;
+      height: 40vh;
       padding: 5px;
       border-top: 1px solid #ccc;
       border-bottom: 1px solid #ccc;
       overflow: auto;
-      position: relative; /* MAXボタンの絶対配置用 */
+      position: relative;
     }
     #image-viewer-area input {
       margin: 5px;
@@ -82,30 +83,19 @@
       margin: 10px;
       cursor: pointer;
     }
-    /* MAXボタン（画像閲覧エリア内右上に配置） */
-    #maxButton {
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      z-index: 10;
-      padding: 5px 10px;
-      font-size: 14px;
-      cursor: pointer;
-    }
     /* モーダル（拡大表示用） */
     #modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.8);
-  justify-content: center;
-  align-items: center;
-  z-index: 2000; /* ここを1000から2000など、より高い値に変更 */
-}
-
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    }
     #modal img {
       max-width: 90%;
       max-height: 90%;
@@ -130,7 +120,7 @@
       align-items: center;
       gap: 5px;
       margin-bottom: 5px;
-      position: relative; /* 重なり順対策 */
+      position: relative;
       z-index: 1000;
     }
     #pageFullscreenButton {
@@ -288,12 +278,11 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-    /* ③-2 コントロールエリア：最下段（Full/Export/レイヤ操作） */
+    /* ③-2 コントロールエリア：最下段（Full/Export/レイヤ操作＋MAXボタン） */
     #control-area {
       height: 40px;
       display: flex;
       align-items: center;
-      justify-content: flex-start;
       gap: 10px;
       background-color: #f0f0f0;
       padding-left: 5px;
@@ -336,11 +325,9 @@
         <canvas id="drawingCanvas"></canvas>
       </div>
     </div>
-    <!-- ② 画像閲覧エリア -->
+    <!-- ② 画像閲覧エリア（初期は非表示） -->
     <div id="image-viewer-area">
       <input type="file" accept="image/*" multiple id="fileInput">
-      <!-- MAXボタンを画像閲覧エリア内右上に配置 -->
-      <button id="maxButton">MAX</button>
       <div id="preview"></div>
       <div id="modal">
         <img id="modalImage" src="" alt="拡大画像">
@@ -438,7 +425,7 @@
           </div>
         </div>
       </div>
-      <!-- ③-2 コントロールエリア：最下段（Full/Export/レイヤ操作） -->
+      <!-- ③-2 コントロールエリア：最下段（Full/Export/レイヤ操作＋MAXボタン） -->
       <div id="control-area">
         <button id="toggleButtonArea">Full</button>
         <button id="exportButton">Export</button>
@@ -447,6 +434,8 @@
           <span id="currentLayerDisplay">1</span>
           <button id="layerUp">+</button>
         </div>
+        <!-- MAXボタンはここに配置（右端） -->
+        <button id="toggleImageViewer" style="margin-left:auto;">MAX</button>
       </div>
     </div>
   </div>
@@ -899,20 +888,22 @@
         // Fullモード：表と図のみ表示、画像閲覧エリア非表示
         btnArea.style.display = "none";
         imageViewer.style.display = "none";
-        topArea.style.height = (window.innerHeight - 40) + "px"; // 下部コントロールバー固定40px
+        topArea.style.height = (window.innerHeight - 40) + "px";
       }
     });
 
-    // 新規追加：画像閲覧エリア内のMAXボタンで高さ切替（初期10vh⇔40vh）
-    let imageViewerMax = false;
-    document.getElementById("maxButton").addEventListener("click", () => {
+    // 新規追加：コントロールエリアの MAX ボタンで画像閲覧エリアの表示切替
+    let imageViewerVisible = false;
+    document.getElementById("toggleImageViewer").addEventListener("click", () => {
       const imageViewer = document.getElementById("image-viewer-area");
-      if (!imageViewerMax) {
-        imageViewer.style.height = "40vh";
-        imageViewerMax = true;
+      if (!imageViewerVisible) {
+        imageViewer.style.display = "block";
+        imageViewerVisible = true;
+        this.innerText = "Hide Images";
       } else {
-        imageViewer.style.height = "3vh";
-        imageViewerMax = false;
+        imageViewer.style.display = "none";
+        imageViewerVisible = false;
+        this.innerText = "MAX";
       }
     });
 
@@ -1026,8 +1017,8 @@
     function openModal(src) {
       const modal = document.getElementById('modal');
       const modalImage = document.getElementById('modalImage');
+      modal.style.display = "flex";
       modalImage.src = src;
-      modal.style.display = 'flex';
     }
     function closeModal() {
       document.getElementById('modal').style.display = 'none';
