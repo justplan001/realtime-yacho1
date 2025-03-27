@@ -115,7 +115,7 @@
       flex-direction: column;
       flex: 1;
     }
-    /* ③-1 ボタン入力エリア */
+    /* ③-1 ボタン入力エリア（文字入力・挿入ボタン・プルダウン/テンキーなど） */
     #button-input-area {
       flex: 4;
       display: flex;
@@ -127,8 +127,8 @@
     #text-input-area {
       display: flex;
       align-items: center;
-      gap: 0;
-      margin-bottom: 0;
+      gap: 5px;
+      margin-bottom: 5px;
       position: relative;
       z-index: 1000;
     }
@@ -146,12 +146,12 @@
       font-size: 16px;
       box-sizing: border-box;
     }
-    /* 挿入可能ボタン群 */
+    /* 挿入可能ボタン群（32個） */
     #insertable-buttons {
       display: grid;
       grid-template-columns: repeat(8, 1fr);
-      gap: 0;
-      margin-bottom: 0;
+      gap: 5px;
+      margin-bottom: 5px;
       position: relative;
       z-index: 1999;
     }
@@ -163,13 +163,13 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-    /* 下段左右配置エリア */
+    /* 下段の左右配置エリア */
     #lower-controls {
       display: flex;
       margin-top: auto;
       position: relative;
     }
-    /* 左：プルダウン入力エリア（5個） */
+    /* 左：プルダウン入力エリア（5個・縦並び、左下に配置） */
     #dropdown-container {
       width: 50%;
       display: flex;
@@ -181,7 +181,7 @@
       display: flex;
       align-items: center;
     }
-    /* 送信ボタンを左側、select 横幅500px固定 */
+    /* 送信ボタンを左側に配置し、selectの横幅を固定500px */
     .dropdown-wrapper select {
       width: 500px;
       overflow: hidden;
@@ -203,6 +203,7 @@
       flex-direction: column;
       align-items: flex-end;
     }
+    /* 十字キー */
     #arrowKeysContainer {
       margin-bottom: 20px;
     }
@@ -225,6 +226,7 @@
     #arrow-left  { grid-area: left; }
     #arrow-right { grid-area: right; }
     #arrow-down  { grid-area: down; }
+    /* 四則演算 */
     #operatorButtons {
       margin-bottom: 5px;
     }
@@ -236,6 +238,7 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
+    /* テンキー */
     #numpad {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -259,6 +262,7 @@
       background-color: #f0f0f0;
       padding-left: 5px;
     }
+    /* レイヤー操作 */
     #layerControl {
       display: flex;
       align-items: center;
@@ -305,7 +309,7 @@
         <img id="modalImage" src="" alt="拡大画像">
       </div>
     </div>
-    <!-- ③ 下部エリア -->
+    <!-- ③ 下部エリア：ボタン入力エリア＋コントロールエリア -->
     <div id="bottom-area">
       <div id="button-input-area">
         <div id="text-input-area">
@@ -313,7 +317,6 @@
           <input id="freeInput" type="text" placeholder="セルの値を編集">
         </div>
         <div id="insertable-buttons">
-          <!-- 32個の挿入可能ボタン -->
           <button id="btn0" class="insertable-button">仮ラベル</button>
           <button id="btn1" class="insertable-button">仮ラベル</button>
           <button id="btn2" class="insertable-button">仮ラベル</button>
@@ -340,7 +343,7 @@
           <button id="btn26" class="insertable-button">仮ラベル</button>
           <button id="btn27" class="insertable-button">仮ラベル</button>
         </div>
-        <!-- 下段左右配置エリア -->
+        <!-- 下段の左右配置エリア -->
         <div id="lower-controls">
           <!-- 左：プルダウン入力エリア（5個） -->
           <div id="dropdown-container">
@@ -412,15 +415,6 @@
   </div>
 
   <script>
-    // 全画面状態の切り替えでスクロールを無効にする
-    document.addEventListener('fullscreenchange', function(){
-      if (document.fullscreenElement) {
-        document.body.style.overflow = 'hidden';
-      } else {
-        document.body.style.overflow = 'auto';
-      }
-    });
-
     //========================
     // グローバル定数・変数
     //========================
@@ -762,7 +756,9 @@
     document.getElementById("pageFullscreenButton").addEventListener("click", () => {
       if (!document.fullscreenElement){
         document.documentElement.requestFullscreen();
-      } else { document.exitFullscreen(); }
+      } else {
+        document.exitFullscreen();
+      }
     });
     document.getElementById("toggleButtonArea").addEventListener("click", () => {
       const btnArea = document.getElementById("button-input-area");
@@ -776,6 +772,15 @@
         btnArea.style.display = "none";
         imageViewer.style.display = "none";
         topArea.style.height = (window.innerHeight - 40) + "px";
+      }
+    });
+
+    // 全画面表示時にスクロールを無効化する設定
+    document.addEventListener("fullscreenchange", function() {
+      if (document.fullscreenElement) {
+        document.body.style.overflow = "hidden";
+      } else {
+        document.body.style.overflow = "auto";
       }
     });
 
@@ -872,7 +877,7 @@
     });
 
     //========================
-    // プルダウン選択式入力処理（5個）
+    // プルダウン選択式入力処理（5個・送信ボタン → プルダウン順）
     //========================
     let drumItems = loadConfig("drumConfig", [
       "左境", "左枡", "車止", "支線", "標", "電柱", "右桝", "右境",
