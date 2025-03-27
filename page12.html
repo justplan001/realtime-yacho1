@@ -71,7 +71,7 @@
       border-top: 1px solid #ccc;
       border-bottom: 1px solid #ccc;
       overflow: auto;
-      position: relative; /* MAXボタンの絶対配置用 */
+      position: relative;
     }
     #image-viewer-area input {
       margin: 5px;
@@ -82,7 +82,7 @@
       margin: 10px;
       cursor: pointer;
     }
-    /* MAXボタン（画像閲覧エリア内右上に配置） */
+    /* MAXボタン */
     #maxButton {
       position: absolute;
       top: 5px;
@@ -146,7 +146,7 @@
       font-size: 16px;
       box-sizing: border-box;
     }
-    /* ③-1 挿入可能ボタン群（32個） */
+    /* 挿入可能ボタン群（32個） */
     #insertable-buttons {
       display: grid;
       grid-template-columns: repeat(8, 1fr);
@@ -163,27 +163,27 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-    /* 下段の左右配置エリア（プルダウン入力＋テンキーなど） */
+    /* 下段の左右配置エリア */
     #lower-controls {
       display: flex;
       margin-top: auto;
       position: relative;
     }
-    /* 左：プルダウン入力エリア（7個・縦並び、各は下部左に揃える） */
+    /* 左：プルダウン入力エリア（5個・縦並び、左下に配置） */
     #dropdown-container {
       width: 50%;
       display: flex;
       flex-direction: column;
       gap: 10px;
-      align-self: flex-end; /* 下部左に配置 */
+      align-self: flex-end;
     }
     .dropdown-wrapper {
       display: flex;
       align-items: center;
     }
-    /* ※ 送信ボタンを左に配置するため順序は ボタン → select */
+    /* 送信ボタンを左側に配置し、selectの横幅を固定500px */
     .dropdown-wrapper select {
-      width: 500px; /* 横幅固定 */
+      width: 500px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -252,7 +252,7 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-    /* ③-2 コントロールエリア：最下段（Full/Export/レイヤ操作） */
+    /* ③-2 コントロールエリア：最下段 */
     #control-area {
       height: 40px;
       display: flex;
@@ -303,7 +303,6 @@
     <!-- ② 画像閲覧エリア -->
     <div id="image-viewer-area">
       <input type="file" accept="image/*" multiple id="fileInput">
-      <!-- MAXボタン -->
       <button id="maxButton">MAX</button>
       <div id="preview"></div>
       <div id="modal">
@@ -313,12 +312,10 @@
     <!-- ③ 下部エリア：ボタン入力エリア＋コントロールエリア -->
     <div id="bottom-area">
       <div id="button-input-area">
-        <!-- 自由記述入力＋全画面表示ボタン -->
         <div id="text-input-area">
           <button id="pageFullscreenButton">全画面表示</button>
           <input id="freeInput" type="text" placeholder="セルの値を編集">
         </div>
-        <!-- 挿入可能なボタン群（32個） -->
         <div id="insertable-buttons">
           <button id="btn0" class="insertable-button">仮ラベル</button>
           <button id="btn1" class="insertable-button">仮ラベル</button>
@@ -346,11 +343,10 @@
           <button id="btn26" class="insertable-button">仮ラベル</button>
           <button id="btn27" class="insertable-button">仮ラベル</button>
         </div>
-        <!-- 下段の左右配置エリア（プルダウン入力＋テンキーなど） -->
+        <!-- 下段の左右配置エリア -->
         <div id="lower-controls">
-          <!-- 左：プルダウン入力エリア（7個） -->
+          <!-- 左：プルダウン入力エリア（5個） -->
           <div id="dropdown-container">
-            <!-- 各項目は送信ボタン → プルダウンの順で配置 -->
             <div class="dropdown-wrapper">
               <button id="sendDropdown0" class="dropdown-send-button">送信</button>
               <select id="dropdown0"></select>
@@ -370,14 +366,6 @@
             <div class="dropdown-wrapper">
               <button id="sendDropdown4" class="dropdown-send-button">送信</button>
               <select id="dropdown4"></select>
-            </div>
-            <div class="dropdown-wrapper">
-              <button id="sendDropdown5" class="dropdown-send-button">送信</button>
-              <select id="dropdown5"></select>
-            </div>
-            <div class="dropdown-wrapper">
-              <button id="sendDropdown6" class="dropdown-send-button">送信</button>
-              <select id="dropdown6"></select>
             </div>
           </div>
           <!-- 右：テンキー＋四則演算＋十字キーエリア -->
@@ -413,7 +401,7 @@
           </div>
         </div>
       </div>
-      <!-- ③-2 コントロールエリア：最下段（Full/Export/レイヤ操作） -->
+      <!-- ③-2 コントロールエリア -->
       <div id="control-area">
         <button id="toggleButtonArea">Full</button>
         <button id="exportButton">Export</button>
@@ -619,7 +607,6 @@
       const roadCenterX = originX + (roadWidth * scale) / 2;
       const colors = ["red", "yellow", "green", "cyan", "magenta"];
       
-      // 共通で使用する H 列の値（左境・メジ・右境用）
       let commonOffset = parseFloat(tableState[1][7]);
       
       for (let i = 0; i < ROW_COUNT; i++){
@@ -628,7 +615,6 @@
         if (isNaN(yVal)) continue;
         const yPos = originY - (yVal * scale);
         
-        // 「メジ」：起点から共通オフセット分だけ右へ線を引く
         if (label === "メジ") {
           if (!isNaN(commonOffset)) {
             const startX = originX;
@@ -647,7 +633,6 @@
           }
           continue;
         }
-        // 「左境」：起点から-3分だけ左へ線を引く
         if (label === "左境") {
           const startX = originX;
           const endX = originX - (3 * scale);
@@ -664,7 +649,6 @@
           ctx.fillText(label, textX, yPos);
           continue;
         }
-        // 「右境」：共通オフセットの位置から＋3分だけ右へ線を引く
         if (label === "右境") {
           if (!isNaN(commonOffset)) {
             const startX = originX + (commonOffset * scale);
@@ -684,7 +668,6 @@
           continue;
         }
         
-        // 通常の描画処理（点と文字）
         let xVal;
         if (label === "右桝") {
           xVal = !isNaN(commonOffset) ? commonOffset : roadWidth;
@@ -883,7 +866,7 @@
     });
 
     //========================
-    // プルダウン選択式入力処理（7個・各は送信ボタン→プルダウン順）
+    // プルダウン選択式入力処理（5個・送信ボタン → プルダウン順）
     //========================
     let drumItems = loadConfig("drumConfig", [
       "左境", "左枡", "車止", "支線", "標", "電柱", "右桝", "右境",
@@ -891,7 +874,7 @@
       "E", "T", "メジ", "杭", "都", "他", "市", "民",
       "終", "GR", "植樹", "ﾐﾗｰ", "角", "基準点", "G", "空"
     ]);
-    for (let i = 0; i < 7; i++){
+    for (let i = 0; i < 5; i++){
       const dropdown = document.getElementById("dropdown" + i);
       drumItems.forEach(item => {
         const option = document.createElement("option");
