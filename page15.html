@@ -103,7 +103,7 @@
       background-color: rgba(0, 0, 0, 0.8);
       justify-content: center;
       align-items: center;
-      z-index: 2000; /* モーダルが最前面 */
+      z-index: 3000; /* モーダルが最前面 */
     }
     #modal img {
       max-width: 90%;
@@ -252,6 +252,8 @@
         ". up ."
         "left down right";
       gap: 5px;
+      position: relative;
+      z-index: 2000; /* 挿入可能ボタン群より前面に表示 */
     }
     #arrow-keys button {
       width: 50px;
