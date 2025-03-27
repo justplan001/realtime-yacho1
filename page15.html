@@ -64,7 +64,7 @@
       display: block;
       width: 100%;
     }
-    /* ② 画像閲覧エリア（初期値10vh） */
+    /* ② 画像閲覧エリア（初期値3vh） */
     #image-viewer-area {
       height: 3vh;
       padding: 5px;
@@ -910,7 +910,7 @@
     document.getElementById("maxButton").addEventListener("click", () => {
       const imageViewer = document.getElementById("image-viewer-area");
       if (!imageViewerMax) {
-        imageViewer.style.height = "40vh";
+        imageViewer.style.height = "70vh";
         imageViewerMax = true;
       } else {
         imageViewer.style.height = "3vh";
