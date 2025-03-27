@@ -12,12 +12,12 @@
   <!-- Excelエクスポート用ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    /* 全体は画面全体にフィット */
+    /* 全体は画面全体にフィット、スクロール可能に */
     html, body {
       margin: 0;
       padding: 0;
       height: 100vh;
-      overflow: hidden;
+      overflow: auto; /* 修正: hidden → auto */
       font-family: sans-serif;
       box-sizing: border-box;
     }
@@ -225,8 +225,8 @@
       margin-bottom: 2px;
     }
     #operatorButtons button {
-      padding: 12px;
-      font-size: 22px;
+      padding: 10px;
+      font-size: 20px;
       cursor: pointer;
       background-color: #eee;
       border: 1px solid #ccc;
@@ -752,16 +752,18 @@
       }
     });
 
-    /* 画像閲覧エリアのMAXボタン */
+    /* 画像閲覧エリアのMAXボタン（修正済み） */
     let imageViewerMax = false;
     document.getElementById("maxButton").addEventListener("click", () => {
       const imageViewer = document.getElementById("image-viewer-area");
       if (!imageViewerMax) {
         imageViewer.style.height = "50vh";
         imageViewerMax = true;
+        document.getElementById("maxButton").innerText = "MIN";
       } else {
         imageViewer.style.height = "3vh";
         imageViewerMax = false;
+        document.getElementById("maxButton").innerText = "MAX";
       }
     });
 
@@ -934,13 +936,7 @@
 
     /* 全画面表示時のスクロールロック解除 */
     document.addEventListener("fullscreenchange", function() {
-      if (document.fullscreenElement) {
-        // 全画面時はスクロール可能に
-        document.body.style.overflow = "auto";
-      } else {
-        // 通常時はスクロールロック
-        document.body.style.overflow = "hidden";
-      }
+      document.body.style.overflow = "auto";
     });
   </script>
 </body>
