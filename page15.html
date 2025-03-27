@@ -423,7 +423,7 @@
             </div>
             <!-- 四則演算（+ と - のみ） -->
             <div id="operatorButtons">
-              <button class="operator-button">+</button><a>左　　右</a>
+              <button class="operator-button">+</button><a>左→ ←右</a>
               <button class="operator-button">-</button>
             </div>
             <!-- テンキー -->
@@ -914,7 +914,7 @@
     document.getElementById("maxButton").addEventListener("click", () => {
       const imageViewer = document.getElementById("image-viewer-area");
       if (!imageViewerMax) {
-        imageViewer.style.height = "40vh";
+        imageViewer.style.height = "30vh";
         imageViewerMax = true;
       } else {
         imageViewer.style.height = "3vh";
