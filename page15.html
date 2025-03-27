@@ -207,17 +207,16 @@
       transition: transform 0.1s ease-out;
     }
     .drum-item {
-  height: 30px;
-  line-height: 30px;
-  text-align: center;
-  border-bottom: 1px solid #ddd;
-  font-size: 16px;
-  color: #333;
-  overflow: hidden;         /* はみ出た部分を隠す */
-  white-space: nowrap;      /* 改行せず横一列に表示 */
-  text-overflow: clip;      /* はみ出た文字はそのまま切り捨て（必要なら ellipsis に変更可能） */
-}
-
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      border-bottom: 1px solid #ddd;
+      font-size: 16px;
+      color: #333;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: clip;
+    }
     .drum-item.selected {
       color: #007bff;
       font-weight: bold;
@@ -269,9 +268,10 @@
     #arrow-left  { grid-area: left; }
     #arrow-right { grid-area: right; }
     #arrow-down  { grid-area: down; }
-    /* 四則演算 */
+    /* 四則演算：+ と - の2つに変更し、横幅を倍に */
     #operatorButtons {
       margin-bottom: 5px;
+      display: flex;
     }
     #operatorButtons button {
       padding: 12px;
@@ -280,6 +280,8 @@
       background-color: #eee;
       border: 1px solid #ccc;
       border-radius: 4px;
+      flex: 1;
+      margin: 0 5px;
     }
     /* テンキー */
     #numpad {
@@ -419,11 +421,9 @@
                 <button id="arrow-down">↓</button>
               </div>
             </div>
-            <!-- 四則演算 -->
+            <!-- 四則演算（+ と - のみ） -->
             <div id="operatorButtons">
-              <button class="operator-button">+</button>
-              <button class="operator-button">/</button>
-              <button class="operator-button">*</button>
+              <button class="operator-button">+</button><a>左　　右</a>
               <button class="operator-button">-</button>
             </div>
             <!-- テンキー -->
@@ -909,12 +909,12 @@
       }
     });
 
-    // 新規追加：画像閲覧エリア内のMAXボタンで高さ切替（初期10vh⇔40vh）
+    // 新規追加：画像閲覧エリア内のMAXボタンで高さ切替
     let imageViewerMax = false;
     document.getElementById("maxButton").addEventListener("click", () => {
       const imageViewer = document.getElementById("image-viewer-area");
       if (!imageViewerMax) {
-        imageViewer.style.height = "35vh";
+        imageViewer.style.height = "45vh";
         imageViewerMax = true;
       } else {
         imageViewer.style.height = "3vh";
