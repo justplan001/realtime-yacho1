@@ -20,7 +20,7 @@
       font-family: sans-serif;
       box-sizing: border-box;
     }
-    /* コンテナを5分割（上部20%、画像閲覧20%、残り60%を下部で2分割） */
+    /* コンテナを5分割（上部20%、画像閲覧エリア、残り60%を下部で2分割） */
     #container {
       display: flex;
       flex-direction: column;
@@ -29,7 +29,7 @@
     /* ① 上部エリア：左右に分割（表と図）20% */
     #top-area {
       display: flex;
-      height: 25vh;
+      height: 20vh;
       transition: height 0.3s ease;
       border-bottom: 1px solid #ccc;
     }
@@ -64,16 +64,16 @@
       display: block;
       width: 100%;
     }
-    /* ② 画像閲覧エリア（20%） */
+    /* ② 画像閲覧エリア（初期値10vh） */
     #image-viewer-area {
-      height: 15vh;
+      height: 3vh;
       padding: 5px;
       border-top: 1px solid #ccc;
       border-bottom: 1px solid #ccc;
       overflow: auto;
+      position: relative; /* MAXボタンの絶対配置用 */
     }
-    #image-viewer-area input,
-    #image-viewer-area button {
+    #image-viewer-area input {
       margin: 5px;
     }
     /* サムネイル */
@@ -82,19 +82,30 @@
       margin: 10px;
       cursor: pointer;
     }
+    /* MAXボタン（画像閲覧エリア内右上に配置） */
+    #maxButton {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      z-index: 10;
+      padding: 5px 10px;
+      font-size: 14px;
+      cursor: pointer;
+    }
     /* モーダル（拡大表示用） */
     #modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.8);
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  justify-content: center;
+  align-items: center;
+  z-index: 2000; /* ここを1000から2000など、より高い値に変更 */
+}
+
     #modal img {
       max-width: 90%;
       max-height: 90%;
@@ -119,6 +130,8 @@
       align-items: center;
       gap: 5px;
       margin-bottom: 5px;
+      position: relative; /* 重なり順対策 */
+      z-index: 1000;
     }
     #pageFullscreenButton {
       padding: 8px 12px;
@@ -156,7 +169,6 @@
       position: relative;
     }
     /* 左：ドラム式入力エリア */
-    /* ドラムを横並びにするため、親要素をflexコンテナに */
     #drum-container {
       width: 50%;
       display: flex;
@@ -164,17 +176,16 @@
       justify-content: space-around;
       align-items: flex-start;
     }
-    /* 各ドラムとその送信ボタンをラップする要素（縦方向） */
     .drum-wrapper {
       display: flex;
       flex-direction: column;
       align-items: center;
     }
-.drum-wrapper button {
-  pointer-events: auto; 
-  position: relative;
-  z-index: 20; /* ドラムより高くすることでボタンの優先度を上げる */
-}
+    .drum-wrapper button {
+      pointer-events: auto; 
+      position: relative;
+      z-index: 20;
+    }
     .drum-container {
       height: 150px;
       overflow: hidden;
@@ -278,7 +289,6 @@
       border-radius: 4px;
     }
     /* ③-2 コントロールエリア：最下段（Full/Export/レイヤ操作） */
-    /* 下部バーの高さをボタンと同じ高さ（40px）に調整 */
     #control-area {
       height: 40px;
       display: flex;
@@ -329,7 +339,8 @@
     <!-- ② 画像閲覧エリア -->
     <div id="image-viewer-area">
       <input type="file" accept="image/*" multiple id="fileInput">
-      <button id="resetButton">リセット</button>
+      <!-- MAXボタンを画像閲覧エリア内右上に配置 -->
+      <button id="maxButton">MAX</button>
       <div id="preview"></div>
       <div id="modal">
         <img id="modalImage" src="" alt="拡大画像">
@@ -349,12 +360,18 @@
           <button id="btn1" class="insertable-button">仮ラベル</button>
           <button id="btn2" class="insertable-button">仮ラベル</button>
           <button id="btn3" class="insertable-button">仮ラベル</button>
- <a></a><a></a><a></a><a></a>
+          <button id="btn4" class="insertable-button">仮ラベル</button>
+          <button id="btn5" class="insertable-button">仮ラベル</button>
+          <button id="btn6" class="insertable-button">仮ラベル</button>
+          <button id="btn7" class="insertable-button">仮ラベル</button>
           <button id="btn8" class="insertable-button">仮ラベル</button>
           <button id="btn9" class="insertable-button">仮ラベル</button>
           <button id="btn10" class="insertable-button">仮ラベル</button>
           <button id="btn11" class="insertable-button">仮ラベル</button>
- <a></a><a></a><a></a><a></a>
+          <button id="btn12" class="insertable-button">仮ラベル</button>
+          <button id="btn13" class="insertable-button">仮ラベル</button>
+          <button id="btn14" class="insertable-button">仮ラベル</button>
+          <button id="btn15" class="insertable-button">仮ラベル</button>
           <button id="btn16" class="insertable-button">仮ラベル</button>
           <button id="btn17" class="insertable-button">仮ラベル</button>
           <button id="btn18" class="insertable-button">仮ラベル</button>
@@ -421,7 +438,7 @@
           </div>
         </div>
       </div>
-      <!-- ③-2 コントロールエリア：最下段 -->
+      <!-- ③-2 コントロールエリア：最下段（Full/Export/レイヤ操作） -->
       <div id="control-area">
         <button id="toggleButtonArea">Full</button>
         <button id="exportButton">Export</button>
@@ -465,9 +482,9 @@
     }
     let currentLayer = 0;
     const defaultButtonLabels = [
-      "左境", "左枡", "右桝", "右境", "使用不可", "使用不可", "使用不可", "使用不可",
-      "標", "下", "S", "W", "使用不可", "使用不可", "使用不可", "使用不可",
-      "電柱", "消", "SV", "W", "使用不可", "使用不可", "使用不可", "使用不可",
+      "左境", "左枡", "右桝", "右境", "市", "民", "基", "他",
+      "標", "下", "S", "W", "支線", "灯", "標", "電柱",
+      "電柱", "消", "SV", "止水", "使用不可", "使用不可", "使用不可", "使用不可",
       "角", "市", "民", "桝", "使用不可", "使用不可", "使用不可", "使用不可"
     ];
     function loadConfig(key, defaultArr) {
@@ -870,21 +887,34 @@
       } else { document.exitFullscreen(); }
     });
     document.getElementById("toggleButtonArea").addEventListener("click", () => {
-  const btnArea = document.getElementById("button-input-area");
-  const topArea = document.getElementById("top-area");
-  const imageViewer = document.getElementById("image-viewer-area");
-  if (btnArea.style.display === "none") {
-    // 通常モード：表と図を含む全体レイアウト（画像閲覧エリアも表示）
-    btnArea.style.display = "flex";
-    imageViewer.style.display = "block"; // 画像閲覧エリアを表示
-    topArea.style.height = "20vh";
-  } else {
-    // Fullモード：表と図のみ表示、画像閲覧エリア非表示
-    btnArea.style.display = "none";
-    imageViewer.style.display = "none";
-    topArea.style.height = (window.innerHeight - 40) + "px"; // 下部コントロールバー固定40px
-  }
-});
+      const btnArea = document.getElementById("button-input-area");
+      const topArea = document.getElementById("top-area");
+      const imageViewer = document.getElementById("image-viewer-area");
+      if (btnArea.style.display === "none") {
+        // 通常モード：表と図を含む全体レイアウト（画像閲覧エリアも表示）
+        btnArea.style.display = "flex";
+        imageViewer.style.display = "block";
+        topArea.style.height = "20vh";
+      } else {
+        // Fullモード：表と図のみ表示、画像閲覧エリア非表示
+        btnArea.style.display = "none";
+        imageViewer.style.display = "none";
+        topArea.style.height = (window.innerHeight - 40) + "px"; // 下部コントロールバー固定40px
+      }
+    });
+
+    // 新規追加：画像閲覧エリア内のMAXボタンで高さ切替（初期10vh⇔40vh）
+    let imageViewerMax = false;
+    document.getElementById("maxButton").addEventListener("click", () => {
+      const imageViewer = document.getElementById("image-viewer-area");
+      if (!imageViewerMax) {
+        imageViewer.style.height = "40vh";
+        imageViewerMax = true;
+      } else {
+        imageViewer.style.height = "3vh";
+        imageViewerMax = false;
+      }
+    });
 
     document.getElementById("layerUp").addEventListener("click", () => {
       if (currentLayer < layers.length - 1){
@@ -975,7 +1005,7 @@
     };
 
     //========================
-    // 画像閲覧機能（サムネイル・拡大・リセット）
+    // 画像閲覧機能（サムネイル・拡大）
     //========================
     function loadSavedImages() {
       const savedData = localStorage.getItem('savedImages');
@@ -1029,11 +1059,6 @@
         }
         reader.readAsDataURL(file);
       }
-    });
-    document.getElementById('resetButton').addEventListener('click', function() {
-      localStorage.removeItem('savedImages');
-      document.getElementById('preview').innerHTML = '';
-      document.getElementById('fileInput').value = '';
     });
     document.getElementById('modal').addEventListener('click', function() {
       closeModal();
