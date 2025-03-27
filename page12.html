@@ -12,37 +12,36 @@
   <!-- Excelエクスポート用ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    /* 基本設定 */
+    /* 全体は画面全体にフィット */
     html, body {
       margin: 0;
       padding: 0;
-      height: 100%;
+      height: 100vh;
+      overflow: hidden;
       font-family: sans-serif;
       box-sizing: border-box;
     }
-    /* コンテナを5分割（上部20%、画像閲覧エリア、残り60%を下部で2分割） */
+    /* コンテナは縦に並べ、全体100vh */
     #container {
       display: flex;
       flex-direction: column;
       height: 100vh;
     }
-    /* ① 上部エリア：左右に分割（表と図）20% */
+    /* 上部エリア：表と図は20vh（変更なし） */
     #top-area {
-      display: flex;
       height: 20vh;
-      transition: height 0.3s ease;
+      display: flex;
       border-bottom: 1px solid #ccc;
     }
     #table-container, #diagram-container {
       flex: 1;
-      overflow: auto;
-      padding: 5px;
-      -webkit-overflow-scrolling: touch;
+      overflow: hidden;
+      padding: 2px;
     }
     #table-container {
       border-right: 1px solid #ccc;
     }
-    /* 表のスタイル */
+    /* 表のスタイル（余白を少なく） */
     #table-container table {
       border-collapse: collapse;
       width: 100%;
@@ -50,7 +49,7 @@
     #table-container th,
     #table-container td {
       border: 1px solid #ccc;
-      padding: 5px;
+      padding: 2px;
       text-align: center;
       min-width: 50px;
       min-height: 24px;
@@ -58,41 +57,42 @@
     }
     td { cursor: pointer; outline: none; }
     .selected { background-color: #caf; }
-    /* 図のキャンバス */
+    /* キャンバスはエリア全体に */
     #diagram-container canvas {
       background-color: #000;
       display: block;
       width: 100%;
+      height: 100%;
     }
-    /* ② 画像閲覧エリア（初期値3vh） */
+    /* 画像閲覧エリア：高さは3vh（元の仕様） */
     #image-viewer-area {
       height: 3vh;
-      padding: 5px;
+      padding: 2px 5px;
       border-top: 1px solid #ccc;
       border-bottom: 1px solid #ccc;
-      overflow: auto;
       position: relative;
+      overflow-y: hidden;
+      overflow-x: auto;
     }
     #image-viewer-area input {
-      margin: 5px;
+      margin: 2px 0;
     }
-    /* サムネイル */
     #preview img {
-      width: 100px;
-      margin: 10px;
+      width: 50px;
+      margin: 2px;
       cursor: pointer;
     }
-    /* MAXボタン */
+    /* MAXボタン（画像閲覧エリア内） */
     #maxButton {
       position: absolute;
-      top: 5px;
+      top: 2px;
       right: 5px;
       z-index: 10;
-      padding: 5px 10px;
-      font-size: 14px;
+      padding: 2px 5px;
+      font-size: 12px;
       cursor: pointer;
     }
-    /* モーダル（拡大表示用） */
+    /* モーダル（拡大表示） */
     #modal {
       display: none;
       position: fixed;
@@ -100,7 +100,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(0, 0, 0, 0.8);
+      background-color: rgba(0,0,0,0.8);
       justify-content: center;
       align-items: center;
       z-index: 3000;
@@ -109,32 +109,29 @@
       max-width: 90%;
       max-height: 90%;
     }
-    /* ③ 下部エリア：残り60%をさらに2分割 */
+    /* 下部エリア：残りの高さは100vh - (20vh + 3vh) = 77vh */
     #bottom-area {
+      height: calc(100vh - 23vh);
       display: flex;
       flex-direction: column;
-      flex: 1;
     }
-    /* ③-1 ボタン入力エリア（文字入力・挿入ボタン・プルダウン/テンキーなど） */
+    /* ボタン入力エリア：コントロールエリア（下部）の上部 */
     #button-input-area {
-      flex: 4;
+      height: calc(100% - 40px); /* コントロールエリアを除く */
       display: flex;
       flex-direction: column;
-      padding: 5px;
+      padding: 2px;
       border-bottom: 1px solid #ccc;
     }
-    /* 自由記述入力＋全画面表示ボタン */
     #text-input-area {
       display: flex;
       align-items: center;
       gap: 5px;
-      margin-bottom: 5px;
-      position: relative;
-      z-index: 1000;
+      margin-bottom: 2px;
     }
     #pageFullscreenButton {
-      padding: 8px 12px;
-      font-size: 16px;
+      padding: 4px 8px;
+      font-size: 14px;
       cursor: pointer;
       background-color: #eee;
       border: 1px solid #ccc;
@@ -142,93 +139,91 @@
     }
     #freeInput {
       flex: 1;
-      padding: 8px;
-      font-size: 16px;
+      padding: 4px;
+      font-size: 14px;
       box-sizing: border-box;
     }
     /* 挿入可能ボタン群（32個） */
     #insertable-buttons {
       display: grid;
       grid-template-columns: repeat(8, 1fr);
-      gap: 5px;
-      margin-bottom: 5px;
-      position: relative;
-      z-index: 1999;
+      gap: 2px;
+      margin-bottom: 2px;
     }
     #insertable-buttons button {
-      padding: 8px;
-      font-size: 16px;
+      padding: 4px;
+      font-size: 14px;
       cursor: pointer;
       background-color: #eee;
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-    /* 下段の左右配置エリア */
+    /* 下段左右エリア */
     #lower-controls {
+      flex: 1;
       display: flex;
-      margin-top: auto;
-      position: relative;
+      padding: 2px;
     }
-    /* 左：プルダウン入力エリア（5個・縦並び、左下に配置） */
+    /* 左：プルダウン入力エリア（5個） */
     #dropdown-container {
-      width: 50%;
+      flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      align-self: flex-end;
+      gap: 2px;
+      justify-content: flex-end;
     }
     .dropdown-wrapper {
       display: flex;
       align-items: center;
     }
-    /* 送信ボタンを左側に配置し、selectの横幅を固定500px */
+    /* 送信ボタンを左に配置、selectは固定500px */
     .dropdown-wrapper select {
       width: 500px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      font-size: 16px;
-      padding: 4px;
+      font-size: 14px;
+      padding: 2px;
     }
     .dropdown-wrapper button {
-      padding: 8px 12px;
-      font-size: 16px;
+      padding: 4px 8px;
+      font-size: 14px;
       cursor: pointer;
-      margin-right: 10px;
+      margin-right: 2px;
     }
-    /* 右：テンキー＋四則演算＋十字キーエリア */
+    /* 右：テンキー・四則演算・十字キー */
     #numpad-container {
-      width: 50%;
+      flex: 1;
       display: flex;
       flex-direction: column;
       align-items: flex-end;
+      justify-content: flex-end;
+      padding: 5px;
     }
-    /* 十字キー */
     #arrowKeysContainer {
-      margin-bottom: 20px;
+      margin-bottom: 2px;
     }
     #arrow-keys {
       display: grid;
       grid-template-areas:
         ". up ."
         "left down right";
-      gap: 5px;
+      gap: 2px;
       position: relative;
       z-index: 2000;
     }
     #arrow-keys button {
       width: 50px;
       height: 50px;
-      font-size: 18px;
+      font-size: 16px;
       cursor: pointer;
     }
     #arrow-up    { grid-area: up; }
     #arrow-left  { grid-area: left; }
     #arrow-right { grid-area: right; }
     #arrow-down  { grid-area: down; }
-    /* 四則演算 */
     #operatorButtons {
-      margin-bottom: 5px;
+      margin-bottom: 2px;
     }
     #operatorButtons button {
       padding: 12px;
@@ -238,31 +233,28 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-    /* テンキー */
     #numpad {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 5px;
+      gap: 2px;
     }
     #numpad button {
-      padding: 12px;
-      font-size: 22px;
+      padding: 13px;
+      font-size: 23px;
       cursor: pointer;
       background-color: #eee;
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-    /* ③-2 コントロールエリア */
+    /* コントロールエリア：下部固定40px */
     #control-area {
       height: 40px;
       display: flex;
       align-items: center;
-      justify-content: flex-start;
       gap: 10px;
       background-color: #f0f0f0;
       padding-left: 5px;
     }
-    /* レイヤー操作 */
     #layerControl {
       display: flex;
       align-items: center;
@@ -273,7 +265,7 @@
 </head>
 <body>
   <div id="container">
-    <!-- ① 上部エリア：表と図 -->
+    <!-- 上部エリア：表と図（20vh固定） -->
     <div id="top-area">
       <div id="table-container">
         <table id="excelTable">
@@ -300,7 +292,7 @@
         <canvas id="drawingCanvas"></canvas>
       </div>
     </div>
-    <!-- ② 画像閲覧エリア -->
+    <!-- 画像閲覧エリア -->
     <div id="image-viewer-area">
       <input type="file" accept="image/*" multiple id="fileInput">
       <button id="maxButton">MAX</button>
@@ -309,14 +301,16 @@
         <img id="modalImage" src="" alt="拡大画像">
       </div>
     </div>
-    <!-- ③ 下部エリア：ボタン入力エリア＋コントロールエリア -->
+    <!-- 下部エリア -->
     <div id="bottom-area">
+      <!-- ボタン入力エリア -->
       <div id="button-input-area">
         <div id="text-input-area">
           <button id="pageFullscreenButton">全画面表示</button>
           <input id="freeInput" type="text" placeholder="セルの値を編集">
         </div>
         <div id="insertable-buttons">
+          <!-- 挿入可能ボタン（32個） -->
           <button id="btn0" class="insertable-button">仮ラベル</button>
           <button id="btn1" class="insertable-button">仮ラベル</button>
           <button id="btn2" class="insertable-button">仮ラベル</button>
@@ -343,7 +337,7 @@
           <button id="btn26" class="insertable-button">仮ラベル</button>
           <button id="btn27" class="insertable-button">仮ラベル</button>
         </div>
-        <!-- 下段の左右配置エリア -->
+        <!-- 下段左右エリア -->
         <div id="lower-controls">
           <!-- 左：プルダウン入力エリア（5個） -->
           <div id="dropdown-container">
@@ -368,7 +362,7 @@
               <select id="dropdown4"></select>
             </div>
           </div>
-          <!-- 右：テンキー＋四則演算＋十字キーエリア -->
+          <!-- 右：テンキー・四則演算・十字キー -->
           <div id="numpad-container">
             <div id="arrowKeysContainer">
               <div id="arrow-keys">
@@ -401,7 +395,7 @@
           </div>
         </div>
       </div>
-      <!-- ③-2 コントロールエリア -->
+      <!-- コントロールエリア（下部固定40px） -->
       <div id="control-area">
         <button id="toggleButtonArea">Full</button>
         <button id="exportButton">Export</button>
@@ -415,9 +409,7 @@
   </div>
 
   <script>
-    //========================
-    // グローバル定数・変数
-    //========================
+    /* グローバル定数・変数 */
     const ROW_COUNT = 100;
     const COL_COUNT = 10;
     function generateNewTableState() {
@@ -459,15 +451,13 @@
     }
     const buttonConfig = loadConfig("buttonConfig", defaultButtonLabels);
 
-    // 挿入可能ボタンクリック
+    /* 挿入可能ボタンのクリック処理 */
     function insertText(text) {
       setSelectedCell(layers[currentLayer].currentRow, layers[currentLayer].currentCol);
       updateCellText(text);
     }
 
-    //========================
-    // 表・キャンバス処理
-    //========================
+    /* 表・キャンバスの処理 */
     const tbody = document.getElementById("table-body");
     function renderTable() {
       tbody.innerHTML = "";
@@ -539,9 +529,7 @@
       updateCellText(layers[currentLayer].tableState[layers[currentLayer].currentRow][layers[currentLayer].currentCol] + str);
     }
 
-    //========================
-    // キャンバス描画処理
-    //========================
+    /* キャンバス描画処理 */
     function updateCanvas() {
       const canvas = document.getElementById("drawingCanvas");
       const ctx = canvas.getContext("2d");
@@ -606,15 +594,12 @@
       }
       const roadCenterX = originX + (roadWidth * scale) / 2;
       const colors = ["red", "yellow", "green", "cyan", "magenta"];
-      
       let commonOffset = parseFloat(tableState[1][7]);
-      
       for (let i = 0; i < ROW_COUNT; i++){
         const label = tableState[i][0].trim();
         const yVal = parseFloat(tableState[i][1]);
         if (isNaN(yVal)) continue;
         const yPos = originY - (yVal * scale);
-        
         if (label === "メジ") {
           if (!isNaN(commonOffset)) {
             const startX = originX;
@@ -667,7 +652,6 @@
           }
           continue;
         }
-        
         let xVal;
         if (label === "右桝") {
           xVal = !isNaN(commonOffset) ? commonOffset : roadWidth;
@@ -707,9 +691,7 @@
       container.scrollTop = 0;
     }
 
-    //========================
-    // 挿入可能ボタン設定（32個）
-    //========================
+    /* 挿入可能ボタンの設定 */
     for (let i = 0; i < 32; i++){
       const btn = document.getElementById("btn" + i);
       if (btn){
@@ -718,9 +700,7 @@
       }
     }
 
-    //========================
-    // テンキー、四則演算、十字キーのイベント登録
-    //========================
+    /* テンキー、四則演算、十字キーのイベント */
     document.querySelectorAll("#operatorButtons button").forEach(btn => {
       btn.addEventListener("click", () => { appendCellText(btn.innerText); });
     });
@@ -749,9 +729,7 @@
       setSelectedCell(newRow, newCol);
     }
 
-    //========================
-    // 図操作エリアイベント
-    //========================
+    /* 図操作エリアのイベント */
     document.getElementById("exportButton").addEventListener("click", exportToExcelAllLayers);
     document.getElementById("pageFullscreenButton").addEventListener("click", () => {
       if (!document.fullscreenElement){
@@ -775,16 +753,7 @@
       }
     });
 
-    // 全画面表示時にスクロールを無効化する設定
-    document.addEventListener("fullscreenchange", function() {
-      if (document.fullscreenElement) {
-        document.body.style.overflow = "hidden";
-      } else {
-        document.body.style.overflow = "auto";
-      }
-    });
-
-    // 新規追加：画像閲覧エリア内のMAXボタンで高さ切替
+    /* 画像閲覧エリアのMAXボタン */
     let imageViewerMax = false;
     document.getElementById("maxButton").addEventListener("click", () => {
       const imageViewer = document.getElementById("image-viewer-area");
@@ -869,16 +838,12 @@
       XLSX.writeFile(workbook, finalFilename);
     }
 
-    //========================
-    // 自由記述入力ボックスのセル反映処理
-    //========================
+    /* 自由記述入力ボックスの反映 */
     document.getElementById("freeInput").addEventListener("input", function() {
       updateCellText(this.value);
     });
 
-    //========================
-    // プルダウン選択式入力処理（5個・送信ボタン → プルダウン順）
-    //========================
+    /* プルダウン選択式入力処理（5個） */
     let drumItems = loadConfig("drumConfig", [
       "左境", "左枡", "車止", "支線", "標", "電柱", "右桝", "右境",
       "下", "D", "S", "SS", "消", "F", "SV", "W",
@@ -909,9 +874,7 @@
       loadSavedImages();
     };
 
-    //========================
-    // 画像閲覧機能（サムネイル・拡大）
-    //========================
+    /* 画像閲覧機能 */
     function loadSavedImages() {
       const savedData = localStorage.getItem('savedImages');
       if (savedData) {
