@@ -169,7 +169,7 @@
       margin-top: auto;
       position: relative;
     }
-    /* 左：プルダウン入力エリア（7個・縦並び、各右に送信ボタン） */
+    /* 左：プルダウン入力エリア（6個・縦並び、各右に送信ボタン） */
     #dropdown-container {
       width: 50%;
       display: flex;
@@ -194,6 +194,7 @@
     /* 右：テンキー＋四則演算＋十字キーエリア */
     #numpad-container {
       width: 50%;
+      /* 絶対配置を解除して、通常のフレックスボックスの子要素に */
       display: flex;
       flex-direction: column;
       align-items: flex-end;
@@ -343,7 +344,7 @@
         </div>
         <!-- ③-1 下段の左右配置エリア（プルダウン入力＋テンキーなど） -->
         <div id="lower-controls">
-          <!-- 左：プルダウン入力エリア（7個・縦並び、各右に送信ボタン） -->
+          <!-- 左：プルダウン入力エリア（6個・縦並び、各右に送信ボタン） -->
           <div id="dropdown-container">
             <div class="dropdown-wrapper">
               <select id="dropdown0"></select>
@@ -368,10 +369,6 @@
             <div class="dropdown-wrapper">
               <select id="dropdown5"></select>
               <button id="sendDropdown5" class="dropdown-send-button">送信</button>
-            </div>
-            <div class="dropdown-wrapper">
-              <select id="dropdown6"></select>
-              <button id="sendDropdown6" class="dropdown-send-button">送信</button>
             </div>
           </div>
           <!-- 右：テンキー＋四則演算＋十字キーエリア -->
@@ -884,7 +881,7 @@
     });
 
     //========================
-    // プルダウン選択式入力処理（7個・各右に送信ボタン配置）
+    // プルダウン選択式入力処理（6個・各右に送信ボタン配置）
     //========================
     // drumItemsは既存の設定から読み込み（localStorageがなければ下記の配列を使用）
     let drumItems = loadConfig("drumConfig", [
@@ -893,7 +890,7 @@
       "E", "T", "メジ", "杭", "都", "他", "市", "民",
       "終", "GR", "植樹", "ﾐﾗｰ", "角", "基準点", "G", "空"
     ]);
-    for (let i = 0; i < 7; i++){
+    for (let i = 0; i < 6; i++){
       const dropdown = document.getElementById("dropdown" + i);
       drumItems.forEach(item => {
         const option = document.createElement("option");
