@@ -207,13 +207,17 @@
       transition: transform 0.1s ease-out;
     }
     .drum-item {
-      height: 30px;
-      line-height: 30px;
-      text-align: center;
-      border-bottom: 1px solid #ddd;
-      font-size: 16px;
-      color: #333;
-    }
+  height: 30px;
+  line-height: 30px;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+  font-size: 16px;
+  color: #333;
+  overflow: hidden;         /* はみ出た部分を隠す */
+  white-space: nowrap;      /* 改行せず横一列に表示 */
+  text-overflow: clip;      /* はみ出た文字はそのまま切り捨て（必要なら ellipsis に変更可能） */
+}
+
     .drum-item.selected {
       color: #007bff;
       font-weight: bold;
