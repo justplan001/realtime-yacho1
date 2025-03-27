@@ -176,9 +176,9 @@
       display: flex;
       align-items: center;
     }
-    /* 送信ボタンを左に配置、selectは固定500px */
+    /* 送信ボタンを左に配置、selectは横幅を画面の50%に */
     .dropdown-wrapper select {
-      width: 500px;
+      width: 50vw;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -931,6 +931,17 @@
     });
     window.addEventListener('load', function() {
       loadSavedImages();
+    });
+
+    /* 全画面表示時のスクロールロック解除 */
+    document.addEventListener("fullscreenchange", function() {
+      if (document.fullscreenElement) {
+        // 全画面時はスクロール可能に
+        document.body.style.overflow = "auto";
+      } else {
+        // 通常時はスクロールロック
+        document.body.style.overflow = "hidden";
+      }
     });
   </script>
 </body>
