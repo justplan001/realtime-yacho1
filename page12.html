@@ -103,7 +103,7 @@
       background-color: rgba(0, 0, 0, 0.8);
       justify-content: center;
       align-items: center;
-      z-index: 3000; /* モーダルが最前面 */
+      z-index: 3000;
     }
     #modal img {
       max-width: 90%;
@@ -123,13 +123,13 @@
       padding: 5px;
       border-bottom: 1px solid #ccc;
     }
-    /* 自由記述入力＋全画面表示ボタン（セル編集用） */
+    /* 自由記述入力＋全画面表示ボタン */
     #text-input-area {
       display: flex;
       align-items: center;
       gap: 5px;
       margin-bottom: 5px;
-      position: relative; /* 重なり順対策 */
+      position: relative;
       z-index: 1000;
     }
     #pageFullscreenButton {
@@ -146,14 +146,14 @@
       font-size: 16px;
       box-sizing: border-box;
     }
-    /* ③-1 挿入可能なボタン群：横8、縦4（計32個） */
+    /* ③-1 挿入可能ボタン群（32個） */
     #insertable-buttons {
       display: grid;
       grid-template-columns: repeat(8, 1fr);
       gap: 5px;
       margin-bottom: 5px;
       position: relative;
-      z-index: 1999; /* ボタン群を常に前面に表示（ただしモーダルよりは下） */
+      z-index: 1999;
     }
     #insertable-buttons button {
       padding: 8px;
@@ -169,32 +169,36 @@
       margin-top: auto;
       position: relative;
     }
-    /* 左：プルダウン入力エリア（6個・縦並び、各右に送信ボタン） */
+    /* 左：プルダウン入力エリア（7個・縦並び、各は下部左に揃える） */
     #dropdown-container {
       width: 50%;
       display: flex;
       flex-direction: column;
       gap: 10px;
+      align-self: flex-end; /* 下部左に配置 */
     }
     .dropdown-wrapper {
       display: flex;
       align-items: center;
     }
+    /* ※ 送信ボタンを左に配置するため順序は ボタン → select */
     .dropdown-wrapper select {
-      flex: 1;
+      width: 500px; /* 横幅固定 */
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
       font-size: 16px;
       padding: 4px;
     }
     .dropdown-wrapper button {
-      margin-left: 10px;
       padding: 8px 12px;
       font-size: 16px;
       cursor: pointer;
+      margin-right: 10px;
     }
     /* 右：テンキー＋四則演算＋十字キーエリア */
     #numpad-container {
       width: 50%;
-      /* 絶対配置を解除して、通常のフレックスボックスの子要素に */
       display: flex;
       flex-direction: column;
       align-items: flex-end;
@@ -210,7 +214,7 @@
         "left down right";
       gap: 5px;
       position: relative;
-      z-index: 2000; /* 挿入可能ボタン群より前面に表示 */
+      z-index: 2000;
     }
     #arrow-keys button {
       width: 50px;
@@ -299,7 +303,7 @@
     <!-- ② 画像閲覧エリア -->
     <div id="image-viewer-area">
       <input type="file" accept="image/*" multiple id="fileInput">
-      <!-- MAXボタンを画像閲覧エリア内右上に配置 -->
+      <!-- MAXボタン -->
       <button id="maxButton">MAX</button>
       <div id="preview"></div>
       <div id="modal">
@@ -309,12 +313,12 @@
     <!-- ③ 下部エリア：ボタン入力エリア＋コントロールエリア -->
     <div id="bottom-area">
       <div id="button-input-area">
-        <!-- ③-1 自由記述入力＋全画面表示ボタン -->
+        <!-- 自由記述入力＋全画面表示ボタン -->
         <div id="text-input-area">
           <button id="pageFullscreenButton">全画面表示</button>
           <input id="freeInput" type="text" placeholder="セルの値を編集">
         </div>
-        <!-- ③-1 挿入可能なボタン群（32個） -->
+        <!-- 挿入可能なボタン群（32個） -->
         <div id="insertable-buttons">
           <button id="btn0" class="insertable-button">仮ラベル</button>
           <button id="btn1" class="insertable-button">仮ラベル</button>
@@ -342,38 +346,42 @@
           <button id="btn26" class="insertable-button">仮ラベル</button>
           <button id="btn27" class="insertable-button">仮ラベル</button>
         </div>
-        <!-- ③-1 下段の左右配置エリア（プルダウン入力＋テンキーなど） -->
+        <!-- 下段の左右配置エリア（プルダウン入力＋テンキーなど） -->
         <div id="lower-controls">
-          <!-- 左：プルダウン入力エリア（6個・縦並び、各右に送信ボタン） -->
+          <!-- 左：プルダウン入力エリア（7個） -->
           <div id="dropdown-container">
+            <!-- 各項目は送信ボタン → プルダウンの順で配置 -->
             <div class="dropdown-wrapper">
-              <select id="dropdown0"></select>
               <button id="sendDropdown0" class="dropdown-send-button">送信</button>
+              <select id="dropdown0"></select>
             </div>
             <div class="dropdown-wrapper">
-              <select id="dropdown1"></select>
               <button id="sendDropdown1" class="dropdown-send-button">送信</button>
+              <select id="dropdown1"></select>
             </div>
             <div class="dropdown-wrapper">
-              <select id="dropdown2"></select>
               <button id="sendDropdown2" class="dropdown-send-button">送信</button>
+              <select id="dropdown2"></select>
             </div>
             <div class="dropdown-wrapper">
-              <select id="dropdown3"></select>
               <button id="sendDropdown3" class="dropdown-send-button">送信</button>
+              <select id="dropdown3"></select>
             </div>
             <div class="dropdown-wrapper">
-              <select id="dropdown4"></select>
               <button id="sendDropdown4" class="dropdown-send-button">送信</button>
+              <select id="dropdown4"></select>
             </div>
             <div class="dropdown-wrapper">
-              <select id="dropdown5"></select>
               <button id="sendDropdown5" class="dropdown-send-button">送信</button>
+              <select id="dropdown5"></select>
+            </div>
+            <div class="dropdown-wrapper">
+              <button id="sendDropdown6" class="dropdown-send-button">送信</button>
+              <select id="dropdown6"></select>
             </div>
           </div>
           <!-- 右：テンキー＋四則演算＋十字キーエリア -->
           <div id="numpad-container">
-            <!-- 十字キー -->
             <div id="arrowKeysContainer">
               <div id="arrow-keys">
                 <button id="arrow-up">↑</button>
@@ -382,14 +390,12 @@
                 <button id="arrow-down">↓</button>
               </div>
             </div>
-            <!-- 四則演算 -->
             <div id="operatorButtons">
               <button class="operator-button">+</button>
               <button class="operator-button">/</button>
               <button class="operator-button">*</button>
               <button class="operator-button">-</button>
             </div>
-            <!-- テンキー -->
             <div id="numpad">
               <button>7</button>
               <button>8</button>
@@ -681,10 +687,8 @@
         // 通常の描画処理（点と文字）
         let xVal;
         if (label === "右桝") {
-          // 右桝の場合、C列は無視して必ず共通の幅員値を使用
           xVal = !isNaN(commonOffset) ? commonOffset : roadWidth;
         } else if (label === "左枡") {
-          // 左枡は、常に 0 を使用
           xVal = 0;
         } else {
           let xStr = tableState[i][2].trim();
@@ -776,19 +780,17 @@
       const topArea = document.getElementById("top-area");
       const imageViewer = document.getElementById("image-viewer-area");
       if (btnArea.style.display === "none") {
-        // 通常モード：表と図を含む全体レイアウト（画像閲覧エリアも表示）
         btnArea.style.display = "flex";
         imageViewer.style.display = "block";
         topArea.style.height = "20vh";
       } else {
-        // Fullモード：表と図のみ表示、画像閲覧エリア非表示
         btnArea.style.display = "none";
         imageViewer.style.display = "none";
-        topArea.style.height = (window.innerHeight - 40) + "px"; // 下部コントロールバー固定40px
+        topArea.style.height = (window.innerHeight - 40) + "px";
       }
     });
 
-    // 新規追加：画像閲覧エリア内のMAXボタンで高さ切替（初期10vh⇔40vh）
+    // 新規追加：画像閲覧エリア内のMAXボタンで高さ切替
     let imageViewerMax = false;
     document.getElementById("maxButton").addEventListener("click", () => {
       const imageViewer = document.getElementById("image-viewer-area");
@@ -881,16 +883,15 @@
     });
 
     //========================
-    // プルダウン選択式入力処理（6個・各右に送信ボタン配置）
+    // プルダウン選択式入力処理（7個・各は送信ボタン→プルダウン順）
     //========================
-    // drumItemsは既存の設定から読み込み（localStorageがなければ下記の配列を使用）
     let drumItems = loadConfig("drumConfig", [
       "左境", "左枡", "車止", "支線", "標", "電柱", "右桝", "右境",
       "下", "D", "S", "SS", "消", "F", "SV", "W",
       "E", "T", "メジ", "杭", "都", "他", "市", "民",
       "終", "GR", "植樹", "ﾐﾗｰ", "角", "基準点", "G", "空"
     ]);
-    for (let i = 0; i < 6; i++){
+    for (let i = 0; i < 7; i++){
       const dropdown = document.getElementById("dropdown" + i);
       drumItems.forEach(item => {
         const option = document.createElement("option");
@@ -911,7 +912,6 @@
       renderTable();
       updateCanvas();
       updateLayerDisplay();
-      // 画像閲覧エリア：保存済み画像の読み込み
       loadSavedImages();
     };
 
@@ -949,11 +949,9 @@
       preview.innerHTML = '';
       let imageDataArray = [];
       let filesProcessed = 0;
-      
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const reader = new FileReader();
-        
         reader.onload = function(e) {
           const dataUrl = e.target.result;
           imageDataArray.push(dataUrl);
