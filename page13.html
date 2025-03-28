@@ -11,6 +11,12 @@
   <title>やちょうスマホ版v1.00(20250401)</title>
   <!-- Excelエクスポート用ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- PDF.js ライブラリ（複数ページ表示用） -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script>
+    // PDF.js のワーカー設定
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+  </script>
   <style>
     /* 基本設定 */
     html, body {
@@ -71,7 +77,7 @@
       border-top: 1px solid #ccc;
       border-bottom: 1px solid #ccc;
       overflow: auto;
-      position: relative; /* MAXボタンの絶対配置用 */
+      position: relative;
     }
     /* ファイル入力は画像とPDFの両方を受け付ける */
     #image-viewer-area input {
@@ -85,7 +91,7 @@
       margin: 10px;
       cursor: pointer;
     }
-    /* PDF用のサムネイルコンテナ */
+    /* PDF用サムネイルのコンテナ */
     .pdf-container {
       position: relative;
       display: inline-block;
@@ -126,8 +132,31 @@
       z-index: 3000;
     }
     #modal img, #modal embed {
+      /* 画像は従来通り最大90% */
       max-width: 90%;
       max-height: 90%;
+    }
+    /* PDF.js 用のナビゲーションスタイル */
+    .pdf-nav {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0,0,0,0.5);
+      padding: 5px 10px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+    }
+    .pdf-nav button {
+      margin: 0 5px;
+      padding: 5px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .pdf-nav span {
+      color: white;
+      margin: 0 10px;
     }
     /* ③ 下部エリア：残り60%をさらに2分割 */
     #bottom-area {
@@ -1059,17 +1088,75 @@
         });
       }
     }
-    // PDF拡大表示：PDFの場合は <embed> 要素で90vw/90vh のサイズで表示
+    // PDF拡大表示：PDFの場合は PDF.js を利用して複数ページを表示し、ナビゲーションと縮小ボタンを用意
     function openModal(src) {
       const modal = document.getElementById('modal');
       modal.innerHTML = "";
       if (src.startsWith("data:application/pdf")) {
-        const embed = document.createElement('embed');
-        embed.src = src;
-        embed.type = "application/pdf";
-        embed.style.width = "90vw";
-        embed.style.height = "90vh";
-        modal.appendChild(embed);
+        // PDF.js を用いて PDF を表示する
+        const viewerContainer = document.createElement('div');
+        // 自然サイズ（原寸）で表示。必要ならスクロールバーが現れます。
+        viewerContainer.style.position = "relative";
+        viewerContainer.style.overflow = "auto";
+        // キャンバス作成
+        const canvas = document.createElement('canvas');
+        viewerContainer.appendChild(canvas);
+        // PDFナビゲーション用コントロール＋縮小ボタン
+        const navContainer = document.createElement('div');
+        navContainer.className = "pdf-nav";
+        const prevBtn = document.createElement('button');
+        prevBtn.innerText = "前";
+        const nextBtn = document.createElement('button');
+        nextBtn.innerText = "次";
+        const pageIndicator = document.createElement('span');
+        const shrinkBtn = document.createElement('button');
+        shrinkBtn.innerText = "戻";
+        shrinkBtn.addEventListener('click', function() {
+          closeModal();
+        });
+        navContainer.appendChild(prevBtn);
+        navContainer.appendChild(pageIndicator);
+        navContainer.appendChild(nextBtn);
+        navContainer.appendChild(shrinkBtn);
+        viewerContainer.appendChild(navContainer);
+        modal.appendChild(viewerContainer);
+
+        let pdfDoc = null;
+        let currentPage = 1;
+        let totalPages = 0;
+        function renderPage(pageNum) {
+          pdfDoc.getPage(pageNum).then(function(page) {
+            // scale 1.0 で原寸表示
+            const viewport = page.getViewport({ scale: 1.0 });
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const ctx = canvas.getContext('2d');
+            const renderContext = {
+              canvasContext: ctx,
+              viewport: viewport
+            };
+            page.render(renderContext).promise.then(function() {
+              pageIndicator.innerText = `ページ ${pageNum} / ${totalPages}`;
+            });
+          });
+        }
+        pdfjsLib.getDocument(src).promise.then(function(pdfDoc_) {
+          pdfDoc = pdfDoc_;
+          totalPages = pdfDoc.numPages;
+          renderPage(currentPage);
+        });
+        prevBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (currentPage <= 1) return;
+          currentPage--;
+          renderPage(currentPage);
+        });
+        nextBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (currentPage >= totalPages) return;
+          currentPage++;
+          renderPage(currentPage);
+        });
       } else {
         const img = document.createElement('img');
         img.src = src;
@@ -1083,6 +1170,10 @@
     function closeModal() {
       document.getElementById('modal').style.display = 'none';
     }
+    // モーダルクリックで閉じない（縮小ボタンでのみ閉じる）
+    // document.getElementById('modal').addEventListener('click', function() {
+    //   closeModal();
+    // });
     document.getElementById('fileInput').addEventListener('change', function(event) {
       const files = event.target.files;
       const preview = document.getElementById('preview');
@@ -1098,7 +1189,6 @@
           fileDataArray.push(dataUrl);
           let element;
           if (file.type === "application/pdf") {
-            // PDFの場合：コンテナに embed と拡大ボタンを配置
             const container = document.createElement('div');
             container.className = "pdf-container";
             const embed = document.createElement('embed');
@@ -1135,9 +1225,10 @@
         reader.readAsDataURL(file);
       }
     });
-    document.getElementById('modal').addEventListener('click', function() {
-      closeModal();
-    });
+    // モーダルクリックで閉じないように変更（縮小ボタンでのみ閉じる）
+    // document.getElementById('modal').addEventListener('click', function() {
+    //   closeModal();
+    // });
     window.addEventListener('load', function() {
       loadSavedImages();
     });
