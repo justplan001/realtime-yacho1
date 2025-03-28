@@ -131,7 +131,7 @@
       align-items: center;
       z-index: 3000;
     }
-    /* PDF.js 用ナビゲーション */
+    /* PDF.js 用のナビゲーションスタイル */
     .pdf-nav {
       position: absolute;
       bottom: 10px;
@@ -152,19 +152,6 @@
     .pdf-nav span {
       color: white;
       margin: 0 10px;
-    }
-    /* 画像用の拡大表示コンテナ */
-    .img-modal-container {
-      position: relative;
-      text-align: center;
-    }
-    .img-modal-container button {
-      position: absolute;
-      bottom: 10px;
-      right: 10px;
-      padding: 5px 10px;
-      font-size: 14px;
-      cursor: pointer;
     }
     /* ③ 下部エリア：残り60%をさらに2分割 */
     #bottom-area {
@@ -1096,12 +1083,13 @@
         });
       }
     }
-    // openModal：PDFの場合はPDF.jsで原寸大に表示、画像の場合は画像を拡大表示し縮小ボタンを付加
+    // openModal：PDFの場合はPDF.jsを利用して原寸大（scale:1.0）で表示し、ナビゲーション＋縮小ボタンを追加、
+    // 画像の場合は従来通り、クリックでモーダルが閉じるようにする
     function openModal(src) {
       const modal = document.getElementById('modal');
       modal.innerHTML = "";
       if (src.startsWith("data:application/pdf")) {
-        // PDF.js を用いて PDF を表示する
+        // PDFの場合
         const viewerContainer = document.createElement('div');
         viewerContainer.style.position = "relative";
         viewerContainer.style.overflow = "auto";
@@ -1112,12 +1100,12 @@
         const navContainer = document.createElement('div');
         navContainer.className = "pdf-nav";
         const prevBtn = document.createElement('button');
-        prevBtn.innerText = "前のページ";
+        prevBtn.innerText = "前";
         const nextBtn = document.createElement('button');
-        nextBtn.innerText = "次のページ";
+        nextBtn.innerText = "次";
         const pageIndicator = document.createElement('span');
         const shrinkBtn = document.createElement('button');
-        shrinkBtn.innerText = "縮小";
+        shrinkBtn.innerText = "戻";
         shrinkBtn.addEventListener('click', function() {
           closeModal();
         });
@@ -1133,7 +1121,7 @@
         let totalPages = 0;
         function renderPage(pageNum) {
           pdfDoc.getPage(pageNum).then(function(page) {
-            // scale 1.0 で原寸表示（必要に応じてスクロールバーが現れる）
+            // scale 1.0 で原寸表示
             const viewport = page.getViewport({ scale: 1.0 });
             canvas.width = viewport.width;
             canvas.height = viewport.height;
@@ -1165,28 +1153,24 @@
           renderPage(currentPage);
         });
       } else {
-        // 画像の場合：画像をモーダル内に表示し、下部に縮小ボタンを配置する
-        const imgContainer = document.createElement('div');
-        imgContainer.className = "img-modal-container";
+        // 画像の場合：従来通り、クリックで閉じる
         const img = document.createElement('img');
         img.src = src;
         img.alt = "拡大画像";
-        // 画像は自然サイズで表示（スクロール可能）
-        imgContainer.appendChild(img);
-        const shrinkBtn = document.createElement('button');
-        shrinkBtn.innerText = "縮小";
-        shrinkBtn.addEventListener('click', function() {
+        img.style.maxWidth = "90%";
+        img.style.maxHeight = "90%";
+        // 画像をクリックすればモーダルを閉じる
+        img.addEventListener('click', function() {
           closeModal();
         });
-        imgContainer.appendChild(shrinkBtn);
-        modal.appendChild(imgContainer);
+        modal.appendChild(img);
       }
       modal.style.display = 'flex';
     }
     function closeModal() {
       document.getElementById('modal').style.display = 'none';
     }
-    // モーダルクリックで閉じないように変更（縮小ボタンでのみ閉じる）
+    // クリックで閉じる処理はPDFでは無効（縮小ボタンでのみ閉じる）
     document.getElementById('fileInput').addEventListener('change', function(event) {
       const files = event.target.files;
       const preview = document.getElementById('preview');
