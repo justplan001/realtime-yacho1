@@ -947,16 +947,21 @@
       }
     });
 
-    // 新規追加：画像閲覧エリア内のMAXボタンで高さ切替
+    //========================
+    // 画像閲覧エリアのMAXボタン（高さ切替＋状態保持）
+    //========================
+    // 初期状態は false（3vh）
     let imageViewerMax = false;
     document.getElementById("maxButton").addEventListener("click", () => {
       const imageViewer = document.getElementById("image-viewer-area");
       if (!imageViewerMax) {
         imageViewer.style.height = "30vh";
         imageViewerMax = true;
+        localStorage.setItem("imageViewerMax", "true");
       } else {
         imageViewer.style.height = "3vh";
         imageViewerMax = false;
+        localStorage.setItem("imageViewerMax", "false");
       }
     });
 
@@ -1040,7 +1045,7 @@
     });
 
     //========================
-    // 画像・PDF閲覧機能（サムネイル・拡大）
+    // 画像・PDF閲覧機能（サムネイル・拡大） ※ サムネイル情報は localStorage に保存し、ページ更新後も復元
     //========================
     function loadSavedImages() {
       const savedData = localStorage.getItem('savedImages');
@@ -1075,7 +1080,7 @@
           }
           element.style.margin = "10px";
           element.style.cursor = "pointer";
-          // 画像はクリックで拡大表示
+          // 画像・PDFはクリックで拡大表示
           element.addEventListener('click', function() {
             openModal(src);
           });
@@ -1153,7 +1158,7 @@
           renderPage(currentPage);
         });
       } else {
-        // 画像の場合：従来通り、クリックで閉じる
+        // 画像の場合：クリックで閉じる
         const img = document.createElement('img');
         img.src = src;
         img.alt = "拡大画像";
@@ -1222,10 +1227,9 @@
         reader.readAsDataURL(file);
       }
     });
-    window.addEventListener('load', function() {
-      loadSavedImages();
-    });
-    
+    //========================
+    // ページ読み込み時の初期処理（レイヤー、画像・PDF、画像閲覧エリアの高さ復元）
+    //========================
     window.onload = function(){
       for (let i = 0; i < layers.length; i++){
         loadLayerState(i);
@@ -1233,6 +1237,19 @@
       renderTable();
       updateCanvas();
       updateLayerDisplay();
+
+      // 画像閲覧エリアの高さ状態を復元
+      const imageViewerMaxStored = localStorage.getItem("imageViewerMax");
+      if (imageViewerMaxStored === "true") {
+        document.getElementById("image-viewer-area").style.height = "30vh";
+        imageViewerMax = true;
+      } else {
+        document.getElementById("image-viewer-area").style.height = "3vh";
+        imageViewerMax = false;
+      }
+      
+      // 保存済みの画像/PDFサムネイルを読み込み
+      loadSavedImages();
     };
   </script>
 </body>
