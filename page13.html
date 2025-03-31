@@ -63,7 +63,10 @@
       user-select: none;
     }
     td { cursor: pointer; outline: none; }
-    .selected { background-color: #caf; }
+    /* 選択中の行（全セルに適用する薄い紫色） */
+    .selected-row { background-color: #F5FFFA; }
+    /* 選択中のセル（上記の行表示に重なり、紫色で目立たせる） */
+    .selected { background-color: #DDA0DD; }
     /* 図のキャンバス */
     #diagram-container canvas {
       background-color: #000;
@@ -566,7 +569,14 @@
           td.dataset.row = i;
           td.dataset.col = j;
           td.innerText = tableState[i][j];
-          if (i === currentRow && j === currentCol) { td.classList.add("selected"); }
+          // 同じ行の場合、薄い紫色（selected-row）を適用
+          if (i === currentRow) {
+            td.classList.add("selected-row");
+          }
+          // 選択中のセルは紫色（selected）にする（selectedが上書き）
+          if (i === currentRow && j === currentCol) { 
+            td.classList.add("selected"); 
+          }
           td.addEventListener("click", () => { setSelectedCell(i, j); });
           td.addEventListener("keydown", navigationHandler);
           tr.appendChild(td);
