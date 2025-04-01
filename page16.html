@@ -960,7 +960,6 @@
     //========================
     // 画像閲覧エリアのMAXボタン（高さ切替＋状態保持）
     //========================
-    // 初期状態は false（3vh）
     let imageViewerMax = false;
     document.getElementById("maxButton").addEventListener("click", () => {
       const imageViewer = document.getElementById("image-viewer-area");
@@ -1066,7 +1065,6 @@
         fileDataArray.forEach(src => {
           let element;
           if (src.startsWith("data:application/pdf")) {
-            // PDFの場合はコンテナ内に embed と「拡大」ボタンを配置
             const container = document.createElement('div');
             container.className = "pdf-container";
             const embed = document.createElement('embed');
@@ -1097,20 +1095,19 @@
         });
       }
     }
-    // openModal：PDFの場合はPDF.jsを利用して原寸大（scale:1.0）で表示し、ナビゲーション＋縮小ボタンを追加、
-    // 画像の場合はキャンバス上に画像を描画し、ユーザーのお絵かき内容をlocalStorageに保存して再現する
+    // openModal：PDFは従来の処理。画像の場合は全画面モーダル内にキャンバスを配置し、
+    // 背景画像とお絵かき内容を表示。キャンバスの表示サイズはコンテナに合わせてスケールし、
+    // タッチ操作で座標がずれないように getBoundingClientRect()で補正します。
     function openModal(src) {
       const modal = document.getElementById('modal');
       modal.innerHTML = "";
       if (src.startsWith("data:application/pdf")) {
-        // PDFの場合
+        // PDFの場合の処理（従来通り）
         const viewerContainer = document.createElement('div');
         viewerContainer.style.position = "relative";
         viewerContainer.style.overflow = "auto";
-        // キャンバス作成
         const canvas = document.createElement('canvas');
         viewerContainer.appendChild(canvas);
-        // PDFナビゲーション用コントロール＋縮小ボタン
         const navContainer = document.createElement('div');
         navContainer.className = "pdf-nav";
         const prevBtn = document.createElement('button');
@@ -1120,30 +1117,23 @@
         const pageIndicator = document.createElement('span');
         const shrinkBtn = document.createElement('button');
         shrinkBtn.innerText = "戻";
-        shrinkBtn.addEventListener('click', function() {
-          closeModal();
-        });
+        shrinkBtn.addEventListener('click', function() { closeModal(); });
         navContainer.appendChild(prevBtn);
         navContainer.appendChild(pageIndicator);
         navContainer.appendChild(nextBtn);
         navContainer.appendChild(shrinkBtn);
         viewerContainer.appendChild(navContainer);
         modal.appendChild(viewerContainer);
-
         let pdfDoc = null;
         let currentPage = 1;
         let totalPages = 0;
         function renderPage(pageNum) {
           pdfDoc.getPage(pageNum).then(function(page) {
-            // scale 1.0 で原寸表示
             const viewport = page.getViewport({ scale: 1.0 });
             canvas.width = viewport.width;
             canvas.height = viewport.height;
             const ctx = canvas.getContext('2d');
-            const renderContext = {
-              canvasContext: ctx,
-              viewport: viewport
-            };
+            const renderContext = { canvasContext: ctx, viewport: viewport };
             page.render(renderContext).promise.then(function() {
               pageIndicator.innerText = `ページ ${pageNum} / ${totalPages}`;
             });
@@ -1167,105 +1157,131 @@
           renderPage(currentPage);
         });
       } else {
-        // 画像の場合：キャンバスを利用して背景画像＋お絵かき内容を表示
+        // 画像の場合
+        // モーダルを全画面の固定表示コンテナとして設定
         const container = document.createElement('div');
-        container.style.position = "relative";
-        container.style.maxWidth = "90%";
-        container.style.maxHeight = "90%";
-        // キャンバス作成
+        container.style.position = "fixed";
+        container.style.top = "0";
+        container.style.left = "0";
+        container.style.width = "100vw";
+        container.style.height = "100vh";
+        container.style.backgroundColor = "rgba(0, 0, 0, 0.9)";
+        container.style.display = "flex";
+        container.style.justifyContent = "center";
+        container.style.alignItems = "center";
+        // キャンバス作成（touch-action: none でブラウザのジェスチャーを抑制）
         const canvas = document.createElement('canvas');
         canvas.style.border = "1px solid #ccc";
+        canvas.style.touchAction = "none";
         container.appendChild(canvas);
         // 閉じるボタン
         const closeBtn = document.createElement('button');
         closeBtn.innerText = "閉じる";
         closeBtn.style.position = "absolute";
-        closeBtn.style.top = "10px";
-        closeBtn.style.right = "10px";
+        closeBtn.style.top = "20px";
+        closeBtn.style.right = "20px";
         container.appendChild(closeBtn);
         closeBtn.addEventListener('click', closeModal);
-        // クリアボタン（キャンバスを背景画像にリセットし、保存データを削除）
+        // クリアボタン（キャンバスの内容をリセットし、保存データも削除）
         const clearBtn = document.createElement('button');
         clearBtn.innerText = "クリア";
         clearBtn.style.position = "absolute";
-        clearBtn.style.top = "10px";
-        clearBtn.style.left = "10px";
+        clearBtn.style.top = "20px";
+        clearBtn.style.left = "20px";
         container.appendChild(clearBtn);
         modal.appendChild(container);
-
+        
         const ctx = canvas.getContext("2d");
-        const img = new Image();
-        // まず、チェック：過去に保存されたお絵かき内容があればそれを読み込む
+        // 背景画像とお絵かきの保存キーとして src を利用
         const savedDrawing = localStorage.getItem("drawing_" + src);
-        if (savedDrawing) {
-          const savedImg = new Image();
-          savedImg.onload = function() {
-            canvas.width = savedImg.naturalWidth;
-            canvas.height = savedImg.naturalHeight;
-            ctx.drawImage(savedImg, 0, 0);
-            // ここでキャンバス上に保存された状態（背景画像＋お絵かき内容）が復元される
-            attachDrawingHandlers();
-          }
-          savedImg.src = savedDrawing;
-        } else {
-          // 保存データがなければ、背景画像を読み込む
-          img.onload = function() {
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
-            ctx.drawImage(img, 0, 0);
-            attachDrawingHandlers();
-          }
-          img.src = src;
+        // 背景画像用のImageオブジェクト
+        const img = new Image();
+        // setupCanvas: 背景画像の自然サイズに基づいてキャンバス内部サイズを設定し、
+        // 表示サイズをモーダル内に収めるようにスケーリング
+        function setupCanvas(bgImg) {
+          const containerWidth = container.clientWidth;
+          const containerHeight = container.clientHeight;
+          const scaleFactor = Math.min(containerWidth / bgImg.naturalWidth, containerHeight / bgImg.naturalHeight);
+          const dispWidth = bgImg.naturalWidth * scaleFactor;
+          const dispHeight = bgImg.naturalHeight * scaleFactor;
+          canvas.width = bgImg.naturalWidth;
+          canvas.height = bgImg.naturalHeight;
+          canvas.style.width = dispWidth + "px";
+          canvas.style.height = dispHeight + "px";
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(bgImg, 0, 0);
         }
-
-        // お絵かき用イベントをまとめた関数
-        function attachDrawingHandlers() {
+        // attachDrawingHandlers: キャンバス上のpointerイベントで正しい内部座標を算出して描画
+        function attachDrawingHandlers(bgImg) {
           let drawing = false;
           let lastX = 0;
           let lastY = 0;
+          function getCanvasCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+              x: (e.clientX - rect.left) * scaleX,
+              y: (e.clientY - rect.top) * scaleY
+            };
+          }
           function startDrawing(e) {
             drawing = true;
-            const rect = canvas.getBoundingClientRect();
-            lastX = e.clientX - rect.left;
-            lastY = e.clientY - rect.top;
+            const pos = getCanvasCoords(e);
+            lastX = pos.x;
+            lastY = pos.y;
           }
           function draw(e) {
             if (!drawing) return;
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const pos = getCanvasCoords(e);
             ctx.strokeStyle = "red";
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(lastX, lastY);
-            ctx.lineTo(x, y);
+            ctx.lineTo(pos.x, pos.y);
             ctx.stroke();
-            lastX = x;
-            lastY = y;
+            lastX = pos.x;
+            lastY = pos.y;
           }
-          function stopDrawing() {
+          function endDrawing() {
             drawing = false;
-            // お絵かき終了時に現在のキャンバス内容をlocalStorageに保存
+            // 保存：現在のキャンバス内容をlocalStorageに記録
             localStorage.setItem("drawing_" + src, canvas.toDataURL());
           }
           canvas.addEventListener("pointerdown", startDrawing);
           canvas.addEventListener("pointermove", draw);
-          canvas.addEventListener("pointerup", stopDrawing);
-          canvas.addEventListener("pointerleave", stopDrawing);
+          canvas.addEventListener("pointerup", endDrawing);
+          canvas.addEventListener("pointerleave", endDrawing);
           clearBtn.addEventListener("click", function() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // 背景画像を再描画
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(bgImg, 0, 0);
             localStorage.removeItem("drawing_" + src);
           });
+        }
+        if (savedDrawing) {
+          // 保存データがある場合はそれを背景として読み込み
+          const savedImg = new Image();
+          savedImg.onload = function() {
+            setupCanvas(savedImg);
+            attachDrawingHandlers(savedImg);
+          }
+          savedImg.src = savedDrawing;
+        } else {
+          img.onload = function() {
+            setupCanvas(img);
+            attachDrawingHandlers(img);
+          }
+          img.src = src;
         }
       }
       modal.style.display = 'flex';
     }
+    
     function closeModal() {
       document.getElementById('modal').style.display = 'none';
     }
-    // クリックで閉じる処理はPDFでは無効（縮小ボタンでのみ閉じる）
+    
+    // クリックで閉じる処理はPDFの場合は無効（縮小ボタンでのみ閉じる）
     document.getElementById('fileInput').addEventListener('change', function(event) {
       const files = event.target.files;
       const preview = document.getElementById('preview');
@@ -1317,6 +1333,7 @@
         reader.readAsDataURL(file);
       }
     });
+    
     //========================
     // ページ読み込み時の初期処理（レイヤー、画像・PDF、画像閲覧エリアの高さ復元）
     //========================
@@ -1328,7 +1345,6 @@
       updateCanvas();
       updateLayerDisplay();
 
-      // 画像閲覧エリアの高さ状態を復元
       const imageViewerMaxStored = localStorage.getItem("imageViewerMax");
       if (imageViewerMaxStored === "true") {
         document.getElementById("image-viewer-area").style.height = "30vh";
@@ -1338,7 +1354,6 @@
         imageViewerMax = false;
       }
       
-      // 保存済みの画像/PDFサムネイルを読み込み
       loadSavedImages();
     };
   </script>
