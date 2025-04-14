@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C#処理対応マトリックス風3Dパネル（5パネル版）</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            perspective: 2000px;
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transform-style: preserve-3d;
+        }
+        .panel {
+            position: absolute;
+            width: 35vw;
+            height: 85vh; /* 高さを増加 */
+            background: rgba(0, 20, 0, 0.3);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: flex-end;
+            cursor: pointer;
+            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+            overflow: hidden;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                to bottom right,
+                rgba(0, 255, 0, 0.1) 0%,
+                rgba(0, 255, 0, 0.05) 40%,
+                rgba(0, 255, 0, 0) 50%
+            );
+            transform: rotate(45deg);
+            pointer-events: none;
+        }
+        .panel-title {
+            font-size: 1.5vw;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #00ff00;
+            transition: all 0.8s ease;
+            align-self: flex-end;
+        }
+        .panel-content {
+            font-size: 1.5vw;
+            text-shadow: 0 0 5px #00ff00;
+            width: 100%;
+            height: calc(100% - 40px);
+            position: relative;
+            overflow-y: auto;
+            padding: 10px;
+            box-sizing: border-box;
+            text-align: right;
+            scrollbar-width: thin;
+            scrollbar-color: #00ff00 #001100;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .panel-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        .panel-content::-webkit-scrollbar-track {
+            background: #001100;
+        }
+        .panel-content::-webkit-scrollbar-thumb {
+            background-color: #00ff00;
+            border-radius: 4px;
+        }
+        .panel-content span {
+            position: static;
+            display: inline;
+        }
+        .matrix-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+            background: rgba(0, 255, 0, 0.3);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            font-size: 20px;
+            line-height: 30px;
+            text-align: center;
+            cursor: pointer;
+            display: none;
+        }
+        .panel.active {
+            background: rgba(0, 20, 0, 0.8);
+            width: 80vw;
+            align-items: flex-start;
+        }
+        .panel.active .panel-title {
+            align-self: flex-start;
+        }
+        .panel.active .panel-content {
+            font-size: 2vw;
+            text-align: left;
+        }
+        #color-buttons {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        .color-button {
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+        .color-button:hover {
+            opacity: 1;
+        }
+        #red-button { background-color: #ff0000; }
+        #blue-button { background-color: #0000ff; }
+        #rainbow-button {
+            background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet);
+        }
+        #green-button { background-color: #00ff00; }
+    </style>
+</head>
+<body>
+    <canvas class="matrix-rain" id="matrix-bg"></canvas>
+    <div id="container">
+<div class="center-text" style="font-size: 72px;">14/4/1988</div>
+    </div>
+    <div id="color-buttons">
+        <button class="color-button" id="green-button" title="Green"></button>
+        <button class="color-button" id="red-button" title="Red"></button>
+        <button class="color-button" id="blue-button" title="Blue"></button>
+        <button class="color-button" id="rainbow-button" title="Rainbow"></button>
+    </div>
+
+    <script>
+        const panels = document.querySelectorAll('.panel');
+        const container = document.getElementById('container');
+
+        function arrangePanelsInitially() {
+            panels.forEach((panel, index) => {
+                const xOffset = (index - 2) * 18;
+                panel.style.transform = `translateX(${xOffset}vw) translateZ(${-index * 150}px) rotateY(-20deg)`;
+                panel.dataset.index = index;
+                panel.dataset.isOpen = 'false';
+            });
+        }
+
+        function handlePanelClick(event) {
+            const clickedPanel = event.currentTarget;
+            const isOpen = clickedPanel.dataset.isOpen === 'true';
+
+            if (!isOpen) {
+                openPanel(clickedPanel);
+            }
+        }
+
+        function openPanel(panel) {
+            panels.forEach((p) => {
+                if (p === panel) {
+                    p.style.transform = 'translateX(0) translateZ(200px) rotateY(0deg)';
+                    p.dataset.isOpen = 'true';
+                    p.classList.add('active');
+                    p.querySelector('.close-button').style.display = 'block';
+                    p.querySelector('.panel-title').style.alignSelf = 'flex-start';
+                    p.querySelector('.panel-content').style.textAlign = 'left';
+                    p.querySelector('.panel-content').scrollTop = 0;
+                } else {
+                    const index = parseInt(p.dataset.index);
+                    const xOffset = (index - 2) * 18;
+                    p.style.transform = `translateX(${xOffset}vw) translateZ(${-index * 150}px) rotateY(-20deg)`;
+                    p.dataset.isOpen = 'false';
+                    p.classList.remove('active');
+                    p.querySelector('.close-button').style.display = 'none';
+                    p.querySelector('.panel-title').style.alignSelf = 'flex-end';
+                    p.querySelector('.panel-content').style.textAlign = 'right';
+                }
+            });
+        }
+
+        function handleCloseButtonClick(event) {
+            event.stopPropagation();
+            const panel = event.target.closest('.panel');
+            closePanel(panel);
+        }
+
+        function closePanel(panel) {
+            const index = parseInt(panel.dataset.index);
+            const xOffset = (index - 2) * 18;
+            panel.style.transform = `translateX(${xOffset}vw) translateZ(${-index * 150}px) rotateY(-20deg)`;
+            panel.dataset.isOpen = 'false';
+            panel.classList.remove('active');
+            panel.querySelector('.close-button').style.display = 'none';
+            panel.querySelector('.panel-title').style.alignSelf = 'flex-end';
+            panel.querySelector('.panel-content').style.textAlign = 'right';
+        }
+
+        panels.forEach(panel => {
+            panel.addEventListener('click', handlePanelClick);
+            panel.querySelector('.close-button').addEventListener('click', handleCloseButtonClick);
+        });
+
+        const canvas = document.getElementById('matrix-bg');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const katakana = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+        const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const nums = '0123456789';
+        const alphabet = katakana + latin + nums;
+
+        const fontSize = 16;
+        const columns = canvas.width / fontSize;
+        const rainDrops = Array(Math.floor(columns)).fill(canvas.height);
+
+        let currentColor = '#00ff00';
+        let isRainbowMode = false;
+
+        function draw() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = isRainbowMode ? getRainbowColor() : currentColor;
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < rainDrops.length; i++) {
+                const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+
+                if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    rainDrops[i] = 0;
+                }
+                rainDrops[i]++;
+            }
+        }
+
+        let matrixInterval = setInterval(draw, 30);
+
+        function updateMatrixInterval() {
+            clearInterval(matrixInterval);
+            matrixInterval = setInterval(draw, 30);
+        }
+
+        function changeColor(color) {
+            currentColor = color;
+            isRainbowMode = false;
+            document.body.style.color = color;
+            document.querySelectorAll('.panel').forEach(panel => {
+                panel.style.boxShadow = `0 0 20px ${color}`;
+            });
+            document.querySelectorAll('.panel-title, .panel-content').forEach(element => {
+                element.style.textShadow = `0 0 5px ${color}`;
+            });
+            updateMatrixInterval();
+        }
+
+        function rainbowColor() {
+            let hue = 0;
+            return function() {
+                hue = (hue + 1) % 360;
+                return `hsl(${hue}, 100%, 50%)`;
+            }
+        }
+
+        const getRainbowColor = rainbowColor();
+        let rainbowInterval;
+
+        const greenButton = document.getElementById('green-button');
+        const redButton = document.getElementById('red-button');
+        const blueButton = document.getElementById('blue-button');
+        const rainbowButton = document.getElementById('rainbow-button');
+
+        greenButton.addEventListener('click', () => changeColor('#00ff00'));
+        redButton.addEventListener('click', () => changeColor('#ff0000'));
+        blueButton.addEventListener('click', () => changeColor('#0000ff'));
+
+        rainbowButton.addEventListener('click', () => {
+            isRainbowMode = true;
+            clearInterval(rainbowInterval);
+            rainbowInterval = setInterval(() => {
+                const color = getRainbowColor();
+                document.body.style.color = color;
+                document.querySelectorAll('.panel').forEach(panel => {
+                    panel.style.boxShadow = `0 0 20px ${color}`;
+                });
+                document.querySelectorAll('.panel-title, .panel-content').forEach(element => {
+                    element.style.textShadow = `0 0 5px ${color}`;
+                });
+            }, 50);
+            updateMatrixInterval();
+        });
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        arrangePanelsInitially();
+    </script>
+</body>
+</html>
