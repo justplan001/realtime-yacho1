@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>永遠にプログラムを生成するシミュレーター</title>
+  <style>
+    body {
+      background-color: #0a0a0a;
+      margin: 0;
+      overflow: hidden;
+    }
+    /* スプラッシュ画面 */
+    #splash {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: #0a0a0a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Courier New', monospace;
+      font-size: 32px;
+      color: #00ff00;
+      z-index: 10000;
+      cursor: pointer;
+    }
+    /* コンソールウィンドウ風のスタイル */
+    .console-window {
+      position: absolute;
+      background-color: rgba(10, 10, 10, 0.9);
+      border: 1px solid #333;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #00ff00;
+      padding: 10px;
+      white-space: pre-wrap;
+      overflow: hidden;
+      z-index: 10;
+      transition: left 0.5s linear, top 0.5s linear, opacity 1s ease-out;
+    }
+    .console-window.fade-out {
+      opacity: 0;
+    }
+    /* サブウィンドウとしての進捗バーウィンドウ */
+    .progress-window {
+      position: absolute;
+      width: 80%;
+      left: 10%;
+      top: 40%;
+      padding: 10px;
+      background-color: rgba(10, 10, 10, 0.95);
+      border: 1px solid #00ff00;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      text-align: center;
+      z-index: 20;
+    }
+    .progress-container {
+      width: 100%;
+      height: 20px;
+      border: 1px solid #00ff00;
+      background-color: #000;
+      position: relative;
+      margin-top: 10px;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background-color: #00ff00;
+    }
+    .progress-text {
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <!-- スプラッシュ画面 -->
+  <div id="splash">Enter...▼</div>
+  
+  <script>
+    /***** グローバル変数 *****/
+    let initialPhase = true;   // 最初の5秒間は初期フェーズ
+    // 5秒後に初期フェーズを解除
+    setTimeout(() => { initialPhase = false; }, 3000);
+    
+    // 斜めクラスタ用
+    let diagonalClusterRemaining = 0;
+    let diagonalNextX = 0;
+    let diagonalNextY = 0;
+    const diagonalOffset = 30;  // 斜め配置のずれ（ピクセル）
+    
+    /***** ユーティリティ関数 *****/
+    function getRandomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+    
+    /***** コード生成用素材 *****/
+    const languages = ["Python", "JavaScript", "Java", "C++", "Go", "Rust", "Ruby", "C#", "Swift", "Kotlin", "TypeScript", "PHP", "Scala", "Haskell", "Perl"];
+    const functionWords = ["process", "generate", "create", "analyze", "calculate", "transform", "convert", "extract", "fetch", "parse", "query", "update", "validate", "optimize"];
+    const nouns = ["data", "user", "image", "text", "file", "network", "system", "database", "model", "object", "API", "service", "module", "library"];
+    const adjectives = ["neural", "deep", "advanced", "optimized", "efficient", "robust", "secure", "dynamic"];
+    
+    // シンプルなプレーンテキストのコード行を生成
+    function generatePlainCodeLine(language) {
+      const lineTypes = 11;
+      let lineType = getRandomInt(0, lineTypes - 1);
+      function getRandomFunctionName() {
+        const word = functionWords[getRandomInt(0, functionWords.length - 1)];
+        const noun = nouns[getRandomInt(0, nouns.length - 1)];
+        return word + noun.charAt(0).toUpperCase() + noun.slice(1);
+      }
+      function getRandomVariableName() {
+        const adj = getRandomInt(0, 2) === 0 ? "" : adjectives[getRandomInt(0, adjectives.length - 1)];
+        const noun = nouns[getRandomInt(0, nouns.length - 1)];
+        return (adj ? adj.toLowerCase() + noun.charAt(0).toUpperCase() + noun.slice(1) : noun);
+      }
+      function getRandomNumber() {
+        return getRandomInt(0, 1000);
+      }
+      function getRandomString() {
+        const strings = ["data", "input", "output", "config", "settings", "result", "message", "error", "success"];
+        return strings[getRandomInt(0, strings.length - 1)];
+      }
+      
+      let line = "";
+      switch(lineType) {
+        case 0:
+          line = (language === "Python" || language === "Ruby") 
+            ? "# " + getRandomFunctionName() + " explanation" 
+            : "// " + getRandomFunctionName() + " explanation";
+          break;
+        case 1:
+          if(language === "Python"){
+            line = "def " + getRandomFunctionName() + "(" + getRandomVariableName() + "):";
+          } else if (language === "JavaScript" || language === "TypeScript") {
+            line = "function " + getRandomFunctionName() + "(" + getRandomVariableName() + ") {";
+          } else if(language === "Go") {
+            line = "func " + getRandomFunctionName() + "(" + getRandomVariableName() + " string) {";
+          } else {
+            line = "public void " + getRandomFunctionName() + "(" + getRandomVariableName() + ") {";
+          }
+          break;
+        case 2:
+          if(language === "Python"){
+            line = getRandomVariableName() + " = " + getRandomNumber();
+          } else {
+            line = "const " + getRandomVariableName() + " = " + getRandomNumber() + ";";
+          }
+          break;
+        case 3:
+          if(language === "Python"){
+            line = getRandomVariableName() + " = \"" + getRandomString() + "\"";
+          } else {
+            line = "const " + getRandomVariableName() + " = \"" + getRandomString() + "\";";
+          }
+          break;
+        case 4:
+          if(language === "Python"){
+            line = "if " + getRandomVariableName() + " > " + getRandomNumber() + ":";
+          } else {
+            line = "if (" + getRandomVariableName() + " > " + getRandomNumber() + ") {";
+          }
+          break;
+        case 5:
+          if(language === "Python"){
+            line = "for i in range(" + getRandomNumber() + "):";
+          } else {
+            line = "for (let i = 0; i < " + getRandomNumber() + "; i++) {";
+          }
+          break;
+        case 6:
+          if(language === "Python"){
+            line = getRandomFunctionName() + "(" + getRandomVariableName() + ")";
+          } else {
+            line = getRandomFunctionName() + "(" + getRandomVariableName() + ");";
+          }
+          break;
+        case 7:
+          if(language === "Python"){
+            line = "return " + getRandomVariableName();
+          } else {
+            line = "return " + getRandomVariableName() + ";";
+          }
+          break;
+        case 8:
+          if(language === "Python"){
+            line = "class " + getRandomFunctionName() + ":";
+          } else {
+            line = "class " + getRandomFunctionName() + " {";
+          }
+          break;
+        case 9:
+          if(language === "Python"){
+            line = "import " + getRandomVariableName();
+          } else {
+            line = "import " + getRandomVariableName() + ";";
+          }
+          break;
+        case 10:
+          if(language === "Python"){
+            line = getRandomVariableName() + "." + getRandomFunctionName().toLowerCase() + "()";
+          } else {
+            line = getRandomVariableName() + "." + getRandomFunctionName().toLowerCase() + "();";
+          }
+          break;
+        default:
+          line = "";
+      }
+      return line;
+    }
+    
+    // 複数行のコードブロック（プレーンテキスト）を生成
+    function generatePlainCodeBlock() {
+      const language = languages[getRandomInt(0, languages.length - 1)];
+      let lines = getRandomInt(10, 20);
+      let code = "";
+      code += "// Language: " + language + "\n";
+      code += "// File: " + generatePlainCodeLine(language).toLowerCase() + "." + (language==='Python' ? 'py' : language==='JavaScript' ? 'js' : 'txt') + "\n\n";
+      
+      let indentation = 0;
+      let braceCount = 0;
+      
+      for(let i = 0; i < lines; i++){
+        if(braceCount > 0 && getRandomInt(0,10) > 7){
+          indentation--;
+          braceCount--;
+          if(language !== "Python"){
+            code += " ".repeat(indentation * 4) + "}\n";
+          } else {
+            code += "\n";
+          }
+          continue;
+        }
+        let line = generatePlainCodeLine(language);
+        code += " ".repeat(indentation * 4) + line + "\n";
+        if(line.indexOf("{") !== -1 || (language === "Python" && line.indexOf(":") !== -1)){
+          indentation++;
+          if(line.indexOf("{") !== -1) braceCount++;
+        }
+      }
+      while(braceCount > 0){
+        indentation--;
+        braceCount--;
+        if(language !== "Python"){
+          code += " ".repeat(indentation * 4) + "}\n";
+        }
+      }
+      return code;
+    }
+    
+    // タイプライター効果：テキストを1文字ずつ追加
+    function typeWriter(element, text, speed, callback) {
+      let i = 0;
+      function type() {
+        if(i < text.length) {
+          element.textContent += text.charAt(i);
+          i++;
+          setTimeout(type, speed);
+        } else {
+          if(callback) callback();
+        }
+      }
+      type();
+    }
+    
+    // コンソールウィンドウの位置（通常はランダム配置）
+    function repositionWindow(win) {
+      const maxX = window.innerWidth - win.offsetWidth;
+      const maxY = window.innerHeight - win.offsetHeight;
+      win.style.left = getRandomInt(0, Math.max(maxX, 0)) + "px";
+      win.style.top = getRandomInt(0, Math.max(maxY, 0)) + "px";
+    }
+    
+    // 進捗バー（シークバー）を含むロード演出  
+    // ※進捗中はウィンドウの移動を停止するため、win.loading フラグを設定
+    function simulateLoading(win) {
+      win.loading = true;
+      
+      const progressWin = document.createElement("div");
+      progressWin.className = "progress-window";
+      progressWin.innerHTML = "<div>[システム] ロード中...</div>";
+      
+      const progressContainer = document.createElement("div");
+      progressContainer.className = "progress-container";
+      const progressBar = document.createElement("div");
+      progressBar.className = "progress-bar";
+      progressContainer.appendChild(progressBar);
+      
+      const progressText = document.createElement("div");
+      progressText.className = "progress-text";
+      progressText.textContent = "0%";
+      
+      progressWin.appendChild(progressContainer);
+      progressWin.appendChild(progressText);
+      // サブウィンドウは動かないので、win の中にそのまま追加
+      win.appendChild(progressWin);
+      
+      let progress = 0;
+      // 50msごとに3%ずつ更新（約1.7秒で100%）
+      const progressInterval = setInterval(() => {
+        progress += 3;
+        if(progress > 100) progress = 100;
+        progressBar.style.width = progress + "%";
+        progressText.textContent = progress + "%";
+        if(progress === 100) {
+          clearInterval(progressInterval);
+          progressWin.insertAdjacentHTML("beforeend", "<div style='color:red;'>complete</div>");
+          setTimeout(() => {
+            win.classList.add("fade-out");
+            setTimeout(() => {
+              if(document.body.contains(win)) {
+                document.body.removeChild(win);
+              }
+            }, 500);
+          }, 1000);
+        }
+      }, 50);
+    }
+    
+    // コンソールウィンドウの作成  
+    function createConsoleWindow() {
+      const win = document.createElement('div');
+      win.className = "console-window";
+      win.style.width = getRandomInt(200, 400) + "px";
+      win.style.height = getRandomInt(150, 300) + "px";
+      
+      // 斜めクラスタ（20%の確率でグループ化）
+      if (diagonalClusterRemaining > 0) {
+        win.diagonal = true;
+        win.style.left = diagonalNextX + "px";
+        win.style.top = diagonalNextY + "px";
+        diagonalNextX += diagonalOffset;
+        diagonalNextY += diagonalOffset;
+        diagonalClusterRemaining--;
+      } else if (Math.random() < 0.2) {
+        const clusterSize = getRandomInt(3, 7);
+        diagonalClusterRemaining = clusterSize - 1;
+        win.diagonal = true;
+        diagonalNextX = getRandomInt(0, window.innerWidth - 400);
+        diagonalNextY = getRandomInt(0, window.innerHeight - 300);
+        win.style.left = diagonalNextX + "px";
+        win.style.top = diagonalNextY + "px";
+        diagonalNextX += diagonalOffset;
+        diagonalNextY += diagonalOffset;
+      } else {
+        repositionWindow(win);
+      }
+      document.body.appendChild(win);
+      
+      const code = generatePlainCodeBlock();
+      win.textContent = "";
+      let speed = 10; // タイピング速度：1文字あたり10ms
+      
+      typeWriter(win, code, speed, function(){
+         // タイピング完了後、初期フェーズ中は常に通常（移動＆フェードアウト）  
+         if (!initialPhase && Math.random() < 0.3) {
+           simulateLoading(win);
+         } else {
+           setTimeout(() => {
+              if (!win.loading) {
+                if (!win.diagonal) {
+                  repositionWindow(win);
+                }
+                win.style.transition = "all 0.2s linear";
+                setTimeout(() => {
+                  win.classList.add("fade-out");
+                  setTimeout(() => {
+                    if(document.body.contains(win)) {
+                      document.body.removeChild(win);
+                    }
+                  }, 500);
+                }, 200);
+              }
+           }, getRandomInt(500, 1500));
+         }
+      });
+      
+      // 移動アニメーション：進捗中も斜めウィンドウも移動しない
+      let moveInterval = setInterval(() => {
+        if(document.body.contains(win)) {
+          if (!win.loading && !win.diagonal) {
+            repositionWindow(win);
+          }
+        } else {
+          clearInterval(moveInterval);
+        }
+      }, getRandomInt(500, 1000));
+    }
+    
+    // メインループ：約300msごとに新たなコンソールウィンドウを生成
+    function startConsoleSimulation() {
+      setInterval(() => {
+        createConsoleWindow();
+      }, 300);
+    }
+    
+    /***** 花火（scatter）演出 *****/
+    function scatterFireworks() {
+      const wins = document.querySelectorAll('.console-window');
+      wins.forEach(win => {
+        // 現在位置を取得（数値に変換）
+        const currentLeft = parseFloat(win.style.left) || 0;
+        const currentTop = parseFloat(win.style.top) || 0;
+        // ランダムな角度・距離を計算
+        const angle = Math.random() * 2 * Math.PI;
+        const distance = getRandomInt(200, 500);
+        const newLeft = currentLeft + Math.cos(angle) * distance;
+        const newTop = currentTop + Math.sin(angle) * distance;
+        win.style.transition = "all 0.8s ease-out";
+        win.style.left = newLeft + "px";
+        win.style.top = newTop + "px";
+        win.style.opacity = 0;
+        setTimeout(() => {
+          if(document.body.contains(win)){
+            document.body.removeChild(win);
+          }
+        }, 800);
+      });
+    }
+    
+    /***** 全画面化＆シミュレーション開始、花火演出 *****/
+    // スプラッシュ画面のクリックで全画面化＆シミュレーション開始
+    document.getElementById("splash").addEventListener("click", function() {
+      // 全画面化（ブラウザ互換）
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen();
+      } else if (document.documentElement.msRequestFullscreen) {
+        document.documentElement.msRequestFullscreen();
+      } else if (document.documentElement.mozRequestFullScreen) {
+        document.documentElement.mozRequestFullScreen();
+      } else if (document.documentElement.webkitRequestFullscreen) {
+        document.documentElement.webkitRequestFullscreen();
+      }
+      // スプラッシュ画面削除
+      const splash = document.getElementById("splash");
+      splash.parentNode.removeChild(splash);
+      // シミュレーション開始
+      startConsoleSimulation();
+    });
+    
+    // 初期フェーズ後（5秒以降）に画面クリックで花火散らし演出
+    document.addEventListener("click", function(e) {
+      // すでにスプラッシュがなく、かつ初期フェーズが終了していれば花火発動
+      if (!document.getElementById("splash") && !initialPhase) {
+        scatterFireworks();
+      }
+    });
+  </script>
+</body>
+</html>
