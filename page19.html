@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>超シンプル自動化フロージェネレーター 改良版</title>
+  <style>
+    body { 
+      font-family: sans-serif; 
+      padding: 20px; 
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    select, input, button { 
+      padding: 5px; 
+      margin: 3px;
+    }
+    #output { 
+      width: 100%; 
+      height: 200px; 
+      margin-top: 10px;
+      font-family: monospace;
+    }
+    .action-select {
+      margin-bottom: 15px;
+    }
+    .image-selector {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-top: 5px;
+    }
+    .key-help {
+      font-size: 12px;
+      color: #666;
+      margin: 5px 0;
+      background: #f5f5f5;
+      padding: 5px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <h1>超シンプル自動化フロージェネレーター</h1>
+  
+  <div class="action-select">
+    <select id="action-type">
+      <option value="presskeys">キー操作</option>
+      <option value="typetext">テキスト入力</option>
+      <option value="click">クリック</option>
+      <option value="moveto">座標移動</option>
+      <option value="movetoimage">画像へ移動</option>
+      <option value="waitforimage">画像待機</option>
+      <option value="dragonimage">画像ドラッグ</option>
+      <option value="openurl">URLを開く</option>
+      <option value="screenshot">スクリーンショット</option>
+      <option value="screenshotregion">範囲スクリーンショット</option>
+      <option value="includeflow">サブフロー</option>
+      <option value="sleep">待機</option>
+    </select>
+    <div id="params-container"></div>
+    <button id="add-btn">追加</button>
+  </div>
+  
+  <textarea id="output" readonly></textarea>
+  <button id="copy-btn">コピー</button>
+
+  <script>
+    // DOM要素
+    const actionSelect = document.getElementById('action-type');
+    const paramsContainer = document.getElementById('params-container');
+    const addBtn = document.getElementById('add-btn');
+    const output = document.getElementById('output');
+    const copyBtn = document.getElementById('copy-btn');
+    
+    // キー操作のヘルプ
+    const keyHelp = `
+      よく使うキー: enter(Enter), tab(Tab), space(スペース), backspace(BS), delete(Del), escape(Esc)
+      方向キー: up(↑), down(↓), left(←), right(→)
+      機能キー: f1～f12(F1～F12)
+      修飾キー: shift, ctrl, alt, win
+      キーの組み合わせは例: ctrl+c, shift+alt+del（PyAutoGUIでは別の指定方法が必要）
+    `;
+    
+    // パラメータ定義
+    const actionParams = {
+      sleep: [
+        { id: 'seconds', label: '秒数', type: 'number', default: 1 }
+      ],
+      openurl: [
+        { id: 'url', label: 'URL', type: 'text', default: 'https://example.com' },
+        { id: 'wait', label: '待機(秒)', type: 'number', default: 5 }
+      ],
+      waitforimage: [
+        { id: 'images', label: '画像ファイル（複数可）', type: 'image-select', count: 5, default: '' },
+        { id: 'timeout', label: 'タイムアウト', type: 'number', default: 30 },
+        { id: 'confidence', label: '信頼度', type: 'number', default: 0.8 }
+      ],
+      click: [
+        { id: 'button', label: 'ボタン', type: 'select', options: ['left', 'right'], default: 'left' },
+        { id: 'type', label: 'クリックタイプ', type: 'select', 
+          options: ['click', 'doubleclick', 'rightclick', 'mousedown', 'mouseup'], 
+          labels: ['クリック', 'ダブルクリック', '右クリック', '押しっぱなし', '離す'], 
+          default: 'click' }
+      ],
+      moveto: [
+        { id: 'x', label: 'X座標', type: 'number', default: 100 },
+        { id: 'y', label: 'Y座標', type: 'number', default: 100 },
+        { id: 'duration', label: '時間(秒)', type: 'number', default: 0.5 }
+      ],
+      movetoimage: [
+        { id: 'images', label: '画像ファイル（複数可）', type: 'image-select', count: 5, default: '' },
+        { id: 'duration', label: '時間(秒)', type: 'number', default: 0.5 }
+      ],
+      dragonimage: [
+        { id: 'start', label: '開始画像', type: 'image-select', count: 1, default: '' },
+        { id: 'end', label: '終了画像（空白ならオフセット使用）', type: 'image-select', count: 1, default: '' },
+        { id: 'offset_x', label: 'X移動量', type: 'number', default: 100 },
+        { id: 'offset_y', label: 'Y移動量', type: 'number', default: 0 },
+        { id: 'duration', label: '時間(秒)', type: 'number', default: 1.0 }
+      ],
+      typetext: [
+        { id: 'text', label: 'テキスト', type: 'text', default: 'サンプルテキスト' }
+      ],
+      presskeys: [
+        { id: 'keys', label: 'キー(カンマ区切り)', type: 'text', default: 'enter, tab' },
+        { id: 'keyhelp', label: '', type: 'keyhelp', text: keyHelp }
+      ],
+      screenshot: [],
+      screenshotregion: [
+        { id: 'x', label: 'X座標', type: 'number', default: 100 },
+        { id: 'y', label: 'Y座標', type: 'number', default: 100 },
+        { id: 'w', label: '幅', type: 'number', default: 500 },
+        { id: 'h', label: '高さ', type: 'number', default: 400 }
+      ],
+      includeflow: [
+        { id: 'path', label: 'パス', type: 'text', default: 'subfolder/subflow' }
+      ]
+    };
+    
+    // コード生成関数
+    function generateCode(type, params) {
+      switch(type) {
+        case 'sleep':
+          return `Sleep(${params.seconds}),`;
+        case 'openurl':
+          return `OpenURL("${params.url}", wait=${params.wait}),`;
+        case 'waitforimage': {
+          const images = getSelectedImages(params.images || []);
+          if (images.length === 0) {
+            alert('画像ファイルを選択してください');
+            return null;
+          }
+          
+          if (images.length === 1) {
+            return `WaitForImage(r"${images[0]}", timeout=${params.timeout}, confidence=${params.confidence}),`;
+          } else {
+            const imgList = images.map(img => `r"${img}"`).join(', ');
+            return `WaitForAnyImage([${imgList}], timeout=${params.timeout}, confidence=${params.confidence}),`;
+          }
+        }
+        case 'click': {
+          const button = params.button;
+          const type = params.type;
+          
+          if (type === 'click') {
+            return `Click(button='${button}', clicks=1),`;
+          } else if (type === 'doubleclick') {
+            return `Click(button='${button}', clicks=2),`;
+          } else if (type === 'rightclick') {
+            return `RightClick(),`;
+          } else if (type === 'mousedown') {
+            return `pyautogui.mouseDown(button='${button}'),  # 押しっぱなし`;
+          } else if (type === 'mouseup') {
+            return `pyautogui.mouseUp(button='${button}'),  # 離す`;
+          }
+          break;
+        }
+        case 'moveto':
+          return `MoveTo(${params.x}, ${params.y}, duration=${params.duration}),`;
+        case 'movetoimage': {
+          const images = getSelectedImages(params.images || []);
+          if (images.length === 0) {
+            alert('画像ファイルを選択してください');
+            return null;
+          }
+          
+          if (images.length === 1) {
+            return `MoveToImage(r"${images[0]}", duration=${params.duration}),`;
+          } else {
+            const imgList = images.map(img => `r"${img}"`).join(', ');
+            return `MoveToImage([${imgList}], duration=${params.duration}),`;
+          }
+        }
+        case 'dragonimage': {
+          const startImg = getSelectedImages(params.start || [])[0];
+          const endImg = getSelectedImages(params.end || [])[0];
+          
+          if (!startImg) {
+            alert('開始画像を選択してください');
+            return null;
+          }
+          
+          if (endImg) {
+            return `DragOnImage(r"${startImg}", end=r"${endImg}", duration=${params.duration}),`;
+          } else {
+            return `DragOnImage(r"${startImg}", offset=(${params.offset_x}, ${params.offset_y}), duration=${params.duration}),`;
+          }
+        }
+        case 'typetext':
+          return `TypeText("${params.text}"),`;
+        case 'presskeys': {
+          const keyList = params.keys.split(',').map(key => `"${key.trim()}"`).join(', ');
+          return `PressKeys([${keyList}]),`;
+        }
+        case 'screenshot':
+          return `Screenshot(),`;
+        case 'screenshotregion':
+          return `ScreenshotRegion(${params.x}, ${params.y}, ${params.w}, ${params.h}),`;
+        case 'includeflow':
+          return `IncludeFlow(r"${params.path}"),`;
+        default:
+          return '';
+      }
+    }
+    
+    // 選択された画像ファイル名を取得
+    function getSelectedImages(fileInputs) {
+      if (!Array.isArray(fileInputs)) return [];
+      
+      return fileInputs
+        .filter(input => input && input.files && input.files[0])
+        .map(input => input.files[0].name);
+    }
+    
+    // パラメータUIを更新
+    actionSelect.addEventListener('change', updateParamsUI);
+    
+    function updateParamsUI() {
+      paramsContainer.innerHTML = '';
+      
+      const type = actionSelect.value;
+      const params = actionParams[type] || [];
+      
+      params.forEach(param => {
+        if (param.type === 'image-select') {
+          const container = document.createElement('div');
+          const label = document.createElement('label');
+          label.textContent = param.label;
+          container.appendChild(label);
+          
+          const imageSelector = document.createElement('div');
+          imageSelector.className = 'image-selector';
+          
+          const count = param.count || 1;
+          const inputs = [];
+          
+          for (let i = 0; i < count; i++) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.dataset.param = param.id;
+            inputs.push(input);
+            imageSelector.appendChild(input);
+          }
+          
+          container.appendChild(imageSelector);
+          paramsContainer.appendChild(container);
+          return;
+        }
+        
+        if (param.type === 'keyhelp') {
+          const helpDiv = document.createElement('div');
+          helpDiv.className = 'key-help';
+          helpDiv.textContent = param.text;
+          paramsContainer.appendChild(helpDiv);
+          return;
+        }
+        
+        const label = document.createElement('label');
+        label.textContent = param.label + ': ';
+        
+        let input;
+        if (param.type === 'select') {
+          input = document.createElement('select');
+          (param.options || []).forEach((opt, index) => {
+            const option = document.createElement('option');
+            option.value = opt;
+            option.textContent = param.labels ? param.labels[index] : opt;
+            input.appendChild(option);
+          });
+        } else {
+          input = document.createElement('input');
+          input.type = param.type;
+        }
+        
+        input.value = param.default;
+        input.dataset.param = param.id;
+        
+        label.appendChild(input);
+        paramsContainer.appendChild(label);
+      });
+    }
+    
+    // 初期UI表示
+    updateParamsUI();
+    
+    // 追加ボタンクリック
+    addBtn.addEventListener('click', function() {
+      const type = actionSelect.value;
+      const params = {};
+      
+      // 通常パラメータ値の取得
+      const inputs = paramsContainer.querySelectorAll('input:not([type="file"]), select');
+      inputs.forEach(input => {
+        if (!input.dataset.param) return;
+        
+        let value = input.value;
+        if (input.type === 'number') {
+          value = parseFloat(value);
+        }
+        params[input.dataset.param] = value;
+      });
+      
+      // ファイル入力の取得
+      const fileGroups = {};
+      const fileInputs = paramsContainer.querySelectorAll('input[type="file"]');
+      fileInputs.forEach(input => {
+        if (!input.dataset.param) return;
+        
+        const paramName = input.dataset.param;
+        if (!fileGroups[paramName]) {
+          fileGroups[paramName] = [];
+        }
+        
+        fileGroups[paramName].push(input);
+      });
+      
+      // ファイルグループをパラメータに追加
+      Object.keys(fileGroups).forEach(paramName => {
+        params[paramName] = fileGroups[paramName];
+      });
+      
+      // コード生成
+      const code = generateCode(type, params);
+      
+      // 出力に追加（nullの場合は追加しない）
+      if (code) {
+        output.value += code + '\n';
+      }
+    });
+    
+    // コピーボタン
+    copyBtn.addEventListener('click', function() {
+      output.select();
+      document.execCommand('copy');
+    });
+  </script>
+</body>
+</html>
