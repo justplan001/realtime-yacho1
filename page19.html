@@ -46,6 +46,7 @@
   <div class="action-select">
     <select id="action-type">
       <option value="presskeys">キー操作</option>
+      <option value="hotkey">ホットキー</option>
       <option value="typetext">テキスト入力</option>
       <option value="click">クリック</option>
       <option value="moveto">座標移動</option>
@@ -79,7 +80,15 @@
       方向キー: up(↑), down(↓), left(←), right(→)
       機能キー: f1～f12(F1～F12)
       修飾キー: shift, ctrl, alt, win
-      キーの組み合わせは例: ctrl+c, shift+alt+del（PyAutoGUIでは別の指定方法が必要）
+      キーの組み合わせは例: ctrl+c, shift+alt+del（カンマ区切りで指定）
+    `;
+    
+    // ホットキーのヘルプ
+    const hotkeyHelp = `
+      1つ目のパラメータで修飾キーを指定: 'ctrl', 'alt', 'shift', 'win' など
+      2つ目のパラメータで通常キーを指定: 'c', 'v', 'a', 'f4' など
+      例: HotKey('ctrl', 'c') はCtrl+Cを表します
+      複数の修飾キーを組み合わせる場合は配列を使用: ['ctrl', 'shift']
     `;
     
     // パラメータ定義
@@ -125,6 +134,11 @@
       presskeys: [
         { id: 'keys', label: 'キー(カンマ区切り)', type: 'text', default: 'enter, tab' },
         { id: 'keyhelp', label: '', type: 'keyhelp', text: keyHelp }
+      ],
+      hotkey: [
+        { id: 'modifier', label: '修飾キー', type: 'text', default: 'ctrl' },
+        { id: 'key', label: 'キー', type: 'text', default: 'c' },
+        { id: 'keyhelp', label: '', type: 'keyhelp', text: hotkeyHelp }
       ],
       screenshot: [],
       screenshotregion: [
@@ -212,6 +226,18 @@
         case 'presskeys': {
           const keyList = params.keys.split(',').map(key => `"${key.trim()}"`).join(', ');
           return `PressKeys([${keyList}]),`;
+        }
+        case 'hotkey': {
+          let modifier = params.modifier.trim();
+          const key = params.key.trim();
+          
+          // 複数の修飾キーをチェック (カンマ区切りされている場合)
+          if (modifier.includes(',')) {
+            const modifiers = modifier.split(',').map(m => `'${m.trim()}'`).join(', ');
+            return `HotKey([${modifiers}], '${key}'),`;
+          } else {
+            return `HotKey('${modifier}', '${key}'),`;
+          }
         }
         case 'screenshot':
           return `Screenshot(),`;
