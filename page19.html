@@ -17,7 +17,7 @@
     }
     #output { 
       width: 100%; 
-      height: 200px; 
+      height: 300px; 
       margin-top: 10px;
       font-family: monospace;
     }
@@ -38,27 +38,63 @@
       padding: 5px;
       border-radius: 3px;
     }
+    .section-header {
+      background: #eee;
+      padding: 5px;
+      margin-top: 10px;
+      font-weight: bold;
+      border-radius: 3px;
+    }
+    .action-type {
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
   <h1>フロージェネレーター</h1>
   
   <div class="action-select">
-    <select id="action-type">
-      <option value="presskeys">キー操作</option>
-      <option value="hotkey">ホットキー</option>
-      <option value="typetext">テキスト入力</option>
-      <option value="click">クリック</option>
-      <option value="moveto">座標移動</option>
-      <option value="movetoimage">画像へ移動</option>
-      <option value="waitforimage">画像待機</option>
-      <option value="dragonimage">画像ドラッグ</option>
-      <option value="openurl">URLを開く</option>
-      <option value="screenshot">スクリーンショット</option>
-      <option value="screenshotregion">範囲スクリーンショット</option>
-      <option value="includeflow">サブフロー</option>
-      <option value="sleep">待機</option>
-    </select>
+    <div class="action-type">
+      <label for="action-type">アクションタイプ:</label>
+      <select id="action-type">
+        <optgroup label="基本操作">
+          <option value="sleep">待機</option>
+          <option value="screenshot">スクリーンショット</option>
+          <option value="includeflow">サブフロー</option>
+        </optgroup>
+        <optgroup label="UI操作">
+          <option value="presskeys">キー操作</option>
+          <option value="hotkey">ホットキー</option>
+          <option value="typetext">テキスト入力</option>
+          <option value="click">クリック</option>
+          <option value="moveto">座標移動</option>
+          <option value="movetoimage">画像へ移動</option>
+          <option value="waitforimage">画像待機</option>
+          <option value="dragonimage">画像ドラッグ</option>
+          <option value="openurl">URLを開く</option>
+          <option value="screenshotregion">範囲スクリーンショット</option>
+        </optgroup>
+        <optgroup label="変数操作">
+          <option value="setvariable">変数設定</option>
+          <option value="stringoperation">文字列操作</option>
+          <option value="getclipboard">クリップボード取得</option>
+          <option value="setclipboard">クリップボードへコピー</option>
+        </optgroup>
+        <optgroup label="フロー制御">
+          <option value="loop">ループ処理</option>
+          <option value="foreach">配列反復処理</option>
+          <option value="condition">条件分岐</option>
+        </optgroup>
+        <optgroup label="ファイル操作">
+          <option value="loadtextfile">テキストファイル読込</option>
+          <option value="loadtextfiletolist">テキストファイル行読込</option>
+        </optgroup>
+        <optgroup label="システム操作">
+          <option value="openfolder">フォルダを開く</option>
+          <option value="runexecutable">プログラム実行</option>
+        </optgroup>
+      </select>
+    </div>
     <div id="params-container"></div>
     <button id="add-btn">追加</button>
   </div>
@@ -88,7 +124,25 @@
       1つ目のパラメータで修飾キーを指定: 'ctrl', 'alt', 'shift', 'win' など
       2つ目のパラメータで通常キーを指定: 'c', 'v', 'a', 'f4' など
       例: HotKey('ctrl', 'c') はCtrl+Cを表します
-      複数の修飾キーを組み合わせる場合は配列を使用: ['ctrl', 'shift']
+      複数の修飾キーを組み合わせる場合: 'ctrl, shift' のようにカンマ区切りで指定
+    `;
+    
+    // 変数のヘルプ
+    const variableHelp = `
+      変数名は$プレフィックスなしで指定します (例: "username")
+      変数を参照する場合は$プレフィックスを使用します (例: "$username")
+    `;
+    
+    // 文字列操作ヘルプ
+    const stringOpHelp = `
+      トリム: パラメータ不要
+      左から取得: パラメータ1に文字数
+      右から取得: パラメータ1に文字数
+      範囲指定: パラメータ1に開始位置、パラメータ2に終了位置
+      置換: パラメータ1に検索文字列、パラメータ2に置換文字列
+      指定語の前: パラメータ1に区切り文字列
+      指定語の後: パラメータ1に区切り文字列
+      連結: パラメータ1に連結する文字列（変数参照可）
     `;
     
     // パラメータ定義
@@ -98,7 +152,11 @@
       ],
       openurl: [
         { id: 'url', label: 'URL', type: 'text', default: 'https://example.com' },
-        { id: 'wait', label: '待機(秒)', type: 'number', default: 5 }
+        { id: 'wait', label: '待機(秒)', type: 'number', default: 5 },
+        { id: 'mode', label: 'ウィンドウモード', type: 'select', 
+          options: ['normal', 'fullscreen', 'left_half', 'right_half'], 
+          labels: ['通常', '全画面', '左半分', '右半分'],
+          default: 'normal' }
       ],
       waitforimage: [
         { id: 'images', label: '画像ファイル（複数可）', type: 'image-select', count: 5, default: '' },
@@ -129,7 +187,8 @@
         { id: 'duration', label: '時間(秒)', type: 'number', default: 1.0 }
       ],
       typetext: [
-        { id: 'text', label: 'テキスト', type: 'text', default: 'サンプルテキスト' }
+        { id: 'text', label: 'テキスト', type: 'text', default: 'サンプルテキスト' },
+        { id: 'variable_help', label: '', type: 'keyhelp', text: '変数を参照するには$プレフィックスを使用: "$username"' }
       ],
       presskeys: [
         { id: 'keys', label: 'キー(カンマ区切り)', type: 'text', default: 'enter, tab' },
@@ -149,16 +208,86 @@
       ],
       includeflow: [
         { id: 'path', label: 'パス', type: 'text', default: 'subfolder/subflow' }
+      ],
+      
+      // 変数操作関連
+      setvariable: [
+        { id: 'name', label: '変数名', type: 'text', default: 'var_name' },
+        { id: 'value', label: '値', type: 'text', default: 'sample_value' },
+        { id: 'variable_help', label: '', type: 'keyhelp', text: variableHelp }
+      ],
+      stringoperation: [
+        { id: 'var_name', label: '変数名', type: 'text', default: 'var_name' },
+        { id: 'operation', label: '操作', type: 'select', 
+          options: ['trim', 'left', 'right', 'slice', 'replace', 'before', 'after', 'concat'],
+          labels: ['トリム', '左から取得', '右から取得', '範囲指定', '置換', '指定語の前', '指定語の後', '連結'],
+          default: 'trim' },
+        { id: 'param1', label: 'パラメータ1', type: 'text', default: '' },
+        { id: 'param2', label: 'パラメータ2', type: 'text', default: '' },
+        { id: 'operation_help', label: '', type: 'keyhelp', text: stringOpHelp }
+      ],
+      getclipboard: [
+        { id: 'var_name', label: '格納する変数名', type: 'text', default: 'clipboard_content' }
+      ],
+      setclipboard: [
+        { id: 'content', label: '内容', type: 'text', default: 'テキスト内容' },
+        { id: 'variable_help', label: '', type: 'keyhelp', text: '変数を参照するには$プレフィックスを使用: "$var_name"' }
+      ],
+      
+      // フロー制御関連
+      loop: [
+        { id: 'count', label: '繰り返し回数', type: 'text', default: '3' },
+        { id: 'nested_help', label: '', type: 'keyhelp', text: 'ループ内のアクションは追加後に個別に設定してください。\n回数の代わりに変数を指定する場合は$プレフィックスを使用: "$count_var"' }
+      ],
+      foreach: [
+        { id: 'list_var', label: 'リスト変数名', type: 'text', default: 'items' },
+        { id: 'item_var', label: '要素変数名', type: 'text', default: 'item' },
+        { id: 'nested_help', label: '', type: 'keyhelp', text: 'ForEach内のアクションは追加後に個別に設定してください。\n変数名は$プレフィックスなしで指定します' }
+      ],
+      condition: [
+        { id: 'condition', label: '条件式', type: 'text', default: '$var == "value"' },
+        { id: 'nested_help', label: '', type: 'keyhelp', text: '条件式では変数を$プレフィックスで参照します: "$var1 == 10", "len($text) > 0"\n条件分岐内のアクションは追加後に個別に設定してください。' }
+      ],
+      
+      // ファイル操作関連
+      loadtextfile: [
+        { id: 'file_path', label: 'ファイルパス', type: 'text', default: 'data.txt' },
+        { id: 'var_name', label: '格納する変数名', type: 'text', default: 'file_content' },
+        { id: 'encoding', label: 'エンコーディング', type: 'text', default: 'utf-8' }
+      ],
+      loadtextfiletolist: [
+        { id: 'file_path', label: 'ファイルパス', type: 'text', default: 'lines.txt' },
+        { id: 'var_name', label: '格納する変数名', type: 'text', default: 'lines' },
+        { id: 'encoding', label: 'エンコーディング', type: 'text', default: 'utf-8' },
+        { id: 'strip', label: '行トリム', type: 'checkbox', default: true }
+      ],
+      
+      // システム操作関連
+      openfolder: [
+        { id: 'folder_path', label: 'フォルダパス', type: 'text', default: 'ScreenShot' },
+        { id: 'variable_help', label: '', type: 'keyhelp', text: '変数を参照するには$プレフィックスを使用: "$folder_path"' }
+      ],
+      runexecutable: [
+        { id: 'exe_path', label: '実行ファイルパス', type: 'text', default: 'notepad.exe' },
+        { id: 'args', label: '引数(カンマ区切り)', type: 'text', default: '' },
+        { id: 'wait', label: '完了を待つ', type: 'checkbox', default: false },
+        { id: 'exe_help', label: '', type: 'keyhelp', text: '.pyファイルも実行可能。引数に変数を使用する場合は$プレフィックスを使用: "$var_name"' }
       ]
     };
     
     // コード生成関数
     function generateCode(type, params) {
       switch(type) {
+        // 基本操作
         case 'sleep':
           return `Sleep(${params.seconds}),`;
-        case 'openurl':
-          return `OpenURL("${params.url}", wait=${params.wait}),`;
+        case 'openurl': {
+          let urlCode = `OpenURL("${params.url}", wait=${params.wait}`;
+          if (params.mode && params.mode !== 'normal') {
+            urlCode += `, mode="${params.mode}"`;
+          }
+          return urlCode + '),';
+        }
         case 'waitforimage': {
           const images = getSelectedImages(params.images || []);
           if (images.length === 0) {
@@ -234,7 +363,7 @@
           // 複数の修飾キーをチェック (カンマ区切りされている場合)
           if (modifier.includes(',')) {
             const modifiers = modifier.split(',').map(m => `'${m.trim()}'`).join(', ');
-            return `HotKey([${modifiers}], '${key}'),`;
+            return `HotKey(${modifiers}, '${key}'),`;
           } else {
             return `HotKey('${modifier}', '${key}'),`;
           }
@@ -245,6 +374,75 @@
           return `ScreenshotRegion(${params.x}, ${params.y}, ${params.w}, ${params.h}),`;
         case 'includeflow':
           return `IncludeFlow(r"${params.path}"),`;
+          
+        // 変数操作関連
+        case 'setvariable':
+          return `SetVariable("${params.name}", "${params.value}"),`;
+        case 'stringoperation': {
+          const operation = params.operation;
+          let param1 = params.param1.trim();
+          let param2 = params.param2.trim();
+          
+          // 操作タイプごとのパラメータ処理
+          switch (operation) {
+            case 'trim':
+              return `StringOperation("${params.var_name}", "trim"),`;
+            case 'left':
+              return `StringOperation("${params.var_name}", "left", ${param1}),`;
+            case 'right':
+              return `StringOperation("${params.var_name}", "right", ${param1}),`;
+            case 'slice':
+              return `StringOperation("${params.var_name}", "slice", ${param1}, ${param2}),`;
+            case 'replace':
+              return `StringOperation("${params.var_name}", "replace", "${param1}", "${param2}"),`;
+            case 'before':
+              return `StringOperation("${params.var_name}", "before", "${param1}"),`;
+            case 'after':
+              return `StringOperation("${params.var_name}", "after", "${param1}"),`;
+            case 'concat':
+              return `StringOperation("${params.var_name}", "concat", "${param1}"),`;
+            default:
+              return '';
+          }
+        }
+        case 'getclipboard':
+          return `GetClipboard("${params.var_name}"),`;
+        case 'setclipboard':
+          return `SetClipboard("${params.content}"),`;
+          
+        // フロー制御関連
+        case 'loop': {
+          let countValue = params.count.trim();
+          return `Loop(${countValue}, [\n    # ここにループ内のアクションを追加\n    Sleep(1),\n]),`;
+        }
+        case 'foreach': {
+          return `ForEach("${params.list_var}", "${params.item_var}", [\n    # ここにループ内のアクションを追加\n    TypeText("$${params.item_var}"),\n]),`;
+        }
+        case 'condition': {
+          return `Condition("${params.condition}", [\n    # 条件がTrue時のアクション\n    Sleep(1),\n], [\n    # 条件がFalse時のアクション\n    Sleep(2),\n]),`;
+        }
+        
+        // ファイル操作関連
+        case 'loadtextfile':
+          return `LoadTextFile("${params.file_path}", "${params.var_name}", encoding="${params.encoding}"),`;
+        case 'loadtextfiletolist': {
+          const strip = params.strip ? 'True' : 'False';
+          return `LoadTextFileToList("${params.file_path}", "${params.var_name}", encoding="${params.encoding}", strip=${strip}),`;
+        }
+        
+        // システム操作関連
+        case 'openfolder':
+          return `OpenFolder("${params.folder_path}"),`;
+        case 'runexecutable': {
+          let args = '';
+          if (params.args && params.args.trim()) {
+            const argList = params.args.split(',').map(arg => `"${arg.trim()}"`).join(', ');
+            args = `, [${argList}]`;
+          }
+          const wait = params.wait ? ', wait=True' : '';
+          return `RunExecutable("${params.exe_path}"${args}${wait}),`;
+        }
+          
         default:
           return '';
       }
@@ -315,12 +513,16 @@
             option.textContent = param.labels ? param.labels[index] : opt;
             input.appendChild(option);
           });
+        } else if (param.type === 'checkbox') {
+          input = document.createElement('input');
+          input.type = 'checkbox';
+          input.checked = param.default;
         } else {
           input = document.createElement('input');
           input.type = param.type;
+          input.value = param.default;
         }
         
-        input.value = param.default;
         input.dataset.param = param.id;
         
         label.appendChild(input);
@@ -341,11 +543,15 @@
       inputs.forEach(input => {
         if (!input.dataset.param) return;
         
-        let value = input.value;
-        if (input.type === 'number') {
-          value = parseFloat(value);
+        if (input.type === 'checkbox') {
+          params[input.dataset.param] = input.checked;
+        } else {
+          let value = input.value;
+          if (input.type === 'number') {
+            value = parseFloat(value);
+          }
+          params[input.dataset.param] = value;
         }
-        params[input.dataset.param] = value;
       });
       
       // ファイル入力の取得
