@@ -1,0 +1,2138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>道路配管設計 CAD</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #1a1a1a;
+        }
+        
+        #canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(30, 30, 30, 0.95);
+            border-radius: 10px;
+            color: white;
+            width: 400px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-height: 90vh;
+            overflow: hidden;
+        }
+        
+        .tab-container {
+            display: flex;
+            background: rgba(20, 20, 20, 0.95);
+            border-radius: 10px 10px 0 0;
+            overflow: hidden;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            color: #888;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab-button:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .tab-button.active {
+            color: #4CAF50;
+            border-bottom-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(90vh - 50px);
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        h3 {
+            margin-bottom: 15px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #81C784;
+            border-bottom: 1px solid rgba(129, 199, 132, 0.3);
+            padding-bottom: 5px;
+        }
+        
+        h3:first-child {
+            margin-top: 0;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .control-group input[type="file"],
+        .control-group input[type="number"],
+        .control-group input[type="color"],
+        .control-group select {
+            width: 100%;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .transform-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 5px;
+        }
+        
+        .align-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+        
+        button {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        button.active {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+        }
+        
+        button.delete {
+            background: linear-gradient(135deg, #f44336, #da190b);
+        }
+        
+        button.complete {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+        }
+        
+        button.dimension {
+            background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+        }
+        
+        button.view-btn {
+            background: linear-gradient(135deg, #607D8B, #455A64);
+        }
+        
+        .list-container {
+            margin-top: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            padding: 10px;
+        }
+        
+        .list-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            font-size: 12px;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+        
+        .list-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .list-item.selected {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid #4CAF50;
+        }
+        
+        .list-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .list-item-details {
+            font-size: 11px;
+            color: #888;
+        }
+        
+        .edit-btn {
+            padding: 2px 8px;
+            font-size: 11px;
+            background: #2196F3;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .layer-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            margin-bottom: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+        
+        .layer-item input[type="checkbox"] {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+        }
+        
+        .layer-item label {
+            flex: 1;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        
+        .layer-count {
+            font-size: 11px;
+            color: #888;
+            margin-left: 10px;
+        }
+        
+        #info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(30, 30, 30, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            font-size: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 220px;
+        }
+        
+        #info div {
+            margin-bottom: 5px;
+        }
+        
+        #view-controls {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 30, 30, 0.95);
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            gap: 5px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        #view-controls button {
+            width: 60px;
+            padding: 8px;
+            font-size: 12px;
+            margin: 0;
+        }
+        
+        #undo-controls {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 30, 30, 0.95);
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            gap: 5px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        #undo-controls button {
+            width: 80px;
+            padding: 8px;
+            font-size: 12px;
+            margin: 0;
+        }
+        
+        .mode-indicator {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(76, 175, 80, 0.95);
+            padding: 10px 20px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        
+        #coordinates {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(30, 30, 30, 0.95);
+            padding: 10px;
+            border-radius: 10px;
+            color: white;
+            font-size: 11px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div id="view-controls">
+        <button id="view-top">上面</button>
+        <button id="view-bottom">下面</button>
+        <button id="view-front">正面</button>
+        <button id="view-back">背面</button>
+        <button id="view-left">左面</button>
+        <button id="view-right">右面</button>
+        <button id="view-iso">アイソメ</button>
+    </div>
+    
+    <div id="undo-controls">
+        <button id="undo-btn">↶ 元に戻す</button>
+        <button id="redo-btn">↷ やり直し</button>
+    </div>
+    
+    <div id="controls">
+        <div class="tab-container">
+            <button class="tab-button active" data-tab="model">📦 モデル</button>
+            <button class="tab-button" data-tab="cad">🔧 CAD</button>
+            <button class="tab-button" data-tab="layer">📑 レイヤー</button>
+        </div>
+        
+        <!-- モデルタブ -->
+        <div class="tab-content active" id="model-tab">
+            <h3>📁 GLBファイル読み込み</h3>
+            <div class="control-group">
+                <input type="file" id="glb-input" accept=".glb,.gltf">
+            </div>
+            
+            <h3>🎛️ モデル変形</h3>
+            <div class="control-group">
+                <label>スケール (X, Y, Z)</label>
+                <div class="transform-controls">
+                    <input type="number" id="scale-x" value="1" step="0.1" min="0.1">
+                    <input type="number" id="scale-y" value="1" step="0.1" min="0.1">
+                    <input type="number" id="scale-z" value="1" step="0.1" min="0.1">
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>位置 (X, Y, Z)</label>
+                <div class="transform-controls">
+                    <input type="number" id="model-x" value="0" step="0.5">
+                    <input type="number" id="model-y" value="0" step="0.5">
+                    <input type="number" id="model-z" value="0" step="0.5">
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>回転 (°)</label>
+                <div class="transform-controls">
+                    <input type="number" id="model-rx" value="0" step="15">
+                    <input type="number" id="model-ry" value="0" step="15">
+                    <input type="number" id="model-rz" value="0" step="15">
+                </div>
+            </div>
+            
+            <h3>🎯 整列ツール</h3>
+            <button id="pick-points">4点選択開始</button>
+            <div class="align-controls">
+                <button id="align-ground-points">4点でグリッド整列</button>
+                <button id="align-ground">簡易グリッド整列</button>
+            </div>
+            <div class="align-controls">
+                <button id="center-model">中心に配置</button>
+                <button id="reset-transform">変形リセット</button>
+            </div>
+            
+            <h3>⚙️ 表示設定</h3>
+            <div class="checkbox-group">
+                <input type="checkbox" id="show-grid" checked>
+                <label for="show-grid">グリッド表示</label>
+            </div>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="transparent-road">
+                <label for="transparent-road">モデル半透明化</label>
+            </div>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="snap-grid" checked>
+                <label for="snap-grid">グリッドスナップ (0.5m)</label>
+            </div>
+            
+            <h3>📐 グリッド設定</h3>
+            <div class="control-group">
+                <label>グリッド回転 (°)</label>
+                <div class="transform-controls">
+                    <input type="number" id="grid-rx" value="0" step="15" placeholder="X軸">
+                    <input type="number" id="grid-ry" value="0" step="15" placeholder="Y軸">
+                    <input type="number" id="grid-rz" value="0" step="15" placeholder="Z軸">
+                </div>
+            </div>
+            <button id="reset-grid-rotation">グリッド回転リセット</button>
+        </div>
+        
+        <!-- CADタブ -->
+        <div class="tab-content" id="cad-tab">
+            <h3>🔧 操作モード</h3>
+            <div class="button-group">
+                <button id="view-mode" class="view-btn active">ビュー</button>
+                <button id="add-pipe">配管追加</button>
+                <button id="add-dimension" class="dimension">寸法追加</button>
+            </div>
+            
+            <h3>🚰 配管設定</h3>
+            <div class="control-group">
+                <label>配管タイプ</label>
+                <select id="pipe-type">
+                    <option value="water">🚰 上水道</option>
+                    <option value="sewer">🚽 下水道</option>
+                    <option value="gas">🔥 ガス管</option>
+                    <option value="electric">⚡ 電力ケーブル</option>
+                    <option value="telecom">📡 通信ケーブル</option>
+                    <option value="u-gutter">📦 U字溝</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label id="pipe-size-label">配管径 (mm)</label>
+                <div class="transform-controls" id="pipe-size-controls">
+                    <input type="number" id="pipe-diameter" value="100" min="50" max="2000" step="50" placeholder="径">
+                    <input type="number" id="pipe-width" value="600" min="50" max="2000" step="50" placeholder="幅" style="display:none;">
+                    <input type="number" id="pipe-height" value="600" min="50" max="2000" step="50" placeholder="高さ" style="display:none;">
+                    <input type="number" id="pipe-thickness" value="50" min="10" max="200" step="10" placeholder="厚さ" style="display:none;">
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>埋設深度 (m) ※管頂からの深さ</label>
+                <input type="number" id="pipe-depth" value="-0.7" max="0" min="-10" step="0.1">
+            </div>
+            
+            <div class="control-group">
+                <label>配管色</label>
+                <input type="color" id="pipe-color" value="#0088ff">
+            </div>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="curve-pipe">
+                <label for="curve-pipe">曲線配管 (OFFで直線接続)</label>
+            </div>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="snap-pipe-nodes" checked>
+                <label for="snap-pipe-nodes">配管ノードもグリッドスナップ</label>
+            </div>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="measure-to-model" checked>
+                <label for="measure-to-model">モデル面への寸法測定可能</label>
+            </div>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="vertical-dimension">
+                <label for="vertical-dimension">垂直寸法モード（グリッド面からの高さ）</label>
+            </div>
+            
+            <button id="complete-pipe" class="complete">配管を確定 (Enter)</button>
+            <button id="cancel-pipe" class="delete">キャンセル (Esc)</button>
+            
+            <h3>📊 配管リスト</h3>
+            <div class="list-container" id="pipe-list"></div>
+            
+            <button id="edit-selected-pipe">選択した配管を編集</button>
+            <button class="delete" id="delete-selected-pipe">選択した配管を削除</button>
+            
+            <h3 id="node-edit-section" style="display:none;">📍 ノード編集</h3>
+            <div id="node-list" style="display:none;">
+                <div class="list-container" id="node-list-container"></div>
+                <div class="control-group">
+                    <label>選択中のノード位置</label>
+                    <div class="transform-controls">
+                        <input type="number" id="node-x" step="0.5" placeholder="X">
+                        <input type="number" id="node-y" step="0.5" placeholder="Y">
+                        <input type="number" id="node-z" step="0.5" placeholder="Z">
+                    </div>
+                </div>
+                <button id="apply-node-position">位置を適用</button>
+                <button id="finish-node-edit" class="complete">編集完了</button>
+            </div>
+            
+            <h3>📏 寸法リスト</h3>
+            <div class="list-container" id="dimension-list"></div>
+            
+            <button class="delete" id="delete-selected-dimension">選択した寸法を削除</button>
+            
+            <button id="export-data" style="margin-top: 10px;">データエクスポート</button>
+        </div>
+        
+        <!-- レイヤータブ -->
+        <div class="tab-content" id="layer-tab">
+            <h3>📑 レイヤー管理</h3>
+            
+            <div class="layer-item">
+                <input type="checkbox" id="layer-model" checked>
+                <label for="layer-model">GLBモデル</label>
+            </div>
+            
+            <div class="layer-item">
+                <input type="checkbox" id="layer-water" checked>
+                <label for="layer-water">上水道</label>
+                <span class="layer-count" id="count-water">0</span>
+            </div>
+            
+            <div class="layer-item">
+                <input type="checkbox" id="layer-sewer" checked>
+                <label for="layer-sewer">下水道</label>
+                <span class="layer-count" id="count-sewer">0</span>
+            </div>
+            
+            <div class="layer-item">
+                <input type="checkbox" id="layer-gas" checked>
+                <label for="layer-gas">ガス管</label>
+                <span class="layer-count" id="count-gas">0</span>
+            </div>
+            
+            <div class="layer-item">
+                <input type="checkbox" id="layer-electric" checked>
+                <label for="layer-electric">電力ケーブル</label>
+                <span class="layer-count" id="count-electric">0</span>
+            </div>
+            
+            <div class="layer-item">
+                <input type="checkbox" id="layer-telecom" checked>
+                <label for="layer-telecom">通信ケーブル</label>
+                <span class="layer-count" id="count-telecom">0</span>
+            </div>
+            
+            <div class="layer-item">
+                <input type="checkbox" id="layer-u-gutter" checked>
+                <label for="layer-u-gutter">U字溝</label>
+                <span class="layer-count" id="count-u-gutter">0</span>
+            </div>
+            
+            <div class="layer-item">
+                <input type="checkbox" id="layer-dimensions" checked>
+                <label for="layer-dimensions">寸法線</label>
+                <span class="layer-count" id="count-dimensions">0</span>
+            </div>
+            
+            <h3>⚡ 一括操作</h3>
+            <div class="align-controls">
+                <button id="show-all-layers">すべて表示</button>
+                <button id="hide-all-layers">すべて非表示</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="info">
+        <div><strong>操作方法:</strong></div>
+        <div>• 左ドラッグ: 回転</div>
+        <div>• 右ドラッグ: 移動</div>
+        <div>• ホイール: ズーム</div>
+        <div style="margin-top: 10px;"><strong>配管追加:</strong></div>
+        <div>• クリック: ノード追加</div>
+        <div>• Enter: 確定</div>
+        <div style="margin-top: 10px;"><strong>寸法追加:</strong></div>
+        <div>• 2点クリックで寸法線</div>
+        <div style="margin-top: 10px;"><strong>ショートカット:</strong></div>
+        <div>• Ctrl+Z: 元に戻す</div>
+        <div>• Ctrl+Y: やり直し</div>
+    </div>
+    
+    <div class="mode-indicator" id="mode-indicator">ビューモード</div>
+    
+    <div id="coordinates">
+        <div id="coord-display">X: 0.0, Y: 0.0, Z: 0.0</div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    
+    <script>
+        // シーン、カメラ、レンダラーの設定
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x222222);
+        scene.fog = new THREE.Fog(0x222222, 10, 500);
+        
+        const camera = new THREE.PerspectiveCamera(
+            75,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        camera.position.set(20, 20, 20);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+        
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        
+        // ライティング
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 20, 10);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+        
+        // グリッド
+        const gridHelper = new THREE.GridHelper(100, 100, 0x444444, 0x333333);
+        const gridGroup = new THREE.Group();
+        gridGroup.add(gridHelper);
+        scene.add(gridGroup);
+        
+        // 軸ヘルパー
+        const axesHelper = new THREE.AxesHelper(10);
+        scene.add(axesHelper);
+        
+        // 配管管理
+        let pipes = [];
+        let dimensions = [];
+        let selectedPipe = null;
+        let selectedDimension = null;
+        let roadModel = null;
+        let currentMode = 'view';
+        let pipeNodes = [];
+        let tempPipe = null;
+        let tempLines = [];
+        let selectedNode = null;
+        let isDragging = false;
+        let editingPipe = null;
+        let dimensionPoints = [];
+        
+        // アンドゥ/リドゥ管理
+        const history = [];
+        let historyIndex = -1;
+        const maxHistory = 50;
+        
+        // レイキャスター
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        
+        // タブ切り替え
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.dataset.tab;
+                
+                // タブボタンの状態更新
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                button.classList.add('active');
+                
+                // タブコンテンツの表示切り替え
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(`${tabName}-tab`).classList.add('active');
+            });
+        });
+        
+        // 履歴に追加
+        function addToHistory(action) {
+            history.splice(historyIndex + 1);
+            history.push(action);
+            if (history.length > maxHistory) {
+                history.shift();
+            }
+            historyIndex = history.length - 1;
+            updateUndoRedoButtons();
+        }
+        
+        // アンドゥ
+        function undo() {
+            if (historyIndex < 0) return;
+            
+            const action = history[historyIndex];
+            if (action.type === 'add-pipe') {
+                scene.remove(action.object);
+                pipes = pipes.filter(p => p !== action.object);
+                updatePipeList();
+                updateLayerCounts();
+            } else if (action.type === 'delete-pipe') {
+                scene.add(action.object);
+                pipes.push(action.object);
+                updatePipeList();
+                updateLayerCounts();
+            } else if (action.type === 'add-dimension') {
+                scene.remove(action.object);
+                dimensions = dimensions.filter(d => d !== action.object);
+                updateDimensionList();
+                updateLayerCounts();
+            } else if (action.type === 'delete-dimension') {
+                scene.add(action.object);
+                dimensions.push(action.object);
+                updateDimensionList();
+                updateLayerCounts();
+            }
+            
+            historyIndex--;
+            updateUndoRedoButtons();
+        }
+        
+        // リドゥ
+        function redo() {
+            if (historyIndex >= history.length - 1) return;
+            
+            historyIndex++;
+            const action = history[historyIndex];
+            
+            if (action.type === 'add-pipe') {
+                scene.add(action.object);
+                pipes.push(action.object);
+                updatePipeList();
+                updateLayerCounts();
+            } else if (action.type === 'delete-pipe') {
+                scene.remove(action.object);
+                pipes = pipes.filter(p => p !== action.object);
+                updatePipeList();
+                updateLayerCounts();
+            } else if (action.type === 'add-dimension') {
+                scene.add(action.object);
+                dimensions.push(action.object);
+                updateDimensionList();
+                updateLayerCounts();
+            } else if (action.type === 'delete-dimension') {
+                scene.remove(action.object);
+                dimensions = dimensions.filter(d => d !== action.object);
+                updateDimensionList();
+                updateLayerCounts();
+            }
+            
+            updateUndoRedoButtons();
+        }
+        
+        function updateUndoRedoButtons() {
+            document.getElementById('undo-btn').disabled = historyIndex < 0;
+            document.getElementById('redo-btn').disabled = historyIndex >= history.length - 1;
+        }
+        
+        // 仮の道路モデル
+        function createDefaultRoad() {
+            const roadGeometry = new THREE.BoxGeometry(30, 0.5, 10);
+            const roadMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x555555,
+                transparent: true,
+                opacity: 0.9
+            });
+            const road = new THREE.Mesh(roadGeometry, roadMaterial);
+            road.position.y = 0;
+            road.castShadow = true;
+            road.receiveShadow = true;
+            
+            roadModel = new THREE.Group();
+            roadModel.add(road);
+            roadModel.userData.isModel = true;
+            
+            // 道路のマーキング
+            const lineGeometry = new THREE.BoxGeometry(0.2, 0.01, 8);
+            const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            for (let i = -10; i <= 10; i += 4) {
+                const line = new THREE.Mesh(lineGeometry, lineMaterial);
+                line.position.set(i, 0.26, 0);
+                road.add(line);
+            }
+            
+            scene.add(roadModel);
+        }
+        
+        createDefaultRoad();
+        
+        // カメラビュー設定
+        function setCameraView(position, target) {
+            camera.position.set(position.x, position.y, position.z);
+            controls.target.set(target.x, target.y, target.z);
+            controls.update();
+        }
+        
+        // ビューボタンイベント
+        document.getElementById('view-top').addEventListener('click', () => {
+            setCameraView({x: 0, y: 50, z: 0}, {x: 0, y: 0, z: 0});
+        });
+        
+        document.getElementById('view-bottom').addEventListener('click', () => {
+            setCameraView({x: 0, y: -50, z: 0}, {x: 0, y: 0, z: 0});
+        });
+        
+        document.getElementById('view-front').addEventListener('click', () => {
+            setCameraView({x: 0, y: 10, z: 50}, {x: 0, y: 0, z: 0});
+        });
+        
+        document.getElementById('view-back').addEventListener('click', () => {
+            setCameraView({x: 0, y: 10, z: -50}, {x: 0, y: 0, z: 0});
+        });
+        
+        document.getElementById('view-left').addEventListener('click', () => {
+            setCameraView({x: -50, y: 10, z: 0}, {x: 0, y: 0, z: 0});
+        });
+        
+        document.getElementById('view-right').addEventListener('click', () => {
+            setCameraView({x: 50, y: 10, z: 0}, {x: 0, y: 0, z: 0});
+        });
+        
+        document.getElementById('view-iso').addEventListener('click', () => {
+            setCameraView({x: 30, y: 30, z: 30}, {x: 0, y: 0, z: 0});
+        });
+        
+        // アンドゥ/リドゥボタン
+        document.getElementById('undo-btn').addEventListener('click', undo);
+        document.getElementById('redo-btn').addEventListener('click', redo);
+        
+        // GLBローダー
+        const loader = new THREE.GLTFLoader();
+        document.getElementById('glb-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                loader.load(url, (gltf) => {
+                    if (roadModel) {
+                        scene.remove(roadModel);
+                    }
+                    roadModel = gltf.scene;
+                    roadModel.userData.isModel = true;
+                    scene.add(roadModel);
+                    
+                    // グリッド面に整列
+                    alignToGround();
+                });
+            }
+        });
+        
+        // 4点整列用の変数
+        let alignmentPoints = [];
+        let alignmentHelpers = [];
+        let isAligning = false;
+        
+        // 整列ポイントのヘルパー作成
+        function createAlignmentHelper(position, index) {
+            const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+            const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]; // 赤、緑、青、黄
+            const material = new THREE.MeshBasicMaterial({ 
+                color: colors[index % 4],
+                emissive: colors[index % 4],
+                emissiveIntensity: 0.8,
+                transparent: true,
+                opacity: 0.8
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            sphere.position.copy(position);
+            
+            // 番号表示用のスプライト
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 64;
+            canvas.height = 64;
+            
+            context.fillStyle = 'white';
+            context.font = 'Bold 48px Arial';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText((index + 1).toString(), 32, 32);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.position.copy(position);
+            sprite.position.y += 1;
+            sprite.scale.set(2, 2, 1);
+            
+            return { sphere, sprite };
+        }
+        
+        // 4点によるグリッド面整列
+        function alignToGroundByPoints() {
+            if (alignmentPoints.length !== 4) {
+                alert('モデル上の4点を選択してください');
+                return;
+            }
+            
+            // 4点から平面を計算（最小二乗法）
+            let sumX = 0, sumY = 0, sumZ = 0;
+            alignmentPoints.forEach(p => {
+                sumX += p.x;
+                sumY += p.y;
+                sumZ += p.z;
+            });
+            
+            const center = new THREE.Vector3(sumX / 4, sumY / 4, sumZ / 4);
+            
+            // 共分散行列を計算
+            let xx = 0, xy = 0, xz = 0, yy = 0, yz = 0, zz = 0;
+            alignmentPoints.forEach(p => {
+                const dx = p.x - center.x;
+                const dy = p.y - center.y;
+                const dz = p.z - center.z;
+                xx += dx * dx;
+                xy += dx * dy;
+                xz += dx * dz;
+                yy += dy * dy;
+                yz += dy * dz;
+                zz += dz * dz;
+            });
+            
+            // 法線ベクトルを計算（簡易的に最初の3点から）
+            const v1 = new THREE.Vector3().subVectors(alignmentPoints[1], alignmentPoints[0]);
+            const v2 = new THREE.Vector3().subVectors(alignmentPoints[2], alignmentPoints[0]);
+            const normal = new THREE.Vector3().crossVectors(v1, v2).normalize();
+            
+            // グリッド面の法線（Y軸）
+            const targetNormal = new THREE.Vector3(0, 1, 0);
+            
+            // 回転を計算
+            const rotationAxis = new THREE.Vector3().crossVectors(normal, targetNormal);
+            
+            if (rotationAxis.length() > 0.001) {
+                rotationAxis.normalize();
+                const angle = Math.acos(Math.max(-1, Math.min(1, normal.dot(targetNormal))));
+                
+                // 回転を適用
+                const quaternion = new THREE.Quaternion().setFromAxisAngle(rotationAxis, angle);
+                roadModel.quaternion.premultiply(quaternion);
+                
+                // 回転後の点を再計算
+                const rotatedPoints = alignmentPoints.map(p => p.clone().applyQuaternion(quaternion));
+                
+                // Y位置を調整（平均高さを0に）
+                const avgY = rotatedPoints.reduce((sum, p) => sum + p.y, 0) / 4;
+                roadModel.position.y -= avgY;
+            }
+            
+            updateTransformControls();
+            clearAlignmentPoints();
+        }
+        
+        // 簡易的なグリッド面整列（旧バージョン）
+        function alignToGround() {
+            if (!roadModel) return;
+            
+            const box = new THREE.Box3().setFromObject(roadModel);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+            
+            // Y軸の最低点をグリッド面(Y=0)に合わせる
+            roadModel.position.y = -box.min.y;
+            roadModel.position.x = -center.x;
+            roadModel.position.z = -center.z;
+            
+            updateTransformControls();
+        }
+        
+        // 整列ポイントをクリア
+        function clearAlignmentPoints() {
+            alignmentHelpers.forEach(helper => {
+                scene.remove(helper.sphere);
+                scene.remove(helper.sprite);
+            });
+            alignmentHelpers = [];
+            alignmentPoints = [];
+            isAligning = false;
+            document.getElementById('pick-points').textContent = '4点選択開始';
+            document.getElementById('pick-points').classList.remove('active');
+        }
+        
+        // 4点選択モードの開始/終了
+        function toggleAlignmentMode() {
+            if (isAligning) {
+                clearAlignmentPoints();
+            } else {
+                isAligning = true;
+                alignmentPoints = [];
+                alignmentHelpers.forEach(helper => {
+                    scene.remove(helper.sphere);
+                    scene.remove(helper.sprite);
+                });
+                alignmentHelpers = [];
+                document.getElementById('pick-points').textContent = '選択中 (0/4)';
+                document.getElementById('pick-points').classList.add('active');
+            }
+        }
+        
+        // 中心に配置
+        function centerModel() {
+            if (!roadModel) return;
+            
+            const box = new THREE.Box3().setFromObject(roadModel);
+            const center = box.getCenter(new THREE.Vector3());
+            
+            roadModel.position.x = -center.x;
+            roadModel.position.z = -center.z;
+            
+            updateTransformControls();
+        }
+        
+        // 変形コントロール更新
+        function updateTransformControls() {
+            if (!roadModel) return;
+            
+            document.getElementById('scale-x').value = roadModel.scale.x;
+            document.getElementById('scale-y').value = roadModel.scale.y;
+            document.getElementById('scale-z').value = roadModel.scale.z;
+            document.getElementById('model-x').value = roadModel.position.x;
+            document.getElementById('model-y').value = roadModel.position.y;
+            document.getElementById('model-z').value = roadModel.position.z;
+            document.getElementById('model-rx').value = roadModel.rotation.x * 180 / Math.PI;
+            document.getElementById('model-ry').value = roadModel.rotation.y * 180 / Math.PI;
+            document.getElementById('model-rz').value = roadModel.rotation.z * 180 / Math.PI;
+        }
+        
+        // 整列ボタンイベント
+        document.getElementById('pick-points').addEventListener('click', toggleAlignmentMode);
+        document.getElementById('align-ground-points').addEventListener('click', alignToGroundByPoints);
+        document.getElementById('align-ground').addEventListener('click', alignToGround);
+        document.getElementById('center-model').addEventListener('click', centerModel);
+        
+        // グリッド回転コントロール
+        ['grid-rx', 'grid-ry', 'grid-rz'].forEach((id, index) => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                const rot = ['x', 'y', 'z'][index];
+                gridGroup.rotation[rot] = parseFloat(e.target.value) * Math.PI / 180;
+                
+                // 軸ヘルパーも一緒に回転
+                axesHelper.rotation[rot] = gridGroup.rotation[rot];
+            });
+        });
+        
+        document.getElementById('reset-grid-rotation').addEventListener('click', () => {
+            gridGroup.rotation.set(0, 0, 0);
+            axesHelper.rotation.set(0, 0, 0);
+            document.getElementById('grid-rx').value = 0;
+            document.getElementById('grid-ry').value = 0;
+            document.getElementById('grid-rz').value = 0;
+        });
+        
+        // モデル変形コントロール
+        ['scale-x', 'scale-y', 'scale-z'].forEach((id, index) => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                if (roadModel) {
+                    const axis = ['x', 'y', 'z'][index];
+                    roadModel.scale[axis] = parseFloat(e.target.value);
+                }
+            });
+        });
+        
+        ['model-x', 'model-y', 'model-z'].forEach((id, index) => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                if (roadModel) {
+                    const pos = ['x', 'y', 'z'][index];
+                    roadModel.position[pos] = parseFloat(e.target.value);
+                }
+            });
+        });
+        
+        ['model-rx', 'model-ry', 'model-rz'].forEach((id, index) => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                if (roadModel) {
+                    const rot = ['x', 'y', 'z'][index];
+                    roadModel.rotation[rot] = parseFloat(e.target.value) * Math.PI / 180;
+                }
+            });
+        });
+        
+        document.getElementById('reset-transform').addEventListener('click', () => {
+            if (roadModel) {
+                roadModel.scale.set(1, 1, 1);
+                roadModel.position.set(0, 0, 0);
+                roadModel.rotation.set(0, 0, 0);
+                updateTransformControls();
+            }
+        });
+        
+        // ノードヘルパー作成（大きくして見やすく）
+        function createNodeHelper(position, isActive = false) {
+            const geometry = new THREE.SphereGeometry(0.5, 16, 16);  // サイズを大きく
+            const material = new THREE.MeshBasicMaterial({ 
+                color: isActive ? 0x00ff00 : 0xffff00,
+                emissive: isActive ? 0x00ff00 : 0xffff00,
+                emissiveIntensity: 0.5,
+                depthTest: false,  // 常に前面に表示
+                depthWrite: false
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            sphere.position.copy(position);
+            sphere.userData.isNode = true;
+            sphere.renderOrder = 999;  // 描画順を最前面に
+            return sphere;
+        }
+        
+        // 直角配管の線を作成
+        function createOrthogonalLines(nodes) {
+            const lines = [];
+            const material = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
+            
+            for (let i = 0; i < nodes.length - 1; i++) {
+                const start = nodes[i].position;
+                const end = nodes[i + 1].position;
+                
+                // 直角接続のための中間点
+                const mid1 = new THREE.Vector3(end.x, start.y, start.z);
+                const mid2 = new THREE.Vector3(end.x, end.y, start.z);
+                
+                // 3つのライン（水平→垂直→水平）
+                const points1 = [start, mid1];
+                const points2 = [mid1, mid2];
+                const points3 = [mid2, end];
+                
+                [points1, points2, points3].forEach(points => {
+                    if (points[0].distanceTo(points[1]) > 0.01) {
+                        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                        const line = new THREE.Line(geometry, material);
+                        lines.push(line);
+                    }
+                });
+            }
+            
+            return lines;
+        }
+        
+        // 寸法線作成（垂直寸法対応）
+        function createDimension(point1, point2) {
+            const isVertical = document.getElementById('vertical-dimension').checked;
+            
+            if (isVertical) {
+                // 垂直寸法（グリッド面からの高さ）
+                // point1を基準にグリッド面への垂直線を作成
+                const gridNormal = new THREE.Vector3(0, 1, 0);
+                const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(gridGroup.rotation);
+                gridNormal.applyMatrix4(rotationMatrix);
+                
+                // グリッド面上の点を計算
+                const gridPoint = point1.clone();
+                gridPoint.y = 0; // 簡易的にY=0のグリッド面を使用
+                
+                const distance = Math.abs(point1.y);
+                const midpoint = new THREE.Vector3().addVectors(point1, gridPoint).multiplyScalar(0.5);
+                
+                // 垂直寸法線
+                const lineGeometry = new THREE.BufferGeometry().setFromPoints([point1, gridPoint]);
+                const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2 });
+                const line = new THREE.Line(lineGeometry, lineMaterial);
+                
+                // テキストスプライト
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = 256;
+                canvas.height = 64;
+                
+                context.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                
+                context.font = 'Bold 48px Arial';
+                context.fillStyle = 'black';
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                context.fillText(`H:${distance.toFixed(2)}m`, canvas.width / 2, canvas.height / 2);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+                const sprite = new THREE.Sprite(spriteMaterial);
+                sprite.position.copy(midpoint);
+                sprite.position.x += 2;
+                sprite.scale.set(4, 1, 1);
+                
+                const dimensionGroup = new THREE.Group();
+                dimensionGroup.add(line);
+                dimensionGroup.add(sprite);
+                dimensionGroup.userData = {
+                    isDimension: true,
+                    distance: distance,
+                    isVertical: true,
+                    id: Date.now()
+                };
+                
+                return dimensionGroup;
+            } else {
+                // 通常の寸法線
+                const distance = point1.distanceTo(point2);
+                const midpoint = new THREE.Vector3().addVectors(point1, point2).multiplyScalar(0.5);
+                
+                // 寸法線
+                const lineGeometry = new THREE.BufferGeometry().setFromPoints([point1, point2]);
+                const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 2 });
+                const line = new THREE.Line(lineGeometry, lineMaterial);
+                
+                // 端部の垂直線
+                const perpSize = 0.5;
+                const direction = new THREE.Vector3().subVectors(point2, point1).normalize();
+                const perpDir = new THREE.Vector3(-direction.z, 0, direction.x).normalize();
+                
+                const endLine1Geom = new THREE.BufferGeometry().setFromPoints([
+                    point1.clone().add(perpDir.clone().multiplyScalar(perpSize)),
+                    point1.clone().sub(perpDir.clone().multiplyScalar(perpSize))
+                ]);
+                const endLine1 = new THREE.Line(endLine1Geom, lineMaterial);
+                
+                const endLine2Geom = new THREE.BufferGeometry().setFromPoints([
+                    point2.clone().add(perpDir.clone().multiplyScalar(perpSize)),
+                    point2.clone().sub(perpDir.clone().multiplyScalar(perpSize))
+                ]);
+                const endLine2 = new THREE.Line(endLine2Geom, lineMaterial);
+                
+                // テキストスプライト
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = 256;
+                canvas.height = 64;
+                
+                context.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                
+                context.font = 'Bold 48px Arial';
+                context.fillStyle = 'black';
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                context.fillText(`${distance.toFixed(2)}m`, canvas.width / 2, canvas.height / 2);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+                const sprite = new THREE.Sprite(spriteMaterial);
+                sprite.position.copy(midpoint);
+                sprite.position.y += 1;
+                sprite.scale.set(4, 1, 1);
+                
+                const dimensionGroup = new THREE.Group();
+                dimensionGroup.add(line);
+                dimensionGroup.add(endLine1);
+                dimensionGroup.add(endLine2);
+                dimensionGroup.add(sprite);
+                dimensionGroup.userData = {
+                    isDimension: true,
+                    distance: distance,
+                    isVertical: false,
+                    id: Date.now()
+                };
+                
+                return dimensionGroup;
+            }
+        }
+        
+        // 配管作成/更新（管頂位置の確認）
+        function updateTempPipe() {
+            if (pipeNodes.length < 1) return;
+            
+            // 前の一時表示を削除
+            if (tempPipe) {
+                scene.remove(tempPipe);
+                tempPipe = null;
+            }
+            tempLines.forEach(line => scene.remove(line));
+            tempLines = [];
+            
+            if (pipeNodes.length < 2) return;
+            
+            const diameter = parseFloat(document.getElementById('pipe-diameter').value);
+            const radius = diameter / 1000;
+            const color = document.getElementById('pipe-color').value;
+            const useCurve = document.getElementById('curve-pipe').checked;
+            
+            // 管頂位置の確認（デバッグ用）
+            if (pipeNodes.length > 0) {
+                const nodeY = pipeNodes[0].position.y;
+                const topY = nodeY + radius;
+                console.log(`一時配管: 中心Y=${nodeY.toFixed(3)}m, 管頂Y=${topY.toFixed(3)}m, 半径=${radius.toFixed(3)}m`);
+            }
+            
+            if (useCurve) {
+                // 曲線配管
+                const curve = new THREE.CatmullRomCurve3(pipeNodes.map(n => n.position));
+                const tubeGeometry = new THREE.TubeGeometry(curve, pipeNodes.length * 10, radius / 2, 16, false);
+                const tubeMaterial = new THREE.MeshPhongMaterial({
+                    color: color,
+                    transparent: true,
+                    opacity: 0.7,
+                    side: THREE.DoubleSide
+                });
+                
+                tempPipe = new THREE.Mesh(tubeGeometry, tubeMaterial);
+                tempPipe.castShadow = true;
+                tempPipe.receiveShadow = true;
+                scene.add(tempPipe);
+            } else {
+                // 直線接続（点と点を直接つなぐ）
+                const material = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
+                
+                for (let i = 0; i < pipeNodes.length - 1; i++) {
+                    const geometry = new THREE.BufferGeometry().setFromPoints([
+                        pipeNodes[i].position,
+                        pipeNodes[i + 1].position
+                    ]);
+                    const line = new THREE.Line(geometry, material);
+                    tempLines.push(line);
+                    scene.add(line);
+                }
+            }
+        }
+        
+        // 配管確定（ノードを確実に保存）
+        function completePipe() {
+            if (pipeNodes.length < 2) return;
+            
+            console.log('配管確定開始: ノード数 =', pipeNodes.length);
+            
+            const type = document.getElementById('pipe-type').value;
+            const isUGutter = type === 'u-gutter';
+            
+            // サイズ取得（U字溝と通常配管で分岐）
+            let diameter, width, height, thickness;
+            if (isUGutter) {
+                width = parseFloat(document.getElementById('pipe-width').value);
+                height = parseFloat(document.getElementById('pipe-height').value);
+                thickness = parseFloat(document.getElementById('pipe-thickness').value);
+                diameter = width; // 互換性のため
+            } else {
+                diameter = parseFloat(document.getElementById('pipe-diameter').value);
+                width = diameter;
+                height = diameter;
+                thickness = 50;
+            }
+            
+            const depth = parseFloat(document.getElementById('pipe-depth').value);
+            const color = document.getElementById('pipe-color').value;
+            const radius = diameter / 1000;
+            const useCurve = document.getElementById('curve-pipe').checked;
+            
+            const pipeGroup = new THREE.Group();
+            
+            // 配管本体を作成（既存のコード）
+            if (isUGutter) {
+                // U字溝（矩形断面）
+                const pipeMaterial = new THREE.MeshPhongMaterial({
+                    color: color,
+                    transparent: false,
+                    opacity: 1,
+                    side: THREE.DoubleSide
+                });
+                
+                const w = width / 1000;  // 幅
+                const h = height / 1000;  // 高さ
+                const thick = thickness / 1000;  // 厚さ
+                
+                for (let i = 0; i < pipeNodes.length - 1; i++) {
+                    const start = pipeNodes[i].position.clone();
+                    const end = pipeNodes[i + 1].position.clone();
+                    
+                    const direction = new THREE.Vector3().subVectors(end, start);
+                    const distance = direction.length();
+                    direction.normalize();
+                    
+                    // U字溝の形状を作成（中空の矩形）
+                    const shape = new THREE.Shape();
+                    shape.moveTo(-w/2, -h/2);
+                    shape.lineTo(w/2, -h/2);
+                    shape.lineTo(w/2, h/2);
+                    shape.lineTo(-w/2, h/2);
+                    shape.closePath();
+                    
+                    // 中空部分（上部開放のU字型）
+                    const hole = new THREE.Path();
+                    hole.moveTo(-w/2 + thick, -h/2 + thick);
+                    hole.lineTo(w/2 - thick, -h/2 + thick);
+                    hole.lineTo(w/2 - thick, h/2);  // 上部は開放
+                    hole.lineTo(-w/2 + thick, h/2);  // 上部は開放
+                    hole.closePath();
+                    shape.holes.push(hole);
+                    
+                    const extrudeSettings = {
+                        depth: distance,
+                        bevelEnabled: false
+                    };
+                    
+                    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                    const mesh = new THREE.Mesh(geometry, pipeMaterial);
+                    
+                    // 方向に合わせて配置
+                    mesh.position.copy(start);
+                    const quaternion = new THREE.Quaternion();
+                    const up = new THREE.Vector3(0, 0, 1);
+                    quaternion.setFromUnitVectors(up, direction);
+                    mesh.quaternion.copy(quaternion);
+                    
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+                    pipeGroup.add(mesh);
+                }
+            } else if (useCurve) {
+                // 曲線配管
+                const curve = new THREE.CatmullRomCurve3(pipeNodes.map(n => n.position.clone()));
+                const tubeGeometry = new THREE.TubeGeometry(curve, pipeNodes.length * 10, radius / 2, 16, false);
+                const tubeMaterial = new THREE.MeshPhongMaterial({
+                    color: color,
+                    transparent: false,
+                    opacity: 1
+                });
+                
+                const pipeMesh = new THREE.Mesh(tubeGeometry, tubeMaterial);
+                pipeMesh.castShadow = true;
+                pipeMesh.receiveShadow = true;
+                pipeGroup.add(pipeMesh);
+            } else {
+                // 直線配管（点と点を直接つなぐ）
+                const pipeMaterial = new THREE.MeshPhongMaterial({
+                    color: color,
+                    transparent: false,
+                    opacity: 1
+                });
+                
+                for (let i = 0; i < pipeNodes.length - 1; i++) {
+                    const start = pipeNodes[i].position.clone();
+                    const end = pipeNodes[i + 1].position.clone();
+                    
+                    const direction = new THREE.Vector3().subVectors(end, start);
+                    const distance = direction.length();
+                    direction.normalize();
+                    
+                    const center = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+                    
+                    // パイプのシリンダーを作成
+                    const geometry = new THREE.CylinderGeometry(radius/2, radius/2, distance, 16);
+                    const mesh = new THREE.Mesh(geometry, pipeMaterial);
+                    
+                    // 方向に合わせて回転
+                    const up = new THREE.Vector3(0, 1, 0);
+                    const quaternion = new THREE.Quaternion();
+                    quaternion.setFromUnitVectors(up, direction);
+                    mesh.quaternion.copy(quaternion);
+                    mesh.position.copy(center);
+                    
+                    mesh.castShadow = true;
+                    mesh.receiveShadow = true;
+                    pipeGroup.add(mesh);
+                    
+                    // ジョイント部分（球体）を追加
+                    if (i > 0) {
+                        const jointGeometry = new THREE.SphereGeometry(radius/2 * 1.1, 16, 16);
+                        const jointMesh = new THREE.Mesh(jointGeometry, pipeMaterial);
+                        jointMesh.position.copy(start);
+                        jointMesh.castShadow = true;
+                        jointMesh.receiveShadow = true;
+                        pipeGroup.add(jointMesh);
+                    }
+                }
+                
+                // 最後のジョイント
+                if (pipeNodes.length > 2) {
+                    const jointGeometry = new THREE.SphereGeometry(radius/2 * 1.1, 16, 16);
+                    const jointMesh = new THREE.Mesh(jointGeometry, pipeMaterial);
+                    jointMesh.position.copy(pipeNodes[pipeNodes.length - 1].position);
+                    jointMesh.castShadow = true;
+                    jointMesh.receiveShadow = true;
+                    pipeGroup.add(jointMesh);
+                }
+            }
+            
+            // ノード位置を配列として保存（重要：確実に保存）
+            const nodePositions = [];
+            pipeNodes.forEach((node, index) => {
+                const pos = new THREE.Vector3(
+                    node.position.x,
+                    node.position.y,
+                    node.position.z
+                );
+                nodePositions.push(pos);
+                console.log(`ノード${index + 1}を保存:`, pos);
+            });
+            
+            // 長さを計算
+            let totalLength = 0;
+            for (let i = 1; i < pipeNodes.length; i++) {
+                totalLength += pipeNodes[i].position.distanceTo(pipeNodes[i-1].position);
+            }
+            
+            // 配管本体のメタデータを設定（管頂確認用）
+            pipeGroup.userData = {
+                type: type,
+                diameter: diameter,
+                width: width,
+                height: height,
+                thickness: thickness,
+                depth: depth,  // 入力された深度（管頂基準）
+                actualCenterDepth: depth - radius,  // 実際の中心深度
+                nodePositions: nodePositions,  // ノード位置を確実に保存
+                nodeCount: nodePositions.length,  // ノード数も保存
+                length: totalLength,
+                isPipe: true,
+                isUGutter: isUGutter,
+                useCurve: useCurve,
+                color: color,
+                id: Date.now()
+            };
+            
+            // 管頂位置の最終確認
+            if (nodePositions.length > 0) {
+                const centerY = nodePositions[0].y;
+                const topY = centerY + radius;
+                console.log(`配管確定: 指定深度=${depth}m, 管頂=${topY.toFixed(3)}m, 中心=${centerY.toFixed(3)}m, 半径=${radius.toFixed(3)}m`);
+                
+                // 管頂位置が正しいか確認
+                const tolerance = 0.001;  // 1mm の誤差を許容
+                if (Math.abs(topY - depth) > tolerance) {
+                    console.warn(`警告: 管頂位置がずれています。期待値=${depth}m, 実際=${topY.toFixed(3)}m`);
+                }
+            }
+            
+            console.log('配管userData保存完了:', pipeGroup.userData);
+            
+            scene.add(pipeGroup);
+            pipes.push(pipeGroup);
+            updatePipeList();
+            updateLayerCounts();
+            
+            // 履歴に追加
+            addToHistory({ type: 'add-pipe', object: pipeGroup });
+            
+            clearCurrentPipe();
+        }
+        
+        // 現在の配管をクリア
+        function clearCurrentPipe() {
+            pipeNodes.forEach(node => scene.remove(node));
+            pipeNodes = [];
+            
+            if (tempPipe) {
+                scene.remove(tempPipe);
+                tempPipe = null;
+            }
+            
+            tempLines.forEach(line => scene.remove(line));
+            tempLines = [];
+        }
+        
+        // グリッドスナップ（回転対応）
+        function snapToGrid(position) {
+            if (!document.getElementById('snap-grid').checked) return position;
+            
+            const snap = 0.5;
+            
+            // グリッドの逆回転を適用してローカル座標に変換
+            const inverseRotation = new THREE.Matrix4().makeRotationFromEuler(gridGroup.rotation).invert();
+            const localPos = position.clone().applyMatrix4(inverseRotation);
+            
+            // ローカル座標でスナップ
+            localPos.x = Math.round(localPos.x / snap) * snap;
+            localPos.y = Math.round(localPos.y / snap) * snap;
+            localPos.z = Math.round(localPos.z / snap) * snap;
+            
+            // ワールド座標に戻す
+            const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(gridGroup.rotation);
+            localPos.applyMatrix4(rotationMatrix);
+            
+            return localPos;
+        }
+        
+        // マウス位置から3D座標を取得（グリッド回転対応、管頂基準）
+        function getIntersectionPoint(event, forPipe = false) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            
+            let depth = parseFloat(document.getElementById('pipe-depth').value);
+            
+            // 配管追加モードの場合、管頂基準で深度を調整
+            // 深度は管頂の位置なので、配管中心はさらに半径分下になる
+            if (forPipe && currentMode === 'add-pipe') {
+                const isUGutter = document.getElementById('pipe-type').value === 'u-gutter';
+                let radius;
+                
+                if (isUGutter) {
+                    const height = parseFloat(document.getElementById('pipe-height').value) || 600;
+                    radius = height / 2000;  // 高さの半分をメートルに変換
+                } else {
+                    const diameter = parseFloat(document.getElementById('pipe-diameter').value);
+                    radius = diameter / 2000;  // 半径をメートルに変換
+                }
+                
+                // 管頂が指定深度になるように、中心位置を計算
+                // 例：深度-0.7m、径100mm(0.1m)の場合
+                // 管頂：-0.7m、中心：-0.7 - 0.05 = -0.75m
+                depth = depth - radius;
+            }
+            
+            // グリッドの回転を考慮した平面を作成
+            const planeNormal = new THREE.Vector3(0, 1, 0);
+            
+            // グリッドの回転行列を取得
+            const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(gridGroup.rotation);
+            planeNormal.applyMatrix4(rotationMatrix);
+            
+            const plane = new THREE.Plane(planeNormal, -depth);
+            const intersectPoint = new THREE.Vector3();
+            raycaster.ray.intersectPlane(plane, intersectPoint);
+            
+            // 配管ノード用のスナップ判定
+            if (forPipe && document.getElementById('snap-pipe-nodes').checked) {
+                return intersectPoint ? snapToGrid(intersectPoint) : null;
+            }
+            
+            return intersectPoint ? snapToGrid(intersectPoint) : null;
+        }
+        
+        // マウスイベント
+        renderer.domElement.addEventListener('click', (event) => {
+            if (event.button !== 0 || isDragging) return;
+            
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            
+            // ノード編集モード
+            if (currentMode === 'edit-pipe' && editingPipe) {
+                if (!selectedNode) {
+                    // ノード選択フェーズ
+                    const intersects = raycaster.intersectObjects(editingPipe.userData.nodes);
+                    
+                    if (intersects.length > 0) {
+                        // ノードを選択
+                        selectedNode = intersects[0].object;
+                        
+                        // 選択したノードを赤色に
+                        if (selectedNode.material) {
+                            selectedNode.material.color = new THREE.Color(0xff0000);
+                            selectedNode.material.emissive = new THREE.Color(0xff0000);
+                            selectedNode.material.emissiveIntensity = 0.5;
+                        }
+                        
+                        document.getElementById('mode-indicator').textContent = 'ノード選択済み - 移動先をクリック';
+                        console.log('ノード選択:', selectedNode.position);
+                    }
+                } else {
+                    // ノード移動フェーズ
+                    const point = getIntersectionPoint(event, true);
+                    
+                    if (point) {
+                        // ノードを新しい位置に移動
+                        selectedNode.position.copy(point);
+                        
+                        // 配管を更新
+                        updatePipeGeometry(editingPipe);
+                        
+                        // ノードの色を緑に戻す
+                        if (selectedNode.material) {
+                            selectedNode.material.color = new THREE.Color(0x00ff00);
+                            selectedNode.material.emissive = new THREE.Color(0x00ff00);
+                            selectedNode.material.emissiveIntensity = 0.3;
+                        }
+                        
+                        selectedNode = null;
+                        document.getElementById('mode-indicator').textContent = 'ノード編集中（ノードをクリック→移動先をクリック）';
+                        console.log('ノード移動完了:', point);
+                    }
+                }
+                return;
+            }
+            
+            // 4点整列モード
+            if (isAligning) {
+                // モデルとの交差判定
+                if (roadModel) {
+                    const intersects = raycaster.intersectObject(roadModel, true);
+                    
+                    if (intersects.length > 0) {
+                        // ワールド座標での点を取得
+                        const worldPoint = intersects[0].point.clone();
+                        
+                        // モデルのローカル座標に変換して保存
+                        const localPoint = roadModel.worldToLocal(worldPoint.clone());
+                        alignmentPoints.push(localPoint);
+                        
+                        // ヘルパーを追加（ワールド座標で表示）
+                        const helper = createAlignmentHelper(worldPoint, alignmentPoints.length - 1);
+                        scene.add(helper.sphere);
+                        scene.add(helper.sprite);
+                        alignmentHelpers.push(helper);
+                        
+                        // ボタンテキスト更新
+                        document.getElementById('pick-points').textContent = `選択中 (${alignmentPoints.length}/4)`;
+                        
+                        if (alignmentPoints.length >= 4) {
+                            document.getElementById('pick-points').textContent = '4点選択完了';
+                            isAligning = false;
+                        }
+                    }
+                }
+                return;
+            }
+            
+            if (currentMode === 'add-pipe' && !editingPipe) {
+                // 配管追加時は管頂基準の深度計算を使用
+                const point = getIntersectionPoint(event, true);
+                if (point) {
+                    // デバッグ情報
+                    const depth = parseFloat(document.getElementById('pipe-depth').value);
+                    const diameter = parseFloat(document.getElementById('pipe-diameter').value);
+                    const radius = diameter / 2000;
+                    console.log(`配管追加: 深度=${depth}m, 径=${diameter}mm, 管頂Y=${depth}m, 中心Y=${point.y}m`);
+                    
+                    const node = createNodeHelper(point, true);
+                    scene.add(node);
+                    pipeNodes.push(node);
+                    
+                    updateTempPipe();
+                }
+            } else if (currentMode === 'add-dimension') {
+                const isVertical = document.getElementById('vertical-dimension').checked;
+                
+                if (isVertical) {
+                    // 垂直寸法モード：配管のみクリック可能
+                    const pipeObjects = [];
+                    pipes.forEach(pipe => {
+                        pipe.children.forEach(child => {
+                            if (!child.userData.isNode) {
+                                pipeObjects.push(child);
+                            }
+                        });
+                    });
+                    
+                    const intersects = raycaster.intersectObjects(pipeObjects, false);
+                    
+                    if (intersects.length > 0) {
+                        const point = intersects[0].point.clone();
+                        const gridPoint = point.clone();
+                        gridPoint.y = 0;
+                        
+                        const dim = createDimension(point, gridPoint);
+                        scene.add(dim);
+                        dimensions.push(dim);
+                        updateDimensionList();
+                        updateLayerCounts();
+                        
+                        addToHistory({ type: 'add-dimension', object: dim });
+                    }
+                } else {
+                    // 通常の寸法モード：2点で寸法作成
+                    const measureToModel = document.getElementById('measure-to-model').checked;
+                    const objects = measureToModel ? scene.children : scene.children.filter(obj => !obj.userData.isModel);
+                    const intersects = raycaster.intersectObjects(objects, true);
+                    
+                    if (intersects.length > 0) {
+                        dimensionPoints.push(intersects[0].point.clone());
+                        
+                        if (dimensionPoints.length === 2) {
+                            const dim = createDimension(dimensionPoints[0], dimensionPoints[1]);
+                            scene.add(dim);
+                            dimensions.push(dim);
+                            updateDimensionList();
+                            updateLayerCounts();
+                            
+                            addToHistory({ type: 'add-dimension', object: dim });
+                            
+                            dimensionPoints = [];
+                        }
+                    }
+                }
+            } else if (currentMode === 'view') {
+                // ビューモードでのオブジェクト選択
+                const objects = [...pipes, ...dimensions];
+                const intersects = raycaster.intersectObjects(objects, true);
+                
+                if (intersects.length > 0) {
+                    let parent = intersects[0].object;
+                    while (parent.parent && !parent.userData.isPipe && !parent.userData.isDimension) {
+                        parent = parent.parent;
+                    }
+                    if (parent.userData.isPipe) {
+                        selectPipe(parent);
+                    } else if (parent.userData.isDimension) {
+                        selectDimension(parent);
+                    }
+                }
+            }
+        });
+        
+        // モードボタンイベント
+        document.getElementById('view-mode').addEventListener('click', () => {
+            currentMode = 'view';
+            document.getElementById('view-mode').classList.add('active');
+            document.getElementById('add-pipe').classList.remove('active');
+            document.getElementById('add-dimension').classList.remove('active');
+            document.getElementById('mode-indicator').textContent = 'ビューモード';
+            document.getElementById('mode-indicator').style.background = 'rgba(76, 175, 80, 0.95)';
+            clearCurrentPipe();
+        });
+        
+        document.getElementById('add-pipe').addEventListener('click', () => {
+            currentMode = 'add-pipe';
+            document.getElementById('add-pipe').classList.add('active');
+            document.getElementById('view-mode').classList.remove('active');
+            document.getElementById('add-dimension').classList.remove('active');
+            document.getElementById('mode-indicator').textContent = '配管追加モード';
+            document.getElementById('mode-indicator').style.background = 'rgba(255, 152, 0, 0.95)';
+            clearCurrentPipe();
+        });
+        
+        document.getElementById('add-dimension').addEventListener('click', () => {
+            currentMode = 'add-dimension';
+            document.getElementById('add-dimension').classList.add('active');
+            document.getElementById('view-mode').classList.remove('active');
+            document.getElementById('add-pipe').classList.remove('active');
+            document.getElementById('mode-indicator').textContent = '寸法追加モード';
+            document.getElementById('mode-indicator').style.background = 'rgba(156, 39, 176, 0.95)';
+            clearCurrentPipe();
+            dimensionPoints = [];
+        });
+        
+        document.getElementById('complete-pipe').addEventListener('click', completePipe);
+        document.getElementById('cancel-pipe').addEventListener('click', clearCurrentPipe);
+        
+        // キーボードショートカット
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && currentMode === 'add-pipe') {
+                completePipe();
+            } else if (e.key === 'Escape') {
+                clearCurrentPipe();
+                dimensionPoints = [];
+                if (isAligning) {
+                    clearAlignmentPoints();
+                }
+                if (editingPipe) {
+                    endEditPipe();
+                }
+            } else if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                undo();
+            } else if (e.ctrlKey && e.key === 'y') {
+                e.preventDefault();
+                redo();
+            }
+        });
+        
+        // チェックボックスイベント
+        document.getElementById('show-grid').addEventListener('change', (e) => {
+            gridGroup.visible = e.target.checked;
+        });
+        
+        document.getElementById('transparent-road').addEventListener('change', (e) => {
+            if (roadModel) {
+                roadModel.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material.transparent = true;
+                        child.material.opacity = e.target.checked ? 0.3 : 1;
+                    }
+                });
+            }
+        });
+        
+        // レイヤー管理
+        function updateLayerVisibility() {
+            // モデル
+            if (roadModel) {
+                roadModel.visible = document.getElementById('layer-model').checked;
+            }
+            
+            // 配管タイプ別
+            pipes.forEach(pipe => {
+                const layerCheckbox = document.getElementById(`layer-${pipe.userData.type}`);
+                if (layerCheckbox) {
+                    pipe.visible = layerCheckbox.checked;
+                }
+            });
+            
+            // 寸法線
+            dimensions.forEach(dim => {
+                dim.visible = document.getElementById('layer-dimensions').checked;
+            });
+        }
+        
+        // レイヤーカウント更新
+        function updateLayerCounts() {
+            const counts = {
+                water: 0,
+                sewer: 0,
+                gas: 0,
+                electric: 0,
+                telecom: 0,
+                'u-gutter': 0
+            };
+            
+            pipes.forEach(pipe => {
+                if (counts[pipe.userData.type] !== undefined) {
+                    counts[pipe.userData.type]++;
+                }
+            });
+            
+            Object.keys(counts).forEach(type => {
+                const countElement = document.getElementById(`count-${type}`);
+                if (countElement) {
+                    countElement.textContent = counts[type];
+                }
+            });
+            
+            document.getElementById('count-dimensions').textContent = dimensions.length;
+        }
+        
+        // レイヤーチェックボックスイベント
+        document.querySelectorAll('[id^="layer-"]').forEach(checkbox => {
+            checkbox.addEventListener('change', updateLayerVisibility);
+        });
+        
+        // 一括表示/非表示
+        document.getElementById('show-all-layers').addEventListener('click', () => {
+            document.querySelectorAll('[id^="layer-"]').forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            updateLayerVisibility();
+        });
+        
+        document.getElementById('hide-all-layers').addEventListener('click', () => {
+            document.querySelectorAll('[id^="layer-"]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            updateLayerVisibility();
+        });
+        
+        // リスト更新関数
+        function updatePipeList() {
+            const listElement = document.getElementById('pipe-list');
+            listElement.innerHTML = '';
+            
+            pipes.forEach((pipe, index) => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                if (pipe === selectedPipe) item.classList.add('selected');
+                
+                const typeLabel = pipe.userData.isUGutter ? 
+                    `U字溝 ${pipe.userData.width}×${pipe.userData.height}mm` :
+                    `${getPipeTypeName(pipe.userData.type)} - φ${pipe.userData.diameter}mm`;
+                
+                item.innerHTML = `
+                    <div class="list-item-header">
+                        <span>${typeLabel}</span>
+                        <span class="edit-btn" data-index="${index}">編集</span>
+                    </div>
+                    <div class="list-item-details">
+                        深度: ${pipe.userData.depth}m | 長さ: ${pipe.userData.length.toFixed(2)}m
+                        ${pipe.userData.isUGutter ? ` | 厚さ: ${pipe.userData.thickness}mm` : ''}
+                    </div>
+                `;
+                
+                item.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('edit-btn')) {
+                        e.stopPropagation();
+                        startEditPipe(pipe);
+                    } else {
+                        selectPipe(pipe);
+                    }
+                });
+                
+                listElement.appendChild(item);
+            });
+        }
+        
+        function updateDimensionList() {
+            const listElement = document.getElementById('dimension-list');
+            listElement.innerHTML = '';
+            
+            dimensions.forEach((dim, index) => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                if (dim === selectedDimension) item.classList.add('selected');
+                
+                item.innerHTML = `
+                    <div class="list-item-header">
+                        <span>寸法 #${index + 1}</span>
+                        <span>${dim.userData.distance.toFixed(2)}m</span>
+                    </div>
+                `;
+                
+                item.addEventListener('click', () => {
+                    selectDimension(dim);
+                });
+                
+                listElement.appendChild(item);
+            });
+        }
+        
+        function getPipeTypeName(type) {
+            const types = {
+                'water': '上水道',
+                'sewer': '下水道',
+                'gas': 'ガス管',
+                'electric': '電力',
+                'telecom': '通信'
+            };
+            return types[type] || type;
+        }
+        
+        function selectPipe(pipe) {
+            selectedPipe = pipe;
+            selectedDimension = null;
+            updatePipeList();
+            updateDimensionList();
+        }
+        
+        function selectDimension(dim) {
+            selectedDimension = dim;
+            selectedPipe = null;
+            updatePipeList();
+            updateDimensionList();
+        }
+        
+        // 削除機能
+        document.getElementById('delete-selected-pipe').addEventListener('click', () => {
+            if (selectedPipe) {
+                addToHistory({ type: 'delete-pipe', object: selectedPipe });
+                scene.remove(selectedPipe);
+                pipes = pipes.filter(p => p !== selectedPipe);
+                selectedPipe = null;
+                updatePipeList();
+                updateLayerCounts();
+            }
+        });
+        
+        document.getElementById('delete-selected-dimension').addEventListener('click', () => {
+            if (selectedDimension) {
+                addToHistory({ type: 'delete-dimension', object: selectedDimension });
+                scene.remove(selectedDimension);
+                dimensions = dimensions.filter(d => d !== selectedDimension);
+                selectedDimension = null;
+                updateDimensionList();
+                updateLayerCounts();
+            }
+        });
+        
+        // エクスポート機能
+        document.getElementById('export-data').addEventListener('click', () => {
+            const data = {
+                pipes: pipes.map(pipe => ({
+                    type: pipe.userData.type,
+                    diameter: pipe.userData.diameter,
+                    depth: pipe.userData.depth,
+                    length: pipe.userData.length,
+                    useCurve: pipe.userData.useCurve,
+                    nodes: pipe.userData.nodes.map(n => ({
+                        x: n.position.x, 
+                        y: n.position.y, 
+                        z: n.position.z
+                    }))
+                })),
+                dimensions: dimensions.map(dim => ({
+                    distance: dim.userData.distance
+                }))
+            };
+            
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'pipe_design.json';
+            a.click();
+        });
+        
+        // アニメーションループ
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        // ウィンドウリサイズ対応
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // マウス移動イベント
+        renderer.domElement.addEventListener('mousemove', (event) => {
+            const point = getIntersectionPoint(event);
+            if (point) {
+                document.getElementById('coord-display').textContent = 
+                    `X: ${point.x.toFixed(1)}, Y: ${point.y.toFixed(1)}, Z: ${point.z.toFixed(1)}`;
+            }
+        });
+        
+        // 初期状態
+        updateUndoRedoButtons();
+        updateLayerCounts();
+        animate();
+    </script>
+</body>
+</html>
