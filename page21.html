@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D道路トレースツール</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(30, 30, 30, 0.95);
+            border-radius: 10px;
+            max-height: 90vh;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            width: 380px;
+        }
+        
+        .tab-container {
+            display: flex;
+            background: rgba(20, 20, 20, 0.95);
+            border-radius: 10px 10px 0 0;
+            overflow: hidden;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            color: #888;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab-button:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .tab-button.active {
+            color: #4a9eff;
+            border-bottom-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.1);
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(90vh - 50px);
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .control-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .control-section:last-child {
+            border-bottom: none;
+        }
+        
+        h3 {
+            margin-bottom: 10px;
+            color: #4a9eff;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .file-label {
+            display: inline-block;
+            padding: 8px 15px;
+            background: #4a9eff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            margin-bottom: 10px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .file-label:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+        
+        button {
+            padding: 8px 15px;
+            background: #4a9eff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            margin: 5px 5px 5px 0;
+            width: 100%;
+        }
+        
+        button:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+        
+        button.active {
+            background: #ff9800;
+        }
+        
+        button.delete {
+            background: #ff4a4a;
+        }
+        
+        button.delete:hover {
+            background: #d63535;
+        }
+        
+        button.export {
+            background: #4aff7c;
+            color: #1a1a1a;
+            font-weight: bold;
+        }
+        
+        button.export:hover {
+            background: #35d662;
+        }
+        
+        button.road-mode {
+            background: #9c27b0;
+        }
+        
+        button.road-mode:hover {
+            background: #7b1fa2;
+        }
+        
+        button.road-mode.active {
+            background: #ff5722;
+        }
+        
+        input[type="number"], input[type="text"], input[type="color"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            color: white;
+            font-size: 14px;
+        }
+        
+        input[type="number"]:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #4a9eff;
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .object-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            padding: 10px;
+        }
+        
+        .object-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+        
+        .object-item:hover {
+            background: rgba(74, 158, 255, 0.3);
+        }
+        
+        .object-item.selected {
+            background: rgba(74, 158, 255, 0.5);
+            border: 1px solid #4a9eff;
+        }
+        
+        .transform-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        
+        .transform-input {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .transform-input label {
+            font-size: 11px;
+            color: #aaa;
+            margin-bottom: 3px;
+        }
+        
+        .transform-input input {
+            font-size: 13px;
+        }
+        
+        #info {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(30, 30, 30, 0.9);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #aaa;
+        }
+        
+        .mode-indicator {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(76, 175, 80, 0.95);
+            padding: 10px 20px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .mode-indicator.road {
+            background: rgba(156, 39, 176, 0.95);
+        }
+        
+        .mode-indicator.align {
+            background: rgba(255, 152, 0, 0.95);
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin: 10px 0;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
+        }
+        
+        .align-point {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin: 0 5px;
+        }
+        
+        #align-status {
+            padding: 10px;
+            background: rgba(255, 152, 0, 0.2);
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 12px;
+            display: none;
+        }
+        
+        #align-status.active {
+            display: block;
+        }
+        
+        .road-settings {
+            display: none;
+        }
+        
+        .road-settings.active {
+            display: block;
+        }
+        
+        .layer-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            margin-bottom: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+        
+        .layer-item input[type="checkbox"] {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+        }
+        
+        .layer-item label {
+            flex: 1;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        
+        .layer-count {
+            font-size: 11px;
+            color: #888;
+            margin-left: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div id="controls">
+        <div class="tab-container">
+            <button class="tab-button active" data-tab="base">📍 ベース</button>
+            <button class="tab-button" data-tab="trace">🚗 トレース</button>
+            <button class="tab-button" data-tab="layer">📑 レイヤー</button>
+        </div>
+        
+        <!-- ベースタブ -->
+        <div class="tab-content active" id="base-tab">
+            <div class="control-section">
+                <h3>🗺️ 道路GLBモデル</h3>
+                <label for="roadFile" class="file-label">道路GLBを選択</label>
+                <input type="file" id="roadFile" accept=".glb">
+                
+                <div class="button-group">
+                    <button onclick="toggleRoadVisibility()">表示/非表示</button>
+                    <button onclick="startAlignment()" id="alignBtn">4点で位置合わせ</button>
+                </div>
+                
+                <div id="align-status">
+                    <div>点を4つ選択してください：</div>
+                    <span class="align-point" style="background: #ff0000;"></span>
+                    <span class="align-point" style="background: #00ff00;"></span>
+                    <span class="align-point" style="background: #0000ff;"></span>
+                    <span class="align-point" style="background: #ffff00;"></span>
+                    <div id="align-count">0/4 点選択済み</div>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>🎛️ 道路GLB変形</h3>
+                <div class="transform-group">
+                    <div class="transform-input">
+                        <label>X位置</label>
+                        <input type="number" id="roadPosX" step="0.5" value="0">
+                    </div>
+                    <div class="transform-input">
+                        <label>Y位置</label>
+                        <input type="number" id="roadPosY" step="0.5" value="0">
+                    </div>
+                    <div class="transform-input">
+                        <label>Z位置</label>
+                        <input type="number" id="roadPosZ" step="0.5" value="0">
+                    </div>
+                </div>
+                <div class="transform-group">
+                    <div class="transform-input">
+                        <label>X回転(°)</label>
+                        <input type="number" id="roadRotX" step="15" value="0">
+                    </div>
+                    <div class="transform-input">
+                        <label>Y回転(°)</label>
+                        <input type="number" id="roadRotY" step="15" value="0">
+                    </div>
+                    <div class="transform-input">
+                        <label>Z回転(°)</label>
+                        <input type="number" id="roadRotZ" step="15" value="0">
+                    </div>
+                </div>
+                <div class="transform-group">
+                    <div class="transform-input">
+                        <label>Xスケール</label>
+                        <input type="number" id="roadScaleX" step="0.1" value="1" min="0.1">
+                    </div>
+                    <div class="transform-input">
+                        <label>Yスケール</label>
+                        <input type="number" id="roadScaleY" step="0.1" value="1" min="0.1">
+                    </div>
+                    <div class="transform-input">
+                        <label>Zスケール</label>
+                        <input type="number" id="roadScaleZ" step="0.1" value="1" min="0.1">
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button onclick="centerRoadModel()">中心に配置</button>
+                    <button onclick="resetRoadTransform()">変形リセット</button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>⚙️ 表示設定</h3>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="snapGrid" checked>
+                    <label for="snapGrid">グリッドスナップ (0.5m)</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="showGrid" checked>
+                    <label for="showGrid">グリッド表示</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="transparentRoad">
+                    <label for="transparentRoad">道路GLB半透明化</label>
+                </div>
+                <label>明るさ調整</label>
+                <input type="range" id="brightness" min="0.5" max="2.0" value="1.0" step="0.1" style="width: 100%;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #888;">
+                    <span>暗い</span>
+                    <span id="brightnessValue">1.0</span>
+                    <span>明るい</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- トレースタブ -->
+        <div class="tab-content" id="trace-tab">
+            <div class="control-section">
+                <h3>🚗 道路描画</h3>
+                <button onclick="toggleRoadDrawMode()" id="drawRoadBtn" class="road-mode">道路を描く</button>
+                <div class="road-settings" id="roadSettings">
+                    <label>道路タイプ</label>
+                    <select id="roadType">
+                        <option value="main">主要道路</option>
+                        <option value="sub">一般道路</option>
+                        <option value="side">側道</option>
+                        <option value="path">歩道</option>
+                        <option value="gutter">側溝</option>
+                    </select>
+                    <label>幅 (m)</label>
+                    <input type="number" id="roadWidth" value="6" min="0.3" max="20" step="0.1">
+                    <label>色</label>
+                    <input type="color" id="roadColor" value="#555555">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="roadCurved" checked>
+                        <label for="roadCurved">曲線道路（OFFで直線）</label>
+                    </div>
+                    <button onclick="completeRoad()" class="export">道路を確定 (Enter)</button>
+                    <button onclick="cancelRoad()" class="delete">キャンセル (Esc)</button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>🏗️ オブジェクト追加</h3>
+                <label for="objectFile" class="file-label">GLBファイルを選択</label>
+                <input type="file" id="objectFile" accept=".glb" multiple>
+            </div>
+            
+            <div class="control-section">
+                <h3>📝 3Dテキスト追加</h3>
+                <input type="text" id="textInput" placeholder="テキストを入力">
+                <input type="color" id="textColor" value="#ffffff">
+                <input type="number" id="textSize" placeholder="サイズ" value="5" min="1" max="20" step="0.5">
+                <button onclick="addText()">テキスト追加</button>
+            </div>
+            
+            <div class="control-section">
+                <h3>🎯 選択中のオブジェクト</h3>
+                <div id="selectedInfo">なし</div>
+                <div id="transformControls" style="display: none;">
+                    <div class="transform-group">
+                        <div class="transform-input">
+                            <label>X位置</label>
+                            <input type="number" id="posX" step="0.1">
+                        </div>
+                        <div class="transform-input">
+                            <label>Y位置</label>
+                            <input type="number" id="posY" step="0.1">
+                        </div>
+                        <div class="transform-input">
+                            <label>Z位置</label>
+                            <input type="number" id="posZ" step="0.1">
+                        </div>
+                    </div>
+                    <div class="transform-group">
+                        <div class="transform-input">
+                            <label>X回転</label>
+                            <input type="number" id="rotX" step="1">
+                        </div>
+                        <div class="transform-input">
+                            <label>Y回転</label>
+                            <input type="number" id="rotY" step="1">
+                        </div>
+                        <div class="transform-input">
+                            <label>Z回転</label>
+                            <input type="number" id="rotZ" step="1">
+                        </div>
+                    </div>
+                    <div class="transform-group">
+                        <div class="transform-input">
+                            <label>Xスケール</label>
+                            <input type="number" id="scaleX" step="0.1">
+                        </div>
+                        <div class="transform-input">
+                            <label>Yスケール</label>
+                            <input type="number" id="scaleY" step="0.1">
+                        </div>
+                        <div class="transform-input">
+                            <label>Zスケール</label>
+                            <input type="number" id="scaleZ" step="0.1">
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button onclick="duplicateSelected()">複製</button>
+                        <button onclick="deleteSelected()" class="delete">削除</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>📦 配置済みオブジェクト</h3>
+                <div class="object-list" id="objectList"></div>
+            </div>
+            
+            <div class="control-section">
+                <h3>💾 エクスポート</h3>
+                <button onclick="exportScene()" class="export">シーンをGLBで保存</button>
+            </div>
+        </div>
+        
+        <!-- レイヤータブ -->
+        <div class="tab-content" id="layer-tab">
+            <div class="control-section">
+                <h3>📑 レイヤー管理</h3>
+                
+                <div class="layer-item">
+                    <input type="checkbox" id="layer-road-glb" checked>
+                    <label for="layer-road-glb">道路GLBモデル</label>
+                </div>
+                
+                <div class="layer-item">
+                    <input type="checkbox" id="layer-main" checked>
+                    <label for="layer-main">主要道路</label>
+                    <span class="layer-count" id="count-main">0</span>
+                </div>
+                
+                <div class="layer-item">
+                    <input type="checkbox" id="layer-sub" checked>
+                    <label for="layer-sub">一般道路</label>
+                    <span class="layer-count" id="count-sub">0</span>
+                </div>
+                
+                <div class="layer-item">
+                    <input type="checkbox" id="layer-side" checked>
+                    <label for="layer-side">側道</label>
+                    <span class="layer-count" id="count-side">0</span>
+                </div>
+                
+                <div class="layer-item">
+                    <input type="checkbox" id="layer-path" checked>
+                    <label for="layer-path">歩道</label>
+                    <span class="layer-count" id="count-path">0</span>
+                </div>
+                
+                <div class="layer-item">
+                    <input type="checkbox" id="layer-gutter" checked>
+                    <label for="layer-gutter">側溝</label>
+                    <span class="layer-count" id="count-gutter">0</span>
+                </div>
+                
+                <div class="layer-item">
+                    <input type="checkbox" id="layer-objects" checked>
+                    <label for="layer-objects">配置オブジェクト</label>
+                    <span class="layer-count" id="count-objects">0</span>
+                </div>
+                
+                <div class="layer-item">
+                    <input type="checkbox" id="layer-texts" checked>
+                    <label for="layer-texts">3Dテキスト</label>
+                    <span class="layer-count" id="count-texts">0</span>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>⚡ 一括操作</h3>
+                <div class="button-group">
+                    <button onclick="showAllLayers()">すべて表示</button>
+                    <button onclick="hideAllLayers()">すべて非表示</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="info">
+        左クリック: 選択/配置 | 右ドラッグ: カメラ回転 | スクロール: ズーム | Shift+ドラッグ: オブジェクト移動
+    </div>
+    
+    <div class="mode-indicator" id="modeIndicator">通常モード</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+    
+    <script>
+        let scene, camera, renderer, controls, transformControls;
+        let roadModel = null;
+        let placedObjects = [];
+        let drawnRoads = [];
+        let textObjects = [];
+        let selectedObject = null;
+        let raycaster, mouse;
+        let objectCounter = 0;
+        
+        // ライト関連
+        let ambientLight, directionalLight, directionalLight2, hemisphereLight;
+        let pointLights = [];
+        let baseBrightness = 1.0;
+        
+        // 道路描画用
+        let roadDrawMode = false;
+        let roadNodes = [];
+        let tempRoadLines = [];
+        let tempRoad = null;
+        
+        // 4点整列用
+        let alignmentMode = false;
+        let alignmentPoints = [];
+        let alignmentHelpers = [];
+        
+        // ドラッグ用
+        let isDragging = false;
+        let dragObject = null;
+        let dragPlane;
+        let dragOffset = new THREE.Vector3();
+
+        // Three.js初期化
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x222222);
+            scene.fog = new THREE.Fog(0x222222, 50, 200);
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(20, 20, 20);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // ライト設定（強化版）
+            // 環境光を明るく
+            ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambientLight);
+            
+            // メインの指向性ライト
+            directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            directionalLight.position.set(10, 20, 10);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.camera.left = -50;
+            directionalLight.shadow.camera.right = 50;
+            directionalLight.shadow.camera.top = 50;
+            directionalLight.shadow.camera.bottom = -50;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+            
+            // 補助ライト（反対側から）
+            directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight2.position.set(-10, 15, -10);
+            scene.add(directionalLight2);
+            
+            // 半球光（空と地面の色）
+            hemisphereLight = new THREE.HemisphereLight(0x87CEEB, 0x545454, 0.6);
+            scene.add(hemisphereLight);
+            
+            // 4方向からの補助ポイントライト
+            const pointLightPositions = [
+                [20, 10, 20],
+                [-20, 10, 20],
+                [20, 10, -20],
+                [-20, 10, -20]
+            ];
+            
+            pointLightPositions.forEach(pos => {
+                const pointLight = new THREE.PointLight(0xffffff, 0.3, 100);
+                pointLight.position.set(...pos);
+                pointLights.push(pointLight);
+                scene.add(pointLight);
+            });
+            
+            // グリッド
+            const gridHelper = new THREE.GridHelper(100, 100, 0x444444, 0x333333);
+            gridHelper.name = 'grid';
+            scene.add(gridHelper);
+            
+            // カメラコントロール
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // トランスフォームコントロール
+            transformControls = new THREE.TransformControls(camera, renderer.domElement);
+            transformControls.addEventListener('dragging-changed', (event) => {
+                controls.enabled = !event.value;
+            });
+            scene.add(transformControls);
+            
+            // レイキャスター
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+            
+            // ドラッグ用平面
+            dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+            
+            // イベントリスナー
+            renderer.domElement.addEventListener('click', onMouseClick);
+            renderer.domElement.addEventListener('mousedown', onMouseDown);
+            renderer.domElement.addEventListener('mousemove', onMouseMove);
+            renderer.domElement.addEventListener('mouseup', onMouseUp);
+            window.addEventListener('resize', onWindowResize);
+            
+            // ファイル入力イベント
+            document.getElementById('roadFile').addEventListener('change', loadRoadModel);
+            document.getElementById('objectFile').addEventListener('change', loadObjectModel);
+            
+            // トランスフォーム入力イベント
+            ['posX', 'posY', 'posZ', 'rotX', 'rotY', 'rotZ', 'scaleX', 'scaleY', 'scaleZ'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updateSelectedTransform);
+            });
+            
+            // 道路GLBトランスフォーム入力イベント
+            ['roadPosX', 'roadPosY', 'roadPosZ', 'roadRotX', 'roadRotY', 'roadRotZ', 'roadScaleX', 'roadScaleY', 'roadScaleZ'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updateRoadTransform);
+            });
+            
+            // チェックボックスイベント
+            document.getElementById('showGrid').addEventListener('change', (e) => {
+                const grid = scene.getObjectByName('grid');
+                if (grid) grid.visible = e.target.checked;
+            });
+            
+            document.getElementById('transparentRoad').addEventListener('change', (e) => {
+                if (roadModel) {
+                    roadModel.traverse((child) => {
+                        if (child.isMesh) {
+                            child.material.transparent = true;
+                            child.material.opacity = e.target.checked ? 0.3 : 1;
+                        }
+                    });
+                }
+            });
+            
+            // レイヤーチェックボックスイベント
+            document.querySelectorAll('[id^="layer-"]').forEach(checkbox => {
+                checkbox.addEventListener('change', updateLayerVisibility);
+            });
+            
+            // 明るさ調整スライダーイベント
+            document.getElementById('brightness').addEventListener('input', (e) => {
+                const brightness = parseFloat(e.target.value);
+                document.getElementById('brightnessValue').textContent = brightness.toFixed(1);
+                updateBrightness(brightness);
+            });
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    const tabName = button.dataset.tab;
+                    
+                    document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                    button.classList.add('active');
+                    
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById(`${tabName}-tab`).classList.add('active');
+                });
+            });
+            
+            // 道路タイプ変更時の幅調整
+            document.getElementById('roadType').addEventListener('change', (e) => {
+                const widthInput = document.getElementById('roadWidth');
+                switch(e.target.value) {
+                    case 'main': widthInput.value = 8; break;
+                    case 'sub': widthInput.value = 6; break;
+                    case 'side': widthInput.value = 3; break;
+                    case 'path': widthInput.value = 2; break;
+                    case 'gutter': widthInput.value = 0.5; break;
+                }
+            });
+            
+            animate();
+        }
+        
+        // 明るさ更新関数
+        function updateBrightness(brightness) {
+            baseBrightness = brightness;
+            
+            // 各ライトの強度を調整
+            if (ambientLight) ambientLight.intensity = 0.8 * brightness;
+            if (directionalLight) directionalLight.intensity = 1.0 * brightness;
+            if (directionalLight2) directionalLight2.intensity = 0.5 * brightness;
+            if (hemisphereLight) hemisphereLight.intensity = 0.6 * brightness;
+            
+            pointLights.forEach(light => {
+                if (light) light.intensity = 0.3 * brightness;
+            });
+            
+            // マテリアルのemissive（自己発光）を調整
+            scene.traverse((object) => {
+                if (object.isMesh && object.material) {
+                    if (object.material.emissive) {
+                        object.material.emissiveIntensity = brightness * 0.2;
+                    }
+                    // 暗い場合は環境マップの影響を強める
+                    if (object.material.envMapIntensity !== undefined) {
+                        object.material.envMapIntensity = brightness;
+                    }
+                }
+            });
+        }
+        
+        // GLBローダー
+        const gltfLoader = new THREE.GLTFLoader();
+        
+        // 道路モデル読み込み
+        function loadRoadModel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const url = URL.createObjectURL(file);
+            gltfLoader.load(url, (gltf) => {
+                if (roadModel) {
+                    scene.remove(roadModel);
+                }
+                roadModel = gltf.scene;
+                roadModel.userData.isRoadGLB = true;
+                roadModel.userData.isDraggable = false;
+                roadModel.name = 'roadGLB';
+                
+                // GLBモデルのマテリアルを明るく調整
+                roadModel.traverse((child) => {
+                    if (child.isMesh) {
+                        // マテリアルの調整
+                        if (child.material) {
+                            // メタリックと粗さを調整して反射を改善
+                            if (child.material.metalness !== undefined) {
+                                child.material.metalness = Math.min(child.material.metalness, 0.5);
+                            }
+                            if (child.material.roughness !== undefined) {
+                                child.material.roughness = Math.max(child.material.roughness, 0.4);
+                            }
+                            // 両面表示にして影を改善
+                            child.material.side = THREE.DoubleSide;
+                            
+                            // エミッシブ（自己発光）を少し追加
+                            if (!child.material.emissive) {
+                                child.material.emissive = new THREE.Color(0x111111);
+                                child.material.emissiveIntensity = 0.2;
+                            }
+                        }
+                        
+                        // 影の設定
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                
+                scene.add(roadModel);
+                
+                // カメラ位置調整
+                const box = new THREE.Box3().setFromObject(roadModel);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                camera.position.set(center.x + size.x, center.y + size.y, center.z + size.z);
+                controls.target = center;
+                
+                updateRoadTransformInputs();
+                
+                // 現在の明るさを適用
+                const currentBrightness = parseFloat(document.getElementById('brightness').value);
+                updateBrightness(currentBrightness);
+            });
+        }
+        
+        // 道路GLB変形更新
+        function updateRoadTransform() {
+            if (!roadModel) return;
+            
+            roadModel.position.x = parseFloat(document.getElementById('roadPosX').value) || 0;
+            roadModel.position.y = parseFloat(document.getElementById('roadPosY').value) || 0;
+            roadModel.position.z = parseFloat(document.getElementById('roadPosZ').value) || 0;
+            
+            roadModel.rotation.x = THREE.MathUtils.degToRad(parseFloat(document.getElementById('roadRotX').value) || 0);
+            roadModel.rotation.y = THREE.MathUtils.degToRad(parseFloat(document.getElementById('roadRotY').value) || 0);
+            roadModel.rotation.z = THREE.MathUtils.degToRad(parseFloat(document.getElementById('roadRotZ').value) || 0);
+            
+            roadModel.scale.x = parseFloat(document.getElementById('roadScaleX').value) || 1;
+            roadModel.scale.y = parseFloat(document.getElementById('roadScaleY').value) || 1;
+            roadModel.scale.z = parseFloat(document.getElementById('roadScaleZ').value) || 1;
+        }
+        
+        // 道路GLB変形入力更新
+        function updateRoadTransformInputs() {
+            if (!roadModel) return;
+            
+            document.getElementById('roadPosX').value = roadModel.position.x.toFixed(2);
+            document.getElementById('roadPosY').value = roadModel.position.y.toFixed(2);
+            document.getElementById('roadPosZ').value = roadModel.position.z.toFixed(2);
+            
+            document.getElementById('roadRotX').value = THREE.MathUtils.radToDeg(roadModel.rotation.x).toFixed(0);
+            document.getElementById('roadRotY').value = THREE.MathUtils.radToDeg(roadModel.rotation.y).toFixed(0);
+            document.getElementById('roadRotZ').value = THREE.MathUtils.radToDeg(roadModel.rotation.z).toFixed(0);
+            
+            document.getElementById('roadScaleX').value = roadModel.scale.x.toFixed(2);
+            document.getElementById('roadScaleY').value = roadModel.scale.y.toFixed(2);
+            document.getElementById('roadScaleZ').value = roadModel.scale.z.toFixed(2);
+        }
+        
+        // 道路GLB中心配置
+        function centerRoadModel() {
+            if (!roadModel) return;
+            
+            const box = new THREE.Box3().setFromObject(roadModel);
+            const center = box.getCenter(new THREE.Vector3());
+            roadModel.position.sub(center);
+            updateRoadTransformInputs();
+        }
+        
+        // 道路GLB変形リセット
+        function resetRoadTransform() {
+            if (!roadModel) return;
+            
+            roadModel.position.set(0, 0, 0);
+            roadModel.rotation.set(0, 0, 0);
+            roadModel.scale.set(1, 1, 1);
+            updateRoadTransformInputs();
+        }
+        
+        // オブジェクトモデル読み込み
+        function loadObjectModel(event) {
+            const files = event.target.files;
+            
+            Array.from(files).forEach(file => {
+                const url = URL.createObjectURL(file);
+                gltfLoader.load(url, (gltf) => {
+                    const object = gltf.scene;
+                    object.userData.id = ++objectCounter;
+                    object.userData.name = file.name.replace('.glb', '');
+                    object.userData.isPlaced = true;
+                    object.userData.isDraggable = true;
+                    object.userData.type = 'object';
+                    
+                    // オブジェクトのマテリアルも明るく調整
+                    object.traverse((child) => {
+                        if (child.isMesh) {
+                            if (child.material) {
+                                if (child.material.metalness !== undefined) {
+                                    child.material.metalness = Math.min(child.material.metalness, 0.5);
+                                }
+                                if (child.material.roughness !== undefined) {
+                                    child.material.roughness = Math.max(child.material.roughness, 0.4);
+                                }
+                                child.material.side = THREE.DoubleSide;
+                                
+                                if (!child.material.emissive) {
+                                    child.material.emissive = new THREE.Color(0x111111);
+                                    child.material.emissiveIntensity = 0.2;
+                                }
+                            }
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+                    
+                    const direction = new THREE.Vector3();
+                    camera.getWorldDirection(direction);
+                    object.position.copy(camera.position).add(direction.multiplyScalar(5));
+                    
+                    scene.add(object);
+                    placedObjects.push(object);
+                    updateObjectList();
+                    updateLayerCounts();
+                    selectObject(object);
+                });
+            });
+        }
+        
+        // 3Dテキスト追加
+        function addText() {
+            const text = document.getElementById('textInput').value;
+            const color = document.getElementById('textColor').value;
+            const size = parseFloat(document.getElementById('textSize').value);
+            
+            if (!text) return;
+            
+            const textGroup = new THREE.Group();
+            textGroup.userData.id = ++objectCounter;
+            textGroup.userData.name = `Text: ${text}`;
+            textGroup.userData.isPlaced = true;
+            textGroup.userData.isText = true;
+            textGroup.userData.isDraggable = true;
+            textGroup.userData.type = 'text';
+            textGroup.userData.textContent = text;
+            textGroup.userData.textColor = color;
+            textGroup.userData.textSize = size;
+            
+            // 簡易3Dテキスト
+            const charWidth = size * 0.6;
+            const material = new THREE.MeshPhongMaterial({ color: color });
+            
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (char === ' ') continue;
+                
+                const geometry = new THREE.BoxGeometry(charWidth * 0.8, size, size * 0.2);
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.x = i * charWidth - (text.length * charWidth) / 2;
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                textGroup.add(mesh);
+            }
+            
+            // ラベル
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 512;
+            canvas.height = 128;
+            
+            context.fillStyle = color;
+            context.font = `bold ${48}px Arial`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(text, 256, 64);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.scale.set(size * 2, size * 0.5, 1);
+            sprite.position.y = size;
+            textGroup.add(sprite);
+            
+            const direction = new THREE.Vector3();
+            camera.getWorldDirection(direction);
+            textGroup.position.copy(camera.position).add(direction.multiplyScalar(5));
+            
+            scene.add(textGroup);
+            textObjects.push(textGroup);
+            placedObjects.push(textGroup);
+            updateObjectList();
+            updateLayerCounts();
+            selectObject(textGroup);
+            
+            document.getElementById('textInput').value = '';
+        }
+        
+        // 道路描画モード切り替え
+        function toggleRoadDrawMode() {
+            roadDrawMode = !roadDrawMode;
+            const btn = document.getElementById('drawRoadBtn');
+            const settings = document.getElementById('roadSettings');
+            const indicator = document.getElementById('modeIndicator');
+            
+            if (roadDrawMode) {
+                btn.classList.add('active');
+                settings.classList.add('active');
+                indicator.textContent = '道路描画モード';
+                indicator.classList.add('road');
+                clearRoadNodes();
+            } else {
+                btn.classList.remove('active');
+                settings.classList.remove('active');
+                indicator.textContent = '通常モード';
+                indicator.classList.remove('road');
+                clearRoadNodes();
+            }
+        }
+        
+        // 道路ノードクリア
+        function clearRoadNodes() {
+            roadNodes.forEach(node => scene.remove(node));
+            roadNodes = [];
+            tempRoadLines.forEach(line => scene.remove(line));
+            tempRoadLines = [];
+            if (tempRoad) {
+                scene.remove(tempRoad);
+                tempRoad = null;
+            }
+        }
+        
+        // 道路プレビュー更新
+        function updateRoadPreview() {
+            tempRoadLines.forEach(line => scene.remove(line));
+            tempRoadLines = [];
+            if (tempRoad) {
+                scene.remove(tempRoad);
+                tempRoad = null;
+            }
+            
+            if (roadNodes.length < 2) return;
+            
+            const width = parseFloat(document.getElementById('roadWidth').value);
+            const color = document.getElementById('roadColor').value;
+            const useCurve = document.getElementById('roadCurved').checked;
+            const roadType = document.getElementById('roadType').value;
+            
+            // 側溝の場合は特別な形状
+            if (roadType === 'gutter') {
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: color,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                
+                for (let i = 0; i < roadNodes.length - 1; i++) {
+                    const start = roadNodes[i].position;
+                    const end = roadNodes[i + 1].position;
+                    const distance = start.distanceTo(end);
+                    
+                    // U字型の形状
+                    const shape = new THREE.Shape();
+                    const w = width / 2;
+                    const h = width * 0.8;
+                    shape.moveTo(-w, 0);
+                    shape.lineTo(-w, -h);
+                    shape.lineTo(w, -h);
+                    shape.lineTo(w, 0);
+                    
+                    const extrudeSettings = {
+                        depth: distance,
+                        bevelEnabled: false
+                    };
+                    
+                    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                    const segment = new THREE.Mesh(geometry, material);
+                    
+                    const direction = new THREE.Vector3().subVectors(end, start).normalize();
+                    const center = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+                    segment.position.copy(center);
+                    
+                    const axis = new THREE.Vector3(0, 0, 1);
+                    const quaternion = new THREE.Quaternion();
+                    quaternion.setFromUnitVectors(axis, direction);
+                    segment.quaternion.copy(quaternion);
+                    
+                    tempRoadLines.push(segment);
+                    scene.add(segment);
+                }
+            } else if (useCurve) {
+                // 曲線道路
+                const points = roadNodes.map(n => n.position);
+                const curve = new THREE.CatmullRomCurve3(points);
+                const roadShape = new THREE.Shape();
+                roadShape.moveTo(-width/2, 0);
+                roadShape.lineTo(width/2, 0);
+                roadShape.lineTo(width/2, 0.2);
+                roadShape.lineTo(-width/2, 0.2);
+                roadShape.closePath();
+                
+                const extrudeSettings = {
+                    steps: points.length * 10,
+                    bevelEnabled: false,
+                    extrudePath: curve
+                };
+                
+                const geometry = new THREE.ExtrudeGeometry(roadShape, extrudeSettings);
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: color,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                
+                tempRoad = new THREE.Mesh(geometry, material);
+                scene.add(tempRoad);
+            } else {
+                // 直線道路
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: color,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                
+                for (let i = 0; i < roadNodes.length - 1; i++) {
+                    const start = roadNodes[i].position;
+                    const end = roadNodes[i + 1].position;
+                    const distance = start.distanceTo(end);
+                    const direction = new THREE.Vector3().subVectors(end, start).normalize();
+                    
+                    const geometry = new THREE.BoxGeometry(width, 0.2, distance);
+                    const segment = new THREE.Mesh(geometry, material);
+                    
+                    const center = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+                    segment.position.copy(center);
+                    
+                    const axis = new THREE.Vector3(0, 0, 1);
+                    const quaternion = new THREE.Quaternion();
+                    quaternion.setFromUnitVectors(axis, direction);
+                    segment.quaternion.copy(quaternion);
+                    
+                    tempRoadLines.push(segment);
+                    scene.add(segment);
+                }
+            }
+        }
+        
+        // 道路確定
+        function completeRoad() {
+            if (roadNodes.length < 2) return;
+            
+            const width = parseFloat(document.getElementById('roadWidth').value);
+            const color = document.getElementById('roadColor').value;
+            const type = document.getElementById('roadType').value;
+            const useCurve = document.getElementById('roadCurved').checked;
+            
+            const roadGroup = new THREE.Group();
+            roadGroup.userData.id = ++objectCounter;
+            roadGroup.userData.name = `Road_${type}`;
+            roadGroup.userData.isPlaced = true;
+            roadGroup.userData.isRoad = true;
+            roadGroup.userData.isDraggable = true;
+            roadGroup.userData.roadType = type;
+            roadGroup.userData.roadWidth = width;
+            roadGroup.userData.type = type;
+            
+            const points = roadNodes.map(n => n.position.clone());
+            
+            if (type === 'gutter') {
+                // 側溝の特別な形状
+                const material = new THREE.MeshPhongMaterial({ color: color });
+                
+                for (let i = 0; i < points.length - 1; i++) {
+                    const start = points[i];
+                    const end = points[i + 1];
+                    const distance = start.distanceTo(end);
+                    
+                    // U字型の形状
+                    const shape = new THREE.Shape();
+                    const w = width / 2;
+                    const h = width * 0.8;
+                    const thickness = 0.05;
+                    
+                    // 外側
+                    shape.moveTo(-w, 0);
+                    shape.lineTo(-w, -h);
+                    shape.lineTo(w, -h);
+                    shape.lineTo(w, 0);
+                    shape.lineTo(w - thickness, 0);
+                    shape.lineTo(w - thickness, -h + thickness);
+                    shape.lineTo(-w + thickness, -h + thickness);
+                    shape.lineTo(-w + thickness, 0);
+                    shape.closePath();
+                    
+                    const extrudeSettings = {
+                        depth: distance,
+                        bevelEnabled: false
+                    };
+                    
+                    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                    const segment = new THREE.Mesh(geometry, material);
+                    
+                    const direction = new THREE.Vector3().subVectors(end, start).normalize();
+                    const center = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+                    segment.position.copy(center);
+                    
+                    const axis = new THREE.Vector3(0, 0, 1);
+                    const quaternion = new THREE.Quaternion();
+                    quaternion.setFromUnitVectors(axis, direction);
+                    segment.quaternion.copy(quaternion);
+                    
+                    segment.castShadow = true;
+                    segment.receiveShadow = true;
+                    roadGroup.add(segment);
+                }
+            } else if (useCurve && points.length > 2) {
+                // 曲線道路
+                const curve = new THREE.CatmullRomCurve3(points);
+                const roadShape = new THREE.Shape();
+                roadShape.moveTo(-width/2, 0);
+                roadShape.lineTo(width/2, 0);
+                roadShape.lineTo(width/2, 0.3);
+                roadShape.lineTo(-width/2, 0.3);
+                roadShape.closePath();
+                
+                const extrudeSettings = {
+                    steps: points.length * 20,
+                    bevelEnabled: false,
+                    extrudePath: curve
+                };
+                
+                const geometry = new THREE.ExtrudeGeometry(roadShape, extrudeSettings);
+                const material = new THREE.MeshPhongMaterial({ color: color });
+                const roadMesh = new THREE.Mesh(geometry, material);
+                roadMesh.castShadow = true;
+                roadMesh.receiveShadow = true;
+                roadGroup.add(roadMesh);
+                
+                // 中央線（歩道と側溝以外）
+                if (type !== 'path' && type !== 'gutter') {
+                    const lineGeometry = new THREE.TubeGeometry(curve, points.length * 20, 0.05, 8, false);
+                    const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+                    const centerLine = new THREE.Mesh(lineGeometry, lineMaterial);
+                    centerLine.position.y = 0.31;
+                    roadGroup.add(centerLine);
+                }
+            } else {
+                // 直線道路
+                const material = new THREE.MeshPhongMaterial({ color: color });
+                
+                for (let i = 0; i < points.length - 1; i++) {
+                    const start = points[i];
+                    const end = points[i + 1];
+                    const distance = start.distanceTo(end);
+                    const direction = new THREE.Vector3().subVectors(end, start).normalize();
+                    
+                    const geometry = new THREE.BoxGeometry(width, 0.3, distance);
+                    const segment = new THREE.Mesh(geometry, material);
+                    
+                    const center = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+                    segment.position.copy(center);
+                    
+                    const axis = new THREE.Vector3(0, 0, 1);
+                    const quaternion = new THREE.Quaternion();
+                    quaternion.setFromUnitVectors(axis, direction);
+                    segment.quaternion.copy(quaternion);
+                    
+                    segment.castShadow = true;
+                    segment.receiveShadow = true;
+                    roadGroup.add(segment);
+                    
+                    // 中央線（歩道と側溝以外）
+                    if (type !== 'path' && type !== 'gutter') {
+                        const lineGeometry = new THREE.BoxGeometry(0.1, 0.01, distance * 0.8);
+                        const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+                        const centerLine = new THREE.Mesh(lineGeometry, lineMaterial);
+                        centerLine.position.copy(center);
+                        centerLine.position.y = 0.31;
+                        centerLine.quaternion.copy(quaternion);
+                        roadGroup.add(centerLine);
+                    }
+                }
+            }
+            
+            scene.add(roadGroup);
+            drawnRoads.push(roadGroup);
+            placedObjects.push(roadGroup);
+            updateObjectList();
+            updateLayerCounts();
+            
+            clearRoadNodes();
+        }
+        
+        // 道路キャンセル
+        function cancelRoad() {
+            clearRoadNodes();
+            toggleRoadDrawMode();
+        }
+        
+        // 4点整列
+        function startAlignment() {
+            if (!roadModel) {
+                alert('先に道路GLBファイルを読み込んでください');
+                return;
+            }
+            
+            alignmentMode = true;
+            alignmentPoints = [];
+            alignmentHelpers.forEach(helper => scene.remove(helper));
+            alignmentHelpers = [];
+            
+            const status = document.getElementById('align-status');
+            const indicator = document.getElementById('modeIndicator');
+            status.classList.add('active');
+            indicator.textContent = '4点整列モード';
+            indicator.classList.add('align');
+            
+            document.getElementById('align-count').textContent = '0/4 点選択済み';
+        }
+        
+        // 整列ポイントヘルパー作成
+        function createAlignmentHelper(position, index) {
+            const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00];
+            const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+            const material = new THREE.MeshBasicMaterial({ 
+                color: colors[index],
+                emissive: colors[index],
+                emissiveIntensity: 0.5
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            sphere.position.copy(position);
+            return sphere;
+        }
+        
+        // 4点による整列実行
+        function executeAlignment() {
+            if (alignmentPoints.length !== 4) return;
+            
+            const points = alignmentPoints;
+            
+            const v1 = new THREE.Vector3().subVectors(points[1], points[0]);
+            const v2 = new THREE.Vector3().subVectors(points[2], points[0]);
+            const normal = new THREE.Vector3().crossVectors(v1, v2).normalize();
+            
+            const targetNormal = new THREE.Vector3(0, 1, 0);
+            const angle = normal.angleTo(targetNormal);
+            
+            if (angle > 0.01) {
+                const axis = new THREE.Vector3().crossVectors(normal, targetNormal).normalize();
+                const quaternion = new THREE.Quaternion().setFromAxisAngle(axis, angle);
+                roadModel.quaternion.premultiply(quaternion);
+            }
+            
+            const offset = points[0].clone();
+            roadModel.position.sub(offset);
+            
+            updateRoadTransformInputs();
+            
+            alignmentHelpers.forEach(helper => scene.remove(helper));
+            alignmentHelpers = [];
+            alignmentPoints = [];
+            alignmentMode = false;
+            
+            const status = document.getElementById('align-status');
+            const indicator = document.getElementById('modeIndicator');
+            status.classList.remove('active');
+            indicator.textContent = '通常モード';
+            indicator.classList.remove('align');
+        }
+        
+        // レイヤー表示更新
+        function updateLayerVisibility() {
+            // 道路GLB
+            if (roadModel) {
+                roadModel.visible = document.getElementById('layer-road-glb').checked;
+            }
+            
+            // 各種道路とオブジェクト
+            placedObjects.forEach(obj => {
+                if (obj.userData.type === 'object') {
+                    obj.visible = document.getElementById('layer-objects').checked;
+                } else if (obj.userData.type === 'text') {
+                    obj.visible = document.getElementById('layer-texts').checked;
+                } else if (obj.userData.roadType) {
+                    const checkbox = document.getElementById(`layer-${obj.userData.roadType}`);
+                    if (checkbox) {
+                        obj.visible = checkbox.checked;
+                    }
+                }
+            });
+        }
+        
+        // レイヤーカウント更新
+        function updateLayerCounts() {
+            const counts = {
+                main: 0,
+                sub: 0,
+                side: 0,
+                path: 0,
+                gutter: 0,
+                objects: 0,
+                texts: 0
+            };
+            
+            placedObjects.forEach(obj => {
+                if (obj.userData.type === 'object') {
+                    counts.objects++;
+                } else if (obj.userData.type === 'text') {
+                    counts.texts++;
+                } else if (obj.userData.roadType) {
+                    counts[obj.userData.roadType]++;
+                }
+            });
+            
+            Object.keys(counts).forEach(type => {
+                const element = document.getElementById(`count-${type}`);
+                if (element) {
+                    element.textContent = counts[type];
+                }
+            });
+        }
+        
+        // 全レイヤー表示
+        function showAllLayers() {
+            document.querySelectorAll('[id^="layer-"]').forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            updateLayerVisibility();
+        }
+        
+        // 全レイヤー非表示
+        function hideAllLayers() {
+            document.querySelectorAll('[id^="layer-"]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            updateLayerVisibility();
+        }
+        
+        // グリッドスナップ
+        function snapToGrid(position) {
+            if (!document.getElementById('snapGrid').checked) return position;
+            
+            const snap = 0.5;
+            position.x = Math.round(position.x / snap) * snap;
+            position.y = Math.round(position.y / snap) * snap;
+            position.z = Math.round(position.z / snap) * snap;
+            return position;
+        }
+        
+        // マウスクリック
+        function onMouseClick(event) {
+            if (event.button !== 0 || isDragging) return;
+            
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            
+            // 4点整列モード
+            if (alignmentMode) {
+                const intersects = raycaster.intersectObject(roadModel, true);
+                if (intersects.length > 0) {
+                    const point = intersects[0].point.clone();
+                    alignmentPoints.push(point);
+                    
+                    const helper = createAlignmentHelper(point, alignmentPoints.length - 1);
+                    alignmentHelpers.push(helper);
+                    scene.add(helper);
+                    
+                    document.getElementById('align-count').textContent = `${alignmentPoints.length}/4 点選択済み`;
+                    
+                    if (alignmentPoints.length === 4) {
+                        executeAlignment();
+                    }
+                }
+                return;
+            }
+            
+            // 道路描画モード
+            if (roadDrawMode) {
+                const planeNormal = new THREE.Vector3(0, 1, 0);
+                const plane = new THREE.Plane(planeNormal, 0);
+                const intersectPoint = new THREE.Vector3();
+                raycaster.ray.intersectPlane(plane, intersectPoint);
+                
+                if (intersectPoint) {
+                    snapToGrid(intersectPoint);
+                    
+                    const nodeGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+                    const nodeMaterial = new THREE.MeshBasicMaterial({ 
+                        color: 0x00ff00,
+                        emissive: 0x00ff00,
+                        emissiveIntensity: 0.5
+                    });
+                    const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
+                    node.position.copy(intersectPoint);
+                    scene.add(node);
+                    roadNodes.push(node);
+                    
+                    updateRoadPreview();
+                }
+                return;
+            }
+            
+            // 通常の選択
+            const intersects = raycaster.intersectObjects(placedObjects, true);
+            if (intersects.length > 0) {
+                let object = intersects[0].object;
+                while (object.parent && !object.userData.isPlaced) {
+                    object = object.parent;
+                }
+                if (object.userData.isPlaced) {
+                    selectObject(object);
+                }
+            } else {
+                selectObject(null);
+            }
+        }
+        
+        // マウスダウン
+        function onMouseDown(event) {
+            if (event.button === 0 && event.shiftKey && selectedObject && selectedObject.userData.isDraggable) {
+                isDragging = true;
+                dragObject = selectedObject;
+                controls.enabled = false;
+                
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                
+                raycaster.setFromCamera(mouse, camera);
+                const planeNormal = new THREE.Vector3(0, 1, 0);
+                dragPlane.setFromNormalAndCoplanarPoint(planeNormal, dragObject.position);
+                
+                const intersectPoint = new THREE.Vector3();
+                raycaster.ray.intersectPlane(dragPlane, intersectPoint);
+                dragOffset.subVectors(dragObject.position, intersectPoint);
+            }
+        }
+        
+        // マウス移動
+        function onMouseMove(event) {
+            if (isDragging && dragObject) {
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                
+                raycaster.setFromCamera(mouse, camera);
+                const intersectPoint = new THREE.Vector3();
+                raycaster.ray.intersectPlane(dragPlane, intersectPoint);
+                
+                if (intersectPoint) {
+                    const newPosition = intersectPoint.add(dragOffset);
+                    snapToGrid(newPosition);
+                    dragObject.position.copy(newPosition);
+                    updateTransformInputs();
+                }
+            }
+        }
+        
+        // マウスアップ
+        function onMouseUp(event) {
+            if (isDragging) {
+                isDragging = false;
+                dragObject = null;
+                controls.enabled = true;
+            }
+        }
+        
+        // オブジェクト選択
+        function selectObject(object) {
+            if (selectedObject) {
+                transformControls.detach();
+            }
+            
+            selectedObject = object;
+            
+            if (object) {
+                transformControls.attach(object);
+                transformControls.setMode('translate');
+                
+                document.getElementById('selectedInfo').textContent = object.userData.name || 'オブジェクト';
+                document.getElementById('transformControls').style.display = 'block';
+                updateTransformInputs();
+                
+                document.querySelectorAll('.object-item').forEach(item => {
+                    item.classList.toggle('selected', parseInt(item.dataset.id) === object.userData.id);
+                });
+            } else {
+                document.getElementById('selectedInfo').textContent = 'なし';
+                document.getElementById('transformControls').style.display = 'none';
+                document.querySelectorAll('.object-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+            }
+        }
+        
+        // トランスフォーム入力更新
+        function updateTransformInputs() {
+            if (!selectedObject) return;
+            
+            document.getElementById('posX').value = selectedObject.position.x.toFixed(2);
+            document.getElementById('posY').value = selectedObject.position.y.toFixed(2);
+            document.getElementById('posZ').value = selectedObject.position.z.toFixed(2);
+            
+            const rotation = selectedObject.rotation;
+            document.getElementById('rotX').value = THREE.MathUtils.radToDeg(rotation.x).toFixed(0);
+            document.getElementById('rotY').value = THREE.MathUtils.radToDeg(rotation.y).toFixed(0);
+            document.getElementById('rotZ').value = THREE.MathUtils.radToDeg(rotation.z).toFixed(0);
+            
+            document.getElementById('scaleX').value = selectedObject.scale.x.toFixed(2);
+            document.getElementById('scaleY').value = selectedObject.scale.y.toFixed(2);
+            document.getElementById('scaleZ').value = selectedObject.scale.z.toFixed(2);
+        }
+        
+        // 選択オブジェクトのトランスフォーム更新
+        function updateSelectedTransform() {
+            if (!selectedObject) return;
+            
+            selectedObject.position.x = parseFloat(document.getElementById('posX').value) || 0;
+            selectedObject.position.y = parseFloat(document.getElementById('posY').value) || 0;
+            selectedObject.position.z = parseFloat(document.getElementById('posZ').value) || 0;
+            
+            selectedObject.rotation.x = THREE.MathUtils.degToRad(parseFloat(document.getElementById('rotX').value) || 0);
+            selectedObject.rotation.y = THREE.MathUtils.degToRad(parseFloat(document.getElementById('rotY').value) || 0);
+            selectedObject.rotation.z = THREE.MathUtils.degToRad(parseFloat(document.getElementById('rotZ').value) || 0);
+            
+            selectedObject.scale.x = parseFloat(document.getElementById('scaleX').value) || 1;
+            selectedObject.scale.y = parseFloat(document.getElementById('scaleY').value) || 1;
+            selectedObject.scale.z = parseFloat(document.getElementById('scaleZ').value) || 1;
+            
+            transformControls.update();
+        }
+        
+        // オブジェクト複製
+        function duplicateSelected() {
+            if (!selectedObject) return;
+            
+            const clone = selectedObject.clone();
+            clone.userData = {...selectedObject.userData};
+            clone.userData.id = ++objectCounter;
+            clone.userData.name = selectedObject.userData.name + '_copy';
+            clone.position.x += 2;
+            
+            scene.add(clone);
+            
+            if (clone.userData.type === 'text') {
+                textObjects.push(clone);
+            } else if (clone.userData.roadType) {
+                drawnRoads.push(clone);
+            }
+            
+            placedObjects.push(clone);
+            updateObjectList();
+            updateLayerCounts();
+            selectObject(clone);
+        }
+        
+        // オブジェクト削除
+        function deleteSelected() {
+            if (!selectedObject) return;
+            
+            transformControls.detach();
+            scene.remove(selectedObject);
+            
+            placedObjects = placedObjects.filter(obj => obj !== selectedObject);
+            
+            if (selectedObject.userData.type === 'text') {
+                textObjects = textObjects.filter(obj => obj !== selectedObject);
+            } else if (selectedObject.userData.roadType) {
+                drawnRoads = drawnRoads.filter(road => road !== selectedObject);
+            }
+            
+            updateObjectList();
+            updateLayerCounts();
+            selectObject(null);
+        }
+        
+        // 道路表示切り替え
+        function toggleRoadVisibility() {
+            if (roadModel) {
+                roadModel.visible = !roadModel.visible;
+                document.getElementById('layer-road-glb').checked = roadModel.visible;
+            }
+        }
+        
+        // オブジェクトリスト更新
+        function updateObjectList() {
+            const list = document.getElementById('objectList');
+            list.innerHTML = '';
+            
+            placedObjects.forEach(obj => {
+                const item = document.createElement('div');
+                item.className = 'object-item';
+                item.dataset.id = obj.userData.id;
+                
+                let typeName = '';
+                if (obj.userData.type === 'text') {
+                    typeName = '[テキスト] ';
+                } else if (obj.userData.roadType) {
+                    const types = {
+                        main: '[主要道路] ',
+                        sub: '[一般道路] ',
+                        side: '[側道] ',
+                        path: '[歩道] ',
+                        gutter: '[側溝] '
+                    };
+                    typeName = types[obj.userData.roadType] || '';
+                }
+                
+                item.innerHTML = `
+                    <span>${typeName}${obj.userData.name}</span>
+                    <button onclick="selectObjectById(${obj.userData.id})" style="padding: 4px 8px; font-size: 11px;">選択</button>
+                `;
+                list.appendChild(item);
+            });
+        }
+        
+        // IDでオブジェクト選択
+        function selectObjectById(id) {
+            const object = placedObjects.find(obj => obj.userData.id === id);
+            if (object) selectObject(object);
+        }
+        
+        // シーンエクスポート
+        function exportScene() {
+            const includeRoadGLB = roadModel ? confirm('道路GLBモデルも一緒にエクスポートしますか？') : false;
+            
+            const exporter = new THREE.GLTFExporter();
+            const exportGroup = new THREE.Group();
+            
+            // 道路GLBを含める場合
+            if (includeRoadGLB && roadModel) {
+                const roadClone = roadModel.clone();
+                exportGroup.add(roadClone);
+            }
+            
+            // 配置オブジェクトをエクスポート
+            placedObjects.forEach(obj => {
+                const clone = obj.clone();
+                
+                // TransformControlsのヘルパーを除外
+                const toRemove = [];
+                clone.traverse((child) => {
+                    if (child.type === 'Line' || child.type === 'LineSegments') {
+                        const parent = child.parent;
+                        if (parent && parent.type === 'Group' && !parent.userData.isPlaced) {
+                            toRemove.push(child);
+                        }
+                    }
+                });
+                toRemove.forEach(child => {
+                    if (child.parent) child.parent.remove(child);
+                });
+                
+                exportGroup.add(clone);
+            });
+            
+            exporter.parse(exportGroup, (gltf) => {
+                const blob = new Blob([gltf], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = includeRoadGLB ? 'traced_scene_with_road.glb' : 'traced_scene.glb';
+                a.click();
+                URL.revokeObjectURL(url);
+            }, { binary: true });
+        }
+        
+        // ウィンドウリサイズ
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // キーボードショートカット
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && roadDrawMode) {
+                completeRoad();
+            } else if (e.key === 'Escape') {
+                if (roadDrawMode) {
+                    cancelRoad();
+                } else if (alignmentMode) {
+                    alignmentHelpers.forEach(helper => scene.remove(helper));
+                    alignmentHelpers = [];
+                    alignmentPoints = [];
+                    alignmentMode = false;
+                    document.getElementById('align-status').classList.remove('active');
+                    document.getElementById('modeIndicator').textContent = '通常モード';
+                    document.getElementById('modeIndicator').classList.remove('align');
+                }
+            } else if (e.key === 'Delete' && selectedObject) {
+                deleteSelected();
+            } else if (e.key === 'q' && transformControls.object) {
+                transformControls.setMode('translate');
+            } else if (e.key === 'w' && transformControls.object) {
+                transformControls.setMode('rotate');
+            } else if (e.key === 'e' && transformControls.object) {
+                transformControls.setMode('scale');
+            }
+        });
+        
+        // アニメーションループ
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        // 初期化実行
+        init();
+    </script>
+</body>
+</html>
