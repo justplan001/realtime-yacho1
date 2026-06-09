@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>西部 埋設物調査先 地図</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  html,body{height:100%;margin:0;font-family:"Segoe UI","Hiragino Kaku Gothic ProN","Meiryo",sans-serif;}
+  #map{height:100%;width:100%;}
+  .title-box{position:absolute;top:10px;left:50px;z-index:1000;background:rgba(255,255,255,0.92);
+    padding:8px 14px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.3);font-size:15px;font-weight:bold;}
+  .title-box small{font-weight:normal;font-size:11px;color:#555;}
+  .legend{background:rgba(255,255,255,0.95);padding:8px 12px;border-radius:8px;
+    box-shadow:0 1px 4px rgba(0,0,0,0.3);font-size:13px;line-height:1.7;}
+  .leg-row{display:flex;align-items:center;}
+  .dot{width:13px;height:13px;border-radius:50%;display:inline-block;margin-right:7px;border:2px solid #fff;box-shadow:0 0 1px #333;}
+  .leaflet-popup-content{font-size:13px;line-height:1.5;max-width:280px;}
+  .pop-h{font-weight:bold;font-size:14px;margin-bottom:2px;}
+  .pop-addr{color:#333;margin:3px 0 5px;}
+  .pop-e{border-top:1px solid #eee;padding-top:3px;margin-top:3px;font-size:12px;}
+  .pop-e b{color:#000;}
+  .pop-e .it{color:#666;}
+  .pin-num{width:24px;height:24px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+    border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;}
+  .pin-num span{transform:rotate(45deg);color:#fff;font-size:10px;font-weight:bold;}
+</style>
+</head>
+<body>
+<div class="title-box">西部 埋設物調査先 地図<br><small>さいたま市・埼玉南部・東京都北西部 / 全30地点・37件</small></div>
+<div id="map"></div>
+<script>
+const markers = [{"lat": 35.88379, "lng": 139.62676, "label": "さいたま市建設局南部建設事務所", "pref": "埼玉県", "entries": [{"name": "さいたま市建設局南部建設事務所", "dept": "下水道管理課", "item": "下水道（市管理）", "gyoseiku": "南区", "tantou": "山内様", "tel": "048-840-6268", "addr": "さいたま市中央区下落合5-7-10 （中央区役所 別館）", "matched": "埼玉県さいたま市中央区下落合五丁目７番１０号"}, {"name": "さいたま市建設局南部建設事務所", "dept": "下水道建設課", "item": "下水道工事計画（市管理）", "gyoseiku": "南区", "tantou": "長田様", "tel": "048-840-6262", "addr": "さいたま市中央区下落合5-7-10 （中央区役所 別館）", "matched": "埼玉県さいたま市中央区下落合五丁目７番１０号"}, {"name": "さいたま市建設局南部建設事務所", "dept": "土木管理課", "item": "確定図", "gyoseiku": "南区", "tantou": "伊藤様・ヤマカワ様", "tel": "048-840-6199", "addr": "さいたま市中央区下落合5-7-10 （中央区役所 別館）", "matched": "埼玉県さいたま市中央区下落合五丁目７番１０号"}]}, {"lat": 35.87899, "lng": 139.64539, "label": "さいたま市　水道局", "pref": "埼玉県", "entries": [{"name": "さいたま市　水道局", "dept": "給水工事課　埋設管調査窓口", "item": "上水道（市管理）", "gyoseiku": "南区", "tantou": "高橋様", "tel": "048-714-3090", "addr": "さいたま市浦和区針ヶ谷1丁目18-2", "matched": "埼玉県さいたま市浦和区針ヶ谷一丁目１８番２号"}]}, {"lat": 35.86302, "lng": 139.64185, "label": "さいたま市　水道局", "pref": "埼玉県", "entries": [{"name": "さいたま市　水道局", "dept": "水道計画課", "item": "上水道工事計画（市管理）", "gyoseiku": "南区", "tantou": "濱島様", "tel": "048-229-4638", "addr": "さいたま市浦和区常盤六丁目 14番16号", "matched": "埼玉県さいたま市浦和区常盤六丁目１４番１６号"}]}, {"lat": 35.86419, "lng": 139.67056, "label": "NTT", "pref": "埼玉県", "entries": [{"name": "NTT", "dept": "NTTインフラネット（株） 埼玉立会センター", "item": "配線・光ケーブル", "gyoseiku": "南区", "tantou": "", "tel": "048-711-9718", "addr": "さいたま市緑 区太田窪1- 26-24", "matched": "埼玉県さいたま市緑区太田窪一丁目２６番２４号"}]}, {"lat": 35.88932, "lng": 139.6154, "label": "東電パワーグリッド埼玉総支社", "pref": "埼玉県", "entries": [{"name": "東電パワーグリッド埼玉総支社", "dept": "配電保守グループ", "item": "配電", "gyoseiku": "南区", "tantou": "山田様", "tel": "048-638-4164", "addr": "さいたま市中央区本町西 4-17- 10", "matched": "埼玉県さいたま市中央区本町西四丁目１７番１０号"}, {"name": "東電パワーグリッド埼玉総支社", "dept": "地中送電保守グループ", "item": "送電", "gyoseiku": "南区", "tantou": "関根様", "tel": "048-859-5466", "addr": "さいたま市中央区本町西4-17-10", "matched": "埼玉県さいたま市中央区本町西四丁目１７番１０号"}]}, {"lat": 35.8748, "lng": 139.59123, "label": "大久保浄水場", "pref": "埼玉県", "entries": [{"name": "大久保浄水場", "dept": "工務部", "item": "エ水", "gyoseiku": "南区", "tantou": "坂倉様", "tel": "048-857-6389", "addr": "さいたま市桜区大字宿618", "matched": "埼玉県さいたま市桜区宿６１８番地"}, {"name": "大久保浄水場", "dept": "工務部", "item": "県上水", "gyoseiku": "南区", "tantou": "坂倉様", "tel": "048-857-6389", "addr": "さいたま市桜区大字宿 618", "matched": "埼玉県さいたま市桜区宿６１８番地"}]}, {"lat": 35.83074, "lng": 139.65791, "label": "流域下水道", "pref": "埼玉県", "entries": [{"name": "流域下水道", "dept": "荒川左岸南部下水道事務所", "item": "県下水", "gyoseiku": "南区", "tantou": "", "tel": "048-861-2 051", "addr": "さいたま市南区辻8-27 -20", "matched": "埼玉県さいたま市南区辻八丁目２７番２０号"}]}, {"lat": 35.88362, "lng": 139.63185, "label": "(株)さいたま市土地区画整理協会", "pref": "埼玉県", "entries": [{"name": "(株)さいたま市土地区画整理協会", "dept": "管理課", "item": "画地原子図", "gyoseiku": "南区", "tantou": "アラハタ様", "tel": "048-799-2528", "addr": "さいたま市中央区下落合2-18-6", "matched": "埼玉県さいたま市中央区下落合二丁目１８番６号"}, {"name": "(株)さいたま市土地区画整理協会", "dept": "工事課", "item": "街路番号", "gyoseiku": "南区", "tantou": "タシロ様", "tel": "048-799-2528", "addr": "さいたま市中央区下落合2-18-6", "matched": "埼玉県さいたま市中央区下落合二丁目１８番６号"}, {"name": "(株)さいたま市土地区画整理協会", "dept": "工事課", "item": "CCB及び街灯ケーブル", "gyoseiku": "南区", "tantou": "タシロ様", "tel": "048-799-2528", "addr": "さいたま市中央区下落合2-18-6", "matched": "埼玉県さいたま市中央区下落合二丁目１８番６号"}]}, {"lat": 35.88358, "lng": 139.6322, "label": "(株)さいたま市土地区画整理協会", "pref": "埼玉県", "entries": [{"name": "(株)さいたま市土地区画整理協会", "dept": "工事課", "item": "道路計画図", "gyoseiku": "南区", "tantou": "タシロ様", "tel": "048-799-2528", "addr": "さいたま市中央区下落合2-18-4", "matched": "埼玉県さいたま市中央区下落合二丁目１８番４号"}]}, {"lat": 35.88357, "lng": 139.632, "label": "(株)さいたま市土地区画整理協会", "pref": "埼玉県", "entries": [{"name": "(株)さいたま市土地区画整理協会", "dept": "工事課", "item": "舗装構造", "gyoseiku": "南区", "tantou": "タシロ様", "tel": "048-799-2528", "addr": "さいたま市中央区下落合2-18-5", "matched": "埼玉県さいたま市中央区下落合二丁目１８番５号"}]}, {"lat": 35.84105, "lng": 139.64453, "label": "さいたま県土整備事務所", "pref": "埼玉県", "entries": [{"name": "さいたま県土整備事務所", "dept": "管理担当", "item": "河川台帳", "gyoseiku": "県道・河川", "tantou": "清水様", "tel": "048-861-2502", "addr": "さいたま市南区沼影2-4-7", "matched": "埼玉県さいたま市南区沼影二丁目４番７号"}]}, {"lat": 35.82567, "lng": 139.67946, "label": "蕨市役所", "pref": "埼玉県", "entries": [{"name": "蕨市役所", "dept": "都市整備部　下水道課維持管理係", "item": "下水道（市管理）", "gyoseiku": "蕨市", "tantou": "ソガ様", "tel": "048-433-7726", "addr": "蕨市中央5-14-15", "matched": "埼玉県蕨市中央五丁目１４番１５号"}]}, {"lat": 35.82254, "lng": 139.68788, "label": "蕨市役所", "pref": "埼玉県", "entries": [{"name": "蕨市役所", "dept": "水道部　維持管理課", "item": "上水道（市管理）", "gyoseiku": "蕨市", "tantou": "高岡様", "tel": "048-432-2217", "addr": "蕨市中央2-10-6", "matched": "埼玉県蕨市中央二丁目１０番６号"}]}, {"lat": 35.80701, "lng": 139.67073, "label": "戸田市役所", "pref": "埼玉県", "entries": [{"name": "戸田市役所", "dept": "下水道施設課", "item": "下水道（市管理）", "gyoseiku": "戸田市", "tantou": "ヒロベ様", "tel": "048-229-4673", "addr": "埼玉県戸田 市新曽南3-1-5", "matched": "埼玉県戸田市新曽南三丁目１番５号"}, {"name": "戸田市役所", "dept": "水道施設課", "item": "上水道（市管理）", "gyoseiku": "戸田市", "tantou": "ヒロベ様", "tel": "048-2 29 -4638", "addr": "埼玉県戸田市新曽南3-1-5", "matched": "埼玉県戸田市新曽南三丁目１番５号"}]}, {"lat": 35.81794, "lng": 139.67891, "label": "戸田市役所", "pref": "埼玉県", "entries": [{"name": "戸田市役所", "dept": "都市整備部　まちづくり区画整理室", "item": "仮換地図・重ね図", "gyoseiku": "戸田市", "tantou": "ヤマグチ様", "tel": "048-441-1800", "addr": "戸田市上戸田1-18-1", "matched": "埼玉県戸田市上戸田一丁目１８番１号"}]}, {"lat": 35.84884, "lng": 139.64488, "label": "大宮国道事務所", "pref": "埼玉県", "entries": [{"name": "大宮国道事務所", "dept": "浦和出張所", "item": "国道台帳", "gyoseiku": "国道", "tantou": "髙橋様", "tel": "048-861-9967", "addr": "さいたま市南区別所6-12-1", "matched": "埼玉県さいたま市南区別所六丁目１２番１号"}]}, {"lat": 35.78419, "lng": 139.73392, "label": "荒川下流河川事務所", "pref": "東京都", "entries": [{"name": "荒川下流河川事務所", "dept": "占用調整課", "item": "河川区域", "gyoseiku": "国河川", "tantou": "", "tel": "03-3902-2326", "addr": "東京都北区志茂5-41-1", "matched": "東京都北区志茂五丁目４１番１号"}]}, {"lat": 35.75069, "lng": 139.7095, "label": "板橋区役所　本庁舎", "pref": "東京都", "entries": [{"name": "板橋区役所　本庁舎", "dept": "土木部　管理課", "item": "確定図", "gyoseiku": "板橋区", "tantou": "永田様", "tel": "", "addr": "東京都板橋区板橋2-66-1", "matched": "東京都板橋区板橋二丁目６６番１号"}]}, {"lat": 35.72876, "lng": 139.73018, "label": "第四建設事務所", "pref": "東京都", "entries": [{"name": "第四建設事務所", "dept": "管理課　道路台帳担当", "item": "道路台帳", "gyoseiku": "板橋区都道", "tantou": "肥田野様", "tel": "", "addr": "東京都豊島区南大塚2丁目36-2", "matched": "東京都豊島区南大塚二丁目３６番２号"}]}, {"lat": 35.7347, "lng": 139.64755, "label": "水道管管理図", "pref": "東京都", "entries": [{"name": "水道管管理図", "dept": "北部支所配水課配水調整担当", "item": "上水道", "gyoseiku": "板橋区", "tantou": "星様", "tel": "", "addr": "東京都練馬区中村北1丁目9-4", "matched": "東京都練馬区中村北一丁目９番４号"}]}, {"lat": 35.68963, "lng": 139.69177, "label": "公共下水", "pref": "東京都", "entries": [{"name": "公共下水", "dept": "都庁第二本庁舎27階台帳閲覧室", "item": "特殊人孔", "gyoseiku": "板橋区", "tantou": "端末操作", "tel": "", "addr": "東京都新宿区西新宿2-8-1", "matched": "東京都新宿区西新宿二丁目８番"}]}, {"lat": 35.69246, "lng": 139.71025, "label": "東京電力パワーグリッド(株)", "pref": "東京都", "entries": [{"name": "東京電力パワーグリッド(株)", "dept": "東京総支社 設備総括グループ", "item": "配電・送電ケーブル", "gyoseiku": "板橋区", "tantou": "端末操作", "tel": "", "addr": "新宿区新宿5丁目4-9", "matched": "東京都新宿区新宿五丁目４番９号"}]}, {"lat": 35.71392, "lng": 139.56663, "label": "水道", "pref": "東京都", "entries": [{"name": "水道", "dept": "2F", "item": "管理図受取り・事前FAX", "gyoseiku": "武蔵野", "tantou": "", "tel": "", "addr": "東京都武蔵野市吉祥寺北町４丁目１１−４６", "matched": "東京都武蔵野市吉祥寺北町四丁目１１番４６号"}]}, {"lat": 35.74607, "lng": 139.5043, "label": "水道", "pref": "東京都", "entries": [{"name": "水道", "dept": "", "item": "メール", "gyoseiku": "清瀬・東久留米・西東京", "tantou": "", "tel": "", "addr": "東京都東久留米市滝山６丁目１−１", "matched": "東京都東久留米市滝山六丁目１番"}]}, {"lat": 35.67351, "lng": 139.48469, "label": "北多摩南部建設事務所", "pref": "東京都", "entries": [{"name": "北多摩南部建設事務所", "dept": "道路台帳課", "item": "地下埋設物台帳", "gyoseiku": "西部都道", "tantou": "", "tel": "", "addr": "東京都府中市緑町1丁目27-1", "matched": "東京都府中市緑町一丁目２７番"}]}, {"lat": 35.69519, "lng": 139.40891, "label": "北多摩北部建設事務所", "pref": "東京都", "entries": [{"name": "北多摩北部建設事務所", "dept": "道路台帳課", "item": "地下埋設物台帳", "gyoseiku": "西部都道", "tantou": "", "tel": "", "addr": "東京都立川市柴崎町２丁目１５−１９", "matched": "東京都立川市柴崎町二丁目１５番１９号"}]}, {"lat": 35.7175, "lng": 139.56645, "label": "役所", "pref": "東京都", "entries": [{"name": "役所", "dept": "", "item": "", "gyoseiku": "武蔵野", "tantou": "", "tel": "", "addr": "東京都武蔵野市緑町２丁目２−２８", "matched": "東京都武蔵野市緑町二丁目２番２８号"}]}, {"lat": 35.74182, "lng": 139.55798, "label": "役所", "pref": "東京都", "entries": [{"name": "役所", "dept": "", "item": "", "gyoseiku": "西東京", "tantou": "", "tel": "", "addr": "東京都西東京市中町１丁目５−１", "matched": "東京都西東京市中町一丁目５番１号"}]}, {"lat": 35.78557, "lng": 139.52655, "label": "役所", "pref": "東京都", "entries": [{"name": "役所", "dept": "", "item": "", "gyoseiku": "清瀬", "tantou": "", "tel": "", "addr": "東京都清瀬市中里５丁目８４２", "matched": "東京都清瀬市中里五丁目８４２番地"}]}, {"lat": 35.75863, "lng": 139.52971, "label": "役所", "pref": "東京都", "entries": [{"name": "役所", "dept": "", "item": "", "gyoseiku": "東久留米", "tantou": "", "tel": "", "addr": "東京都東久留米市本町３丁目３−１", "matched": "東京都東久留米市本町三丁目３番１号"}]}];
+const colors = {"東京都": "#1565c0", "埼玉県": "#e65100"};
+const map = L.map('map');
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {maxZoom:19, attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
+
+const groups={};
+for (const p in colors) groups[p]=L.layerGroup().addTo(map);
+const bounds=[]; const counters={};
+function esc(t){return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+markers.forEach(m=>{
+  counters[m.pref]=(counters[m.pref]||0)+1;
+  const num=counters[m.pref];
+  const color=colors[m.pref]||'#666';
+  const icon=L.divIcon({className:'',
+    html:`<div class="pin-num" style="background:${color}"><span>${num}</span></div>`,
+    iconSize:[24,24],iconAnchor:[12,24],popupAnchor:[0,-22]});
+  let body=`<div class="pop-h">${esc(m.label)}</div>`;
+  const addrs=[...new Set(m.entries.map(e=>e.addr).filter(Boolean))];
+  body+=`<div class="pop-addr">${esc(addrs.join(' / '))}</div>`;
+  m.entries.forEach(e=>{
+    let line='<div class="pop-e">';
+    const head=[e.gyoseiku,e.name,e.dept].filter(Boolean).map(esc).join(' ／ ');
+    line+=`<b>${head}</b>`;
+    if(e.item) line+=`<br><span class="it">調査項目: ${esc(e.item)}</span>`;
+    if(e.tantou) line+=`<br><span class="it">担当: ${esc(e.tantou)}</span>`;
+    if(e.tel) line+=`<br><span class="it">TEL: ${esc(e.tel)}</span>`;
+    line+='</div>'; body+=line;
+  });
+  body+=`<div style="margin-top:5px"><a href="https://www.google.com/maps/search/?api=1&query=${m.lat},${m.lng}" target="_blank">Googleマップで開く</a></div>`;
+  const mk=L.marker([m.lat,m.lng],{icon});
+  mk.bindPopup(body);
+  mk.bindTooltip(`${m.pref.slice(0,2)}-${num} ${esc(m.label)}`,{direction:'top',offset:[0,-22]});
+  mk.addTo(groups[m.pref]); bounds.push([m.lat,m.lng]);
+});
+map.fitBounds(bounds,{padding:[40,40]});
+
+const overlays={};
+for(const p in colors) overlays[`<span style="color:${colors[p]}">●</span> ${p}`]=groups[p];
+L.control.layers(null,overlays,{collapsed:false}).addTo(map);
+const legend=L.control({position:'bottomright'});
+legend.onAdd=function(){const d=L.DomUtil.create('div','legend');
+  d.innerHTML=`<div style="font-weight:bold;margin-bottom:4px">都県別凡例</div><div class="leg-row"><span class="dot" style="background:#1565c0"></span>東京都 (14件)</div>
+<div class="leg-row"><span class="dot" style="background:#e65100"></span>埼玉県 (16件)</div>
+`;return d;};
+legend.addTo(map);
+</script>
+</body>
+</html>
