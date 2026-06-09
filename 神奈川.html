@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>埋設物調査先 一覧地図(川崎・横浜・湘南)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  html,body{height:100%;margin:0;font-family:"Segoe UI","Hiragino Kaku Gothic ProN","Meiryo",sans-serif;}
+  #map{height:100%;width:100%;}
+  .title-box{
+    position:absolute;top:10px;left:50px;z-index:1000;
+    background:rgba(255,255,255,0.92);padding:8px 14px;border-radius:8px;
+    box-shadow:0 1px 4px rgba(0,0,0,0.3);font-size:15px;font-weight:bold;
+  }
+  .title-box small{font-weight:normal;font-size:11px;color:#555;}
+  .legend{
+    background:rgba(255,255,255,0.95);padding:8px 12px;border-radius:8px;
+    box-shadow:0 1px 4px rgba(0,0,0,0.3);font-size:13px;line-height:1.7;
+  }
+  .leg-row{display:flex;align-items:center;}
+  .dot{width:13px;height:13px;border-radius:50%;display:inline-block;margin-right:7px;border:2px solid #fff;box-shadow:0 0 1px #333;}
+  .leaflet-popup-content{font-size:13px;line-height:1.5;}
+  .pin-num{
+    width:24px;height:24px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+    border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .pin-num span{transform:rotate(45deg);color:#fff;font-size:10px;font-weight:bold;}
+</style>
+</head>
+<body>
+<div class="title-box">埋設物調査先 一覧地図<br><small>川崎・横浜・湘南エリア / 全40件</small></div>
+<div id="map"></div>
+<script>
+const places = [{"area": "湘南", "name": "海老名市役所", "addr": "神奈川県海老名市勝瀬175番地の1", "lat": 35.446548, "lng": 139.390854, "matched": "神奈川県海老名市勝瀬１７５番地"}, {"area": "湘南", "name": "座間市役所", "addr": "神奈川県座間市緑ケ丘1丁目1番1号", "lat": 35.488285, "lng": 139.40715, "matched": "神奈川県座間市緑ケ丘一丁目１番１号"}, {"area": "湘南", "name": "大和市役所", "addr": "神奈川県大和市下鶴間1丁目1番1号", "lat": 35.487579, "lng": 139.458206, "matched": "神奈川県大和市下鶴間一丁目１番"}, {"area": "湘南", "name": "綾瀬市役所", "addr": "神奈川県綾瀬市早川550番地", "lat": 35.436909, "lng": 139.42659, "matched": "神奈川県綾瀬市早川５５０番地"}, {"area": "湘南", "name": "厚木東部センター", "addr": "神奈川県綾瀬市寺尾本町１丁目１１−１１−３", "lat": 35.452877, "lng": 139.422333, "matched": "神奈川県綾瀬市寺尾本町一丁目１１番１１号"}, {"area": "湘南", "name": "海老名水道", "addr": "神奈川県海老名市上郷717", "lat": 35.452049, "lng": 139.384857, "matched": "神奈川県海老名市上郷７１７番地"}, {"area": "湘南", "name": "座間上下水道局", "addr": "神奈川県座間市緑ケ丘１丁目３−１", "lat": 35.488136, "lng": 139.407318, "matched": "神奈川県座間市緑ケ丘一丁目３番１号"}, {"area": "湘南", "name": "大和水道局", "addr": "神奈川県大和市西鶴間３丁目１２−１８", "lat": 35.487194, "lng": 139.448944, "matched": "神奈川県大和市西鶴間三丁目１２番１８号"}, {"area": "横浜", "name": "瀬谷土木", "addr": "神奈川県横浜市瀬谷区三ツ境153-7", "lat": 35.46228, "lng": 139.49794, "matched": "神奈川県横浜市瀬谷区三ツ境１５３番"}, {"area": "横浜", "name": "泉土木", "addr": "神奈川県横浜市泉区和泉中央北5丁目1-2", "lat": 35.418259, "lng": 139.488937, "matched": "神奈川県横浜市泉区和泉中央北五丁目１番"}, {"area": "横浜", "name": "都筑土木", "addr": "神奈川県横浜市都筑区茅ケ崎中央32-1", "lat": 35.544849, "lng": 139.570541, "matched": "神奈川県横浜市都筑区茅ケ崎中央３２番"}, {"area": "横浜", "name": "鶴見土木", "addr": "神奈川県横浜市鶴見区鶴見中央3-28-1", "lat": 35.506821, "lng": 139.683945, "matched": "神奈川県横浜市鶴見区鶴見中央三丁目２８番１号"}, {"area": "横浜", "name": "保土ヶ谷土木", "addr": "神奈川県横浜市保土ケ谷区神戸町61", "lat": 35.452599, "lng": 139.599457, "matched": "神奈川県横浜市保土ケ谷区神戸町６１番地"}, {"area": "横浜", "name": "南土木", "addr": "神奈川県横浜市南区浦舟町2-33", "lat": 35.434521, "lng": 139.627686, "matched": "神奈川県横浜市南区浦舟町二丁目３３番地"}, {"area": "横浜", "name": "磯子土木", "addr": "神奈川県横浜市磯子区磯子3-14-45", "lat": 35.402214, "lng": 139.620316, "matched": "神奈川県横浜市磯子区磯子三丁目１４番４５号"}, {"area": "横浜", "name": "金沢土木", "addr": "神奈川県横浜市金沢区寺前1-9-26", "lat": 35.338726, "lng": 139.626175, "matched": "神奈川県横浜市金沢区寺前一丁目９番２６号"}, {"area": "横浜", "name": "栄土木", "addr": "神奈川県横浜市栄区小菅ケ谷1-6-1", "lat": 35.365974, "lng": 139.54805, "matched": "神奈川県横浜市栄区小菅ケ谷一丁目６番"}, {"area": "横浜", "name": "横浜市本庁　2F", "addr": "神奈川県横浜市中区本町6丁目50番地の10", "lat": 35.450195, "lng": 139.634903, "matched": "神奈川県横浜市中区本町六丁目５０番地"}, {"area": "横浜", "name": "横浜市水道局", "addr": "神奈川県横浜市保土ケ谷区川辺町５−１", "lat": 35.458832, "lng": 139.596054, "matched": "神奈川県横浜市保土ケ谷区川辺町５番地"}, {"area": "横浜", "name": "横浜市本庁　17F", "addr": "神奈川県横浜市中区本町6丁目50番地の10", "lat": 35.450195, "lng": 139.634903, "matched": "神奈川県横浜市中区本町六丁目５０番地"}, {"area": "横浜", "name": "横浜川崎治水事務所", "addr": "神奈川県横浜市西区岡野２丁目１２−２０", "lat": 35.460789, "lng": 139.610916, "matched": "神奈川県横浜市西区岡野二丁目１２番２０号"}, {"area": "川崎", "name": "川崎区道路公園センター", "addr": "神奈川県川崎市川崎区大島1-25-10", "lat": 35.525742, "lng": 139.713013, "matched": "神奈川県川崎市川崎区大島一丁目２５番"}, {"area": "川崎", "name": "幸区道路公園センター", "addr": "神奈川県川崎市幸区下平間357-3", "lat": 35.548359, "lng": 139.685349, "matched": "神奈川県川崎市幸区下平間３５７番地"}, {"area": "川崎", "name": "中原区道路公園センター", "addr": "神奈川県川崎市中原区下小田中2-9-1", "lat": 35.577927, "lng": 139.641083, "matched": "神奈川県川崎市中原区下小田中二丁目９番"}, {"area": "川崎", "name": "高津区道路公園センター", "addr": "神奈川県川崎市高津区溝口5-15-7", "lat": 35.607655, "lng": 139.614502, "matched": "神奈川県川崎市高津区溝口五丁目１５番"}, {"area": "川崎", "name": "宮前区道路公園センター", "addr": "神奈川県川崎市宮前区有馬2-6-4", "lat": 35.579128, "lng": 139.583221, "matched": "神奈川県川崎市宮前区有馬二丁目６番"}, {"area": "川崎", "name": "多摩区道路公園センター", "addr": "神奈川県川崎市多摩区菅北浦4-11-20", "lat": 35.625011, "lng": 139.531097, "matched": "神奈川県川崎市多摩区菅北浦四丁目１１番"}, {"area": "川崎", "name": "麻生区道路公園センター", "addr": "神奈川県川崎市麻生区古沢120", "lat": 35.604568, "lng": 139.501434, "matched": "神奈川県川崎市麻生区古沢１２０番地"}, {"area": "川崎", "name": "第１配水事務所", "addr": "川崎市中原区上平間1183番地　3階", "lat": 35.5555, "lng": 139.676056, "matched": "神奈川県川崎市中原区上平間１１８３番地"}, {"area": "川崎", "name": "第2配水事務所", "addr": "川崎市高津区梶ヶ谷2-13-5", "lat": 35.58849, "lng": 139.60054, "matched": "神奈川県川崎市高津区梶ケ谷二丁目１３番"}, {"area": "川崎", "name": "第3配水事務所", "addr": "川崎市多摩区生田1-1-1", "lat": 35.623955, "lng": 139.541962, "matched": "神奈川県川崎市多摩区生田一丁目１番"}, {"area": "川崎", "name": "南部サービスセンター", "addr": "川崎市中原区上平間1183番地", "lat": 35.5555, "lng": 139.676056, "matched": "神奈川県川崎市中原区上平間１１８３番地"}, {"area": "川崎", "name": "中部サービスセンター", "addr": "高津区末長1丁目44番24号", "lat": 35.590763, "lng": 139.60553, "matched": "神奈川県川崎市高津区末長一丁目４４番"}, {"area": "川崎", "name": "北部サービスセンター", "addr": "川崎市麻生区高石4丁目15番地7号", "lat": 35.610477, "lng": 139.520218, "matched": "神奈川県川崎市麻生区高石四丁目１５番"}, {"area": "川崎", "name": "上下水道局 水管理センター", "addr": "川崎市多摩区三田５丁目１−１", "lat": 35.607964, "lng": 139.548416, "matched": "神奈川県川崎市多摩区三田五丁目１番"}, {"area": "川崎", "name": "南部下水事務所", "addr": "川崎区元木2-2-9", "lat": 35.52301, "lng": 139.696609, "matched": "神奈川県川崎市川崎区元木二丁目２番"}, {"area": "川崎", "name": "中部下水事務所", "addr": "中原区宮内1-21-31", "lat": 35.592354, "lng": 139.639191, "matched": "神奈川県川崎市中原区宮内一丁目２１番"}, {"area": "川崎", "name": "西部下水事務所", "addr": "宮前区有馬1-21-6", "lat": 35.57679, "lng": 139.576797, "matched": "神奈川県川崎市宮前区有馬一丁目２１番"}, {"area": "川崎", "name": "北部下水事務所", "addr": "麻生区高石4-15-7", "lat": 35.610477, "lng": 139.520218, "matched": "神奈川県川崎市麻生区高石四丁目１５番"}, {"area": "川崎", "name": "横浜川崎治水事務所", "addr": "神奈川県川崎市多摩区生田４丁目２５−１", "lat": 35.620918, "lng": 139.542892, "matched": "神奈川県川崎市多摩区生田四丁目２５番"}];
+const colors = {"湘南": "#2e8b57", "横浜": "#1565c0", "川崎": "#c62828"};
+
+const map = L.map('map');
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+const groups = {};
+for (const area in colors) groups[area] = L.layerGroup().addTo(map);
+
+const bounds = [];
+const counters = {};
+places.forEach(p => {
+  if (p.lat == null) return;
+  counters[p.area] = (counters[p.area]||0)+1;
+  const n = counters[p.area];
+  const color = colors[p.area] || '#666';
+  const icon = L.divIcon({
+    className:'',
+    html:`<div class="pin-num" style="background:${color}"><span>${n}</span></div>`,
+    iconSize:[24,24], iconAnchor:[12,24], popupAnchor:[0,-22]
+  });
+  const m = L.marker([p.lat,p.lng],{icon});
+  m.bindPopup(`<b>${p.area}-${n} ${p.name}</b><br>${p.addr}` +
+              (p.matched?`<br><span style="color:#888;font-size:11px">[${p.matched}]</span>`:'') +
+              `<br><a href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank">Googleマップで開く</a>`);
+  m.bindTooltip(`${p.area}-${n} ${p.name}`,{direction:'top',offset:[0,-22]});
+  m.addTo(groups[p.area]);
+  bounds.push([p.lat,p.lng]);
+});
+
+map.fitBounds(bounds,{padding:[40,40]});
+
+// Layer control (toggle areas)
+const overlays = {};
+for (const area in colors) overlays[`<span style="color:${colors[area]}">●</span> ${area}`] = groups[area];
+L.control.layers(null, overlays, {collapsed:false}).addTo(map);
+
+// Legend
+const legend = L.control({position:'bottomright'});
+legend.onAdd = function(){
+  const div = L.DomUtil.create('div','legend');
+  div.innerHTML = `<div style="font-weight:bold;margin-bottom:4px">エリア凡例</div><div class="leg-row"><span class="dot" style="background:#2e8b57"></span>湘南 (8件)</div>
+<div class="leg-row"><span class="dot" style="background:#1565c0"></span>横浜 (13件)</div>
+<div class="leg-row"><span class="dot" style="background:#c62828"></span>川崎 (19件)</div>
+`;
+  return div;
+};
+legend.addTo(map);
+</script>
+</body>
+</html>
