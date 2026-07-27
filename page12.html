@@ -1,943 +1,554 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- iOS Webアプリ設定 -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="縦画面やちょー">
-  <link rel="apple-touch-icon" href="path/to/your-icon.png">
-  <title>やちょうスマホ版v1.01(20250401)</title>
-  <!-- Excelエクスポート用ライブラリ -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <style>
-    /* 全体は画面全体にフィット、スクロール可能に */
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      overflow: auto; /* 修正: hidden → auto */
-      font-family: sans-serif;
-      box-sizing: border-box;
-    }
-    /* コンテナは縦に並べ、全体100vh */
-    #container {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-    /* 上部エリア：表と図は20vh（変更なし） */
-    #top-area {
-      height: 20vh;
-      display: flex;
-      border-bottom: 1px solid #ccc;
-    }
-    #table-container, #diagram-container {
-      flex: 1;
-      overflow: hidden;
-      padding: 2px;
-    }
-    #table-container {
-      border-right: 1px solid #ccc;
-    }
-    /* 表のスタイル（余白を少なく） */
-    #table-container table {
-      border-collapse: collapse;
-      width: 100%;
-    }
-    #table-container th,
-    #table-container td {
-      border: 1px solid #ccc;
-      padding: 2px;
-      text-align: center;
-      min-width: 50px;
-      min-height: 24px;
-      user-select: none;
-    }
-    td { cursor: pointer; outline: none; }
-    .selected { background-color: #caf; }
-    /* キャンバスはエリア全体に */
-    #diagram-container canvas {
-      background-color: #000;
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
-    /* 画像閲覧エリア：高さは3vh（元の仕様） */
-    #image-viewer-area {
-      height: 3vh;
-      padding: 2px 5px;
-      border-top: 1px solid #ccc;
-      border-bottom: 1px solid #ccc;
-      position: relative;
-      overflow-y: hidden;
-      overflow-x: auto;
-    }
-    #image-viewer-area input {
-      margin: 2px 0;
-    }
-    #preview img {
-      width: 50px;
-      margin: 2px;
-      cursor: pointer;
-    }
-    /* MAXボタン（画像閲覧エリア内） */
-    #maxButton {
-      position: absolute;
-      top: 2px;
-      right: 5px;
-      z-index: 10;
-      padding: 2px 5px;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    /* モーダル（拡大表示） */
-    #modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.8);
-      justify-content: center;
-      align-items: center;
-      z-index: 3000;
-    }
-    #modal img {
-      max-width: 90%;
-      max-height: 90%;
-    }
-    /* 下部エリア：残りの高さは100vh - (20vh + 3vh) = 77vh */
-    #bottom-area {
-      height: calc(100vh - 23vh);
-      display: flex;
-      flex-direction: column;
-    }
-    /* ボタン入力エリア：コントロールエリア（下部）の上部 */
-    #button-input-area {
-      height: calc(100% - 40px); /* コントロールエリアを除く */
-      display: flex;
-      flex-direction: column;
-      padding: 2px;
-      border-bottom: 1px solid #ccc;
-    }
-    #text-input-area {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      margin-bottom: 2px;
-    }
-    #pageFullscreenButton {
-      padding: 4px 8px;
-      font-size: 14px;
-      cursor: pointer;
-      background-color: #eee;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    #freeInput {
-      flex: 1;
-      padding: 4px;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
-    /* 挿入可能ボタン群（32個） */
-    #insertable-buttons {
-      display: grid;
-      grid-template-columns: repeat(8, 1fr);
-      gap: 2px;
-      margin-bottom: 2px;
-    }
-    #insertable-buttons button {
-      padding: 8px;
-      font-size: 16px;
-      cursor: pointer;
-      background-color: #eee;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    /* 下段左右エリア */
-    #lower-controls {
-      flex: 1;
-      display: flex;
-      padding: 2px;
-    }
-    /* 左：プルダウン入力エリア（5個） */
-    #dropdown-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      justify-content: flex-end;
-    }
-    .dropdown-wrapper {
-      display: flex;
-      align-items: center;
-    }
-    /* 送信ボタンを左に配置、selectは横幅を画面の50%に */
-    .dropdown-wrapper select {
-      width: 50vw;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-size: 14px;
-      padding: 2px;
-    }
-    .dropdown-wrapper button {
-      padding: 4px 8px;
-      font-size: 14px;
-      cursor: pointer;
-      margin-right: 2px;
-    }
-    /* 右：テンキー・四則演算・十字キー */
-    #numpad-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      justify-content: flex-end;
-    }
-    #arrowKeysContainer {
-      margin-bottom: 2px;
-    }
-    #arrow-keys {
-      display: grid;
-      grid-template-areas:
-        ". up ."
-        "left down right";
-      gap: 2px;
-      position: relative;
-      z-index: 2000;
-    }
-    #arrow-keys button {
-      width: 50px;
-      height: 50px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    #arrow-up    { grid-area: up; }
-    #arrow-left  { grid-area: left; }
-    #arrow-right { grid-area: right; }
-    #arrow-down  { grid-area: down; }
-    #operatorButtons {
-      margin-bottom: 2px;
-    }
-    #operatorButtons button {
-      padding: 10px;
-      font-size: 20px;
-      cursor: pointer;
-      background-color: #eee;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    #numpad {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 2px;
-    }
-    #numpad button {
-      padding: 13px;
-      font-size: 23px;
-      cursor: pointer;
-      background-color: #eee;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    /* コントロールエリア：下部固定40px */
-    #control-area {
-      height: 40px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background-color: #f0f0f0;
-      padding-left: 5px;
-    }
-    #layerControl {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    #currentLayerDisplay { font-size: 16px; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PS2コントローラー 操作割当シート</title>
+<style>
+  :root{
+    --ui-bg:#eef1f6; --ui-fg:#1b2230; --ui-card:#fff; --ui-line:#d3d9e4; --ui-accent:#2f6fed;
+  }
+  html[data-ui="dark"]{
+    --ui-bg:#0f1116; --ui-fg:#e6e9f0; --ui-card:#191c24; --ui-line:#333a49; --ui-accent:#6ea0ff;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--ui-bg); color:var(--ui-fg);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic","Meiryo","Noto Sans JP",system-ui,sans-serif;
+  }
+  .bar{
+    display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+    padding:10px 16px; background:var(--ui-card); border-bottom:1px solid var(--ui-line);
+    position:sticky; top:0; z-index:20;
+  }
+  .bar h1{font-size:15px; margin:0 12px 0 0; font-weight:700; letter-spacing:.02em}
+  .bar .sp{flex:1}
+  button{
+    font:inherit; font-size:13px; padding:7px 13px; border-radius:8px; cursor:pointer;
+    border:1px solid var(--ui-line); background:var(--ui-card); color:var(--ui-fg);
+  }
+  button:hover{border-color:var(--ui-accent); color:var(--ui-accent)}
+  button.primary{background:var(--ui-accent); border-color:var(--ui-accent); color:#fff}
+  button.primary:hover{opacity:.88; color:#fff}
+  .hint{font-size:12px; opacity:.65; padding:10px 16px 0}
+  #stage{position:relative; max-width:1200px; margin:8px auto 0; padding:0 12px 12px}
+  svg#pad{width:100%; height:auto; display:block; border-radius:12px;
+          box-shadow:0 2px 14px rgba(0,0,0,.10)}
+  #editor{
+    position:absolute; display:none; z-index:30; resize:none; overflow:hidden;
+    border:2px solid var(--ui-accent); border-radius:8px; outline:none;
+    background:var(--ui-card); color:var(--ui-fg); padding:6px 8px; line-height:1.35;
+    font-family:inherit; box-shadow:0 4px 18px rgba(0,0,0,.18);
+  }
+  details{max-width:1200px; margin:0 auto 40px; padding:0 12px}
+  summary{cursor:pointer; font-size:13px; padding:8px 0; opacity:.8}
+  textarea#bulk{
+    width:100%; height:230px; font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    font-size:13px; line-height:1.6; padding:10px; border-radius:8px;
+    border:1px solid var(--ui-line); background:var(--ui-card); color:var(--ui-fg);
+  }
+  .row{display:flex; gap:8px; margin-top:8px; align-items:center; flex-wrap:wrap}
+  .row small{opacity:.6; font-size:12px}
+</style>
 </head>
 <body>
-  <div id="container">
-    <!-- 上部エリア：表と図（20vh固定） -->
-    <div id="top-area">
-      <div id="table-container">
-        <table id="excelTable">
-          <thead>
-            <tr>
-              <th>名称</th>
-              <th>距離</th>
-              <th>X座標</th>
-              <th>コメント</th>
-              <th>直径</th>
-              <th>歩道(L)</th>
-              <th>L側溝</th>
-              <th>幅員</th>
-              <th>R側溝</th>
-              <th>歩道(R)</th>
-            </tr>
-          </thead>
-          <tbody id="table-body">
-            <!-- 表データはJSで自動生成 -->
-          </tbody>
-        </table>
-      </div>
-      <div id="diagram-container">
-        <canvas id="drawingCanvas"></canvas>
-      </div>
-    </div>
-    <!-- 画像閲覧エリア -->
-    <div id="image-viewer-area">
-      <input type="file" accept="image/*" multiple id="fileInput">
-      <button id="maxButton">MAX</button>
-      <div id="preview"></div>
-      <div id="modal">
-        <img id="modalImage" src="" alt="拡大画像">
-      </div>
-    </div>
-    <!-- 下部エリア -->
-    <div id="bottom-area">
-      <!-- ボタン入力エリア -->
-      <div id="button-input-area">
-        <div id="text-input-area">
-          <button id="pageFullscreenButton">全画面表示</button>
-          <input id="freeInput" type="text" placeholder="セルの値を編集">
-        </div>
-        <div id="insertable-buttons">
-          <!-- 挿入可能ボタン（32個） -->
-          <button id="btn0" class="insertable-button">仮ラベル</button>
-          <button id="btn1" class="insertable-button">仮ラベル</button>
-          <button id="btn2" class="insertable-button">仮ラベル</button>
-          <button id="btn3" class="insertable-button">仮ラベル</button>
-          <button id="btn4" class="insertable-button">仮ラベル</button>
-          <button id="btn5" class="insertable-button">仮ラベル</button>
-          <button id="btn6" class="insertable-button">仮ラベル</button>
-          <button id="btn7" class="insertable-button">仮ラベル</button>
-          <button id="btn8" class="insertable-button">仮ラベル</button>
-          <button id="btn9" class="insertable-button">仮ラベル</button>
-          <button id="btn10" class="insertable-button">仮ラベル</button>
-          <button id="btn11" class="insertable-button">仮ラベル</button>
-          <button id="btn12" class="insertable-button">仮ラベル</button>
-          <button id="btn13" class="insertable-button">仮ラベル</button>
-          <button id="btn14" class="insertable-button">仮ラベル</button>
-          <button id="btn15" class="insertable-button">仮ラベル</button>
-          <button id="btn16" class="insertable-button">仮ラベル</button>
-          <button id="btn17" class="insertable-button">仮ラベル</button>
-          <button id="btn18" class="insertable-button">仮ラベル</button>
-          <button id="btn19" class="insertable-button">仮ラベル</button>
-          <a></a><a></a><a></a><a></a>
-          <button id="btn24" class="insertable-button">仮ラベル</button>
-          <button id="btn25" class="insertable-button">仮ラベル</button>
-          <button id="btn26" class="insertable-button">仮ラベル</button>
-          <button id="btn27" class="insertable-button">仮ラベル</button>
-        </div>
-        <!-- 下段左右エリア -->
-        <div id="lower-controls">
-          <!-- 左：プルダウン入力エリア（5個） -->
-          <div id="dropdown-container">
-            <div class="dropdown-wrapper">
-              <button id="sendDropdown0" class="dropdown-send-button">送信</button>
-              <select id="dropdown0"></select>
-            </div>
-            <div class="dropdown-wrapper">
-              <button id="sendDropdown1" class="dropdown-send-button">送信</button>
-              <select id="dropdown1"></select>
-            </div>
-            <div class="dropdown-wrapper">
-              <button id="sendDropdown2" class="dropdown-send-button">送信</button>
-              <select id="dropdown2"></select>
-            </div>
-            <div class="dropdown-wrapper">
-              <button id="sendDropdown3" class="dropdown-send-button">送信</button>
-              <select id="dropdown3"></select>
-            </div>
-            <div class="dropdown-wrapper">
-              <button id="sendDropdown4" class="dropdown-send-button">送信</button>
-              <select id="dropdown4"></select>
-            </div>
-          </div>
-          <!-- 右：テンキー・四則演算・十字キー -->
-          <div id="numpad-container">
-            <div id="arrowKeysContainer">
-              <div id="arrow-keys">
-                <button id="arrow-up">↑</button>
-                <button id="arrow-left">←</button>
-                <button id="arrow-right">→</button>
-                <button id="arrow-down">↓</button>
-              </div>
-            </div>
-            <div id="operatorButtons">
-              <button class="operator-button">+</button>
-              <button class="operator-button">/</button>
-              <button class="operator-button">*</button>
-              <button class="operator-button">-</button>
-            </div>
-            <div id="numpad">
-              <button>7</button>
-              <button>8</button>
-              <button>9</button>
-              <button>4</button>
-              <button>5</button>
-              <button>6</button>
-              <button>1</button>
-              <button>2</button>
-              <button>3</button>
-              <button>0</button>
-              <button>.</button>
-              <button>⌫</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <!-- コントロールエリア（下部固定40px） -->
-      <div id="control-area">
-        <button id="toggleButtonArea">Full</button>
-        <button id="exportButton">Export</button>
-        <div id="layerControl">
-          <button id="layerDown">-</button>
-          <span id="currentLayerDisplay">1</span>
-          <button id="layerUp">+</button>
-        </div>
-      </div>
-    </div>
+
+<div class="bar">
+  <h1>PS2コントローラー 操作割当シート</h1>
+  <button id="btnPng" class="primary">PNGで保存</button>
+  <button id="btnTheme">配色切替</button>
+  <button id="btnSample">サンプル入力</button>
+  <button id="btnClear">全消去</button>
+  <span class="sp"></span>
+  <small style="opacity:.6;font-size:12px">枠をクリック → 入力 / Enterで確定・Tabで次へ</small>
+</div>
+
+<div class="hint">図の中のタイトル・各ボタンの枠をクリックすると、そのまま書き込めます。</div>
+
+<div id="stage">
+<svg id="pad" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="PS2コントローラー操作割当図">
+<style>
+  #pad{
+    --bg:#ffffff; --ink:#1b2230; --sub:#7b8598; --line:#aab3c4;
+    --body:#f1f3f8; --body2:#e3e7f0; --btn:#e7ebf3; --btn2:#d5dbe7;
+    --accent:#2f6fed; --box:#fbfcfe; --boxline:#d5dbe7; --chip:#e9eefb; --hl:#2f6fed;
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic","Meiryo","Noto Sans JP",system-ui,sans-serif;
+  }
+  #pad.dark{
+    --bg:#12141b; --ink:#e8ebf2; --sub:#8d97ab; --line:#4a5468;
+    --body:#232936; --body2:#1b2029; --btn:#2d3441; --btn2:#3a4353;
+    --accent:#6ea0ff; --box:#1a1e27; --boxline:#333c4d; --chip:#26304a; --hl:#6ea0ff;
+  }
+  .bg{fill:var(--bg)}
+  .body{fill:var(--body); stroke:var(--line); stroke-width:2.5}
+  .plate{fill:var(--body2); stroke:none; opacity:.55}
+  .btn{fill:var(--btn); stroke:var(--line); stroke-width:2}
+  .glyph{fill:none; stroke:var(--sub); stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round}
+  .glyphf{fill:var(--sub); stroke:none}
+  .ring{fill:var(--btn2); stroke:var(--line); stroke-width:2}
+  .cap{fill:var(--btn); stroke:var(--line); stroke-width:2}
+  .lead{fill:none; stroke:var(--line); stroke-width:1.6; opacity:.85}
+  .dot{fill:var(--line)}
+  .box{fill:var(--box); stroke:var(--boxline); stroke-width:1.6}
+  .box.filled{stroke:var(--accent); stroke-width:1.8}
+  .chip{fill:var(--chip); stroke:none}
+  .chipT{fill:var(--accent); font-size:16px; font-weight:700; text-anchor:middle; dominant-baseline:central}
+  .nameT{fill:var(--sub); font-size:11px}
+  .valT{fill:var(--ink); font-size:16px}
+  .valT.empty{fill:var(--sub); font-size:14px; opacity:.65}
+  .ttl{fill:var(--ink); font-size:27px; font-weight:700; text-anchor:middle}
+  .ttl.empty{fill:var(--sub); opacity:.55}
+  .sub{fill:var(--sub); font-size:13px; text-anchor:middle}
+  .foot{fill:var(--sub); font-size:11px; text-anchor:middle; opacity:.75}
+  .hit{fill:transparent}
+  .hitbox{fill:transparent; cursor:pointer}
+  .on{stroke:var(--hl) !important; stroke-width:3.4 !important}
+  .hit.on{fill:var(--hl); fill-opacity:.22; stroke:none !important}
+  .box.on{stroke:var(--hl) !important; stroke-width:2.4 !important}
+</style>
+
+<rect class="bg" x="0" y="0" width="1200" height="720"/>
+
+<!-- title -->
+<text id="ttlText" class="ttl" x="600" y="46">コントローラー操作割当</text>
+<text id="subText" class="sub" x="600" y="74">サブタイトル</text>
+
+<g id="art">
+  <!-- shoulder buttons (behind body) -->
+  <rect id="b-l2" class="btn" x="418" y="236" width="72" height="28" rx="12"/>
+  <rect id="b-r2" class="btn" x="710" y="236" width="72" height="28" rx="12"/>
+  <rect id="b-l1" class="btn" x="410" y="262" width="82" height="34" rx="13"/>
+  <rect id="b-r1" class="btn" x="708" y="262" width="82" height="34" rx="13"/>
+
+  <!-- body -->
+  <path class="body" d="M 470 296 L 730 296
+    C 768 296 798 306 806 336
+    C 814 366 812 398 802 428
+    C 788 472 776 520 762 556
+    C 752 582 728 596 704 586
+    C 680 574 664 548 654 520
+    C 646 500 628 516 600 516
+    C 572 516 554 500 546 520
+    C 536 548 520 574 496 586
+    C 472 596 448 582 438 556
+    C 424 520 412 472 398 428
+    C 388 398 386 366 394 336
+    C 402 306 432 296 470 296 Z"/>
+  <ellipse class="plate" cx="600" cy="372" rx="150" ry="62"/>
+
+  <!-- D-pad -->
+  <path class="btn" d="M 459 350 h22 v19 h19 v22 h-19 v19 h-22 v-19 h-19 v-22 h19 z"/>
+  <path class="glyphf" d="M470 355 l5.5 8 h-11 z"/>
+  <path class="glyphf" d="M470 405 l5.5 -8 h-11 z"/>
+  <path class="glyphf" d="M445 380 l8 -5.5 v11 z"/>
+  <path class="glyphf" d="M495 380 l-8 -5.5 v11 z"/>
+  <rect id="d-up"    class="hit" x="459" y="350" width="22" height="20"/>
+  <rect id="d-down"  class="hit" x="459" y="390" width="22" height="20"/>
+  <rect id="d-left"  class="hit" x="440" y="369" width="20" height="22"/>
+  <rect id="d-right" class="hit" x="480" y="369" width="20" height="22"/>
+
+  <!-- face buttons -->
+  <circle id="f-tri" class="btn" cx="730" cy="346" r="17"/>
+  <circle id="f-cir" class="btn" cx="764" cy="380" r="17"/>
+  <circle id="f-cro" class="btn" cx="730" cy="414" r="17"/>
+  <circle id="f-squ" class="btn" cx="696" cy="380" r="17"/>
+  <path class="glyph" d="M730 338.5 L737.5 351.5 L722.5 351.5 Z"/>
+  <circle class="glyph" cx="764" cy="380" r="7"/>
+  <path class="glyph" d="M724.5 408.5 L735.5 419.5 M735.5 408.5 L724.5 419.5"/>
+  <rect class="glyph" x="690.5" y="374.5" width="11" height="11"/>
+
+  <!-- select / start / analog -->
+  <rect id="b-sel" class="btn" x="534" y="344" width="44" height="16" rx="8"/>
+  <rect id="b-sta" class="btn" x="622" y="344" width="44" height="16" rx="8"/>
+  <circle id="b-ana" class="btn" cx="600" cy="394" r="12"/>
+  <circle class="glyphf" cx="600" cy="372" r="3.2"/>
+
+  <!-- analog sticks -->
+  <circle id="s-l" class="ring" cx="543" cy="470" r="34"/>
+  <circle class="cap" cx="543" cy="470" r="23"/>
+  <circle class="glyph" cx="543" cy="470" r="12"/>
+  <circle id="s-r" class="ring" cx="657" cy="470" r="34"/>
+  <circle class="cap" cx="657" cy="470" r="23"/>
+  <circle class="glyph" cx="657" cy="470" r="12"/>
+</g>
+
+<g id="leads"></g>
+<g id="labels"></g>
+
+<text class="foot" x="600" y="706">PlayStation 2 / DUALSHOCK 2 レイアウト</text>
+</svg>
+
+<textarea id="editor" rows="2" spellcheck="false"></textarea>
+</div>
+
+<details>
+  <summary>テキストで一括入力／コピー（バックアップ用）</summary>
+  <textarea id="bulk" spellcheck="false"></textarea>
+  <div class="row">
+    <button id="btnApply">テキストを図に反映</button>
+    <button id="btnCopy">クリップボードにコピー</button>
+    <small>「キー: 割り当て」の形式です。コピーしておけば、次に開いたときに貼り付けて復元できます。</small>
   </div>
+</details>
 
-  <script>
-    /* グローバル定数・変数 */
-    const ROW_COUNT = 100;
-    const COL_COUNT = 10;
-    function generateNewTableState() {
-      const table = [];
-      for (let i = 0; i < ROW_COUNT; i++){
-        const row = [];
-        for (let j = 0; j < COL_COUNT; j++){
-          row.push("");
-        }
-        table.push(row);
-      }
-      // サンプル初期値（2行目）
-      table[1][6] = "0.5";
-      table[1][7] = "5";
-      table[1][8] = "0.5";
-      return table;
-    }
-    const layers = [];
-    for (let i = 0; i < 10; i++){
-      layers.push({
-        tableState: generateNewTableState(),
-        currentRow: 0,
-        currentCol: 0
-      });
-    }
-    let currentLayer = 0;
-    const defaultButtonLabels = [
-      "左境", "左枡", "右桝", "右境", "市", "民", "基", "他",
-      "標", "下", "S", "W", "支線", "灯", "標", "電柱",
-      "電柱", "消", "SV", "止水", "使用不可", "使用不可", "使用不可", "使用不可",
-      "角", "市", "民", "桝", "使用不可", "使用不可", "使用不可", "使用不可"
-    ];
-    function loadConfig(key, defaultArr) {
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        try { return JSON.parse(saved); } catch(e) { return defaultArr; }
-      }
-      return defaultArr;
-    }
-    const buttonConfig = loadConfig("buttonConfig", defaultButtonLabels);
+<script>
+(function(){
+"use strict";
 
-    /* 挿入可能ボタンのクリック処理 */
-    function insertText(text) {
-      setSelectedCell(layers[currentLayer].currentRow, layers[currentLayer].currentCol);
-      updateCellText(text);
-    }
+var svg = document.getElementById('pad');
+var stage = document.getElementById('stage');
+var editor = document.getElementById('editor');
+var gLeads = document.getElementById('leads');
+var gLabels = document.getElementById('labels');
 
-    /* 表・キャンバスの処理 */
-    const tbody = document.getElementById("table-body");
-    function renderTable() {
-      tbody.innerHTML = "";
-      const tableState = layers[currentLayer].tableState;
-      const currentRow = layers[currentLayer].currentRow;
-      const currentCol = layers[currentLayer].currentCol;
-      for (let i = 0; i < ROW_COUNT; i++){
-        const tr = document.createElement("tr");
-        for (let j = 0; j < COL_COUNT; j++){
-          const td = document.createElement("td");
-          td.dataset.row = i;
-          td.dataset.col = j;
-          td.innerText = tableState[i][j];
-          if (i === currentRow && j === currentCol) { td.classList.add("selected"); }
-          td.addEventListener("click", () => { setSelectedCell(i, j); });
-          td.addEventListener("keydown", navigationHandler);
-          tr.appendChild(td);
-        }
-        tbody.appendChild(tr);
-      }
-    }
-    function setSelectedCell(r, c) {
-      layers[currentLayer].currentRow = r;
-      layers[currentLayer].currentCol = c;
-      renderTable();
-      updateCanvas();
-      saveLayerState(currentLayer);
-      const container = document.getElementById("table-container");
-      const cell = container.querySelector(`td[data-row="${r}"][data-col="${c}"]`);
-      if (cell) cell.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
-      document.getElementById("freeInput").value = layers[currentLayer].tableState[r][c];
-    }
-    function navigationHandler(event) {
-      let targetRow = layers[currentLayer].currentRow;
-      let targetCol = layers[currentLayer].currentCol;
-      if (event.key === "Enter") { targetRow++; event.preventDefault(); }
-      else if (event.key === "ArrowUp") { targetRow--; }
-      else if (event.key === "ArrowDown") { targetRow++; }
-      else if (event.key === "ArrowLeft") { targetCol--; }
-      else if (event.key === "ArrowRight") { targetCol++; }
-      else { return; }
-      if (targetRow < 0) targetRow = 0;
-      if (targetRow >= ROW_COUNT) targetRow = ROW_COUNT - 1;
-      if (targetCol < 0) targetCol = 0;
-      if (targetCol >= COL_COUNT) targetCol = COL_COUNT - 1;
-      setSelectedCell(targetRow, targetCol);
-      const targetCell = document.querySelector(`td[data-row="${targetRow}"][data-col="${targetCol}"]`);
-      if (targetCell) targetCell.focus();
-    }
-    function saveLayerState(layerIndex) {
-      localStorage.setItem("tableState_layer" + layerIndex, JSON.stringify(layers[layerIndex].tableState));
-    }
-    function loadLayerState(layerIndex) {
-      const saved = localStorage.getItem("tableState_layer" + layerIndex);
-      if (saved) {
-        const data = JSON.parse(saved);
-        if (data && data.length === ROW_COUNT && data[0].length === COL_COUNT) {
-          layers[layerIndex].tableState = data;
-        }
-      }
-    }
-    function updateCellText(newText) {
-      layers[currentLayer].tableState[layers[currentLayer].currentRow][layers[currentLayer].currentCol] = newText;
-      renderTable();
-      updateCanvas();
-      saveLayerState(currentLayer);
-    }
-    function appendCellText(str) {
-      updateCellText(layers[currentLayer].tableState[layers[currentLayer].currentRow][layers[currentLayer].currentCol] + str);
-    }
+/* ---------- layout constants ---------- */
+var COL_W = 300, COL_H = 70, ROW_TOP = 60, ROW_PITCH = 78;
+var LX = 10, RX = 890;
+var CEN_W = 160, CEN_Y = 100;
 
-    /* キャンバス描画処理 */
-    function updateCanvas() {
-      const canvas = document.getElementById("drawingCanvas");
-      const ctx = canvas.getContext("2d");
-      const container = document.getElementById("diagram-container");
-      const scale = 20;
-      const tableState = layers[currentLayer].tableState;
-      let maxDistance = 0;
-      for (let i = 0; i < ROW_COUNT; i++){
-        let d = parseFloat(tableState[i][1]);
-        if (!isNaN(d) && d > maxDistance) maxDistance = d;
-      }
-      if (maxDistance === 0) maxDistance = 100;
-      canvas.width = container.clientWidth;
-      canvas.height = (maxDistance + 5) * scale + 50;
-      ctx.fillStyle = "black";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      let originX = canvas.width / 2;
-      const originY = canvas.height - 50;
-      const roadWidth = parseFloat(tableState[1][7]) || 0;
-      let offsetG = parseFloat(tableState[1][6]) || 0;
-      let offsetI = parseFloat(tableState[1][8]) || 0;
-      let sidewalkL = parseFloat(tableState[1][5]) || 0;
-      let sidewalkR = parseFloat(tableState[1][9]) || 0;
-      originX = originX - (roadWidth * scale) / 2;
-      ctx.strokeStyle = "white";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(originX, originY);
-      ctx.lineTo(originX, originY - ((maxDistance + 5) * scale));
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(originX + roadWidth * scale, originY);
-      ctx.lineTo(originX + roadWidth * scale, originY - ((maxDistance + 5) * scale));
-      ctx.stroke();
-      if (!isNaN(offsetG) && offsetG !== 0){
-        ctx.beginPath();
-        ctx.moveTo(originX + offsetG * scale, originY);
-        ctx.lineTo(originX + offsetG * scale, originY - ((maxDistance + 5) * scale));
-        ctx.stroke();
-      }
-      if (!isNaN(offsetI) && offsetI !== 0){
-        ctx.beginPath();
-        ctx.moveTo(originX + (roadWidth - offsetI) * scale, originY);
-        ctx.lineTo(originX + (roadWidth - offsetI) * scale, originY - ((maxDistance + 5) * scale));
-        ctx.stroke();
-      }
-      ctx.strokeStyle = "yellow";
-      ctx.lineWidth = 2;
-      if (!isNaN(sidewalkL) && sidewalkL !== 0){
-        let sidewalkLX = originX - sidewalkL * scale;
-        ctx.beginPath();
-        ctx.moveTo(sidewalkLX, originY);
-        ctx.lineTo(sidewalkLX, originY - ((maxDistance + 5) * scale));
-        ctx.stroke();
-      }
-      if (!isNaN(sidewalkR) && sidewalkR !== 0){
-        let sidewalkRX = originX + (roadWidth + sidewalkR) * scale;
-        ctx.beginPath();
-        ctx.moveTo(sidewalkRX, originY);
-        ctx.lineTo(sidewalkRX, originY - ((maxDistance + 5) * scale));
-        ctx.stroke();
-      }
-      const roadCenterX = originX + (roadWidth * scale) / 2;
-      const colors = ["red", "yellow", "green", "cyan", "magenta"];
-      let commonOffset = parseFloat(tableState[1][7]);
-      for (let i = 0; i < ROW_COUNT; i++){
-        const label = tableState[i][0].trim();
-        const yVal = parseFloat(tableState[i][1]);
-        if (isNaN(yVal)) continue;
-        const yPos = originY - (yVal * scale);
-        if (label === "メジ") {
-          if (!isNaN(commonOffset)) {
-            const startX = originX;
-            const endX = originX + (commonOffset * scale);
-            ctx.beginPath();
-            ctx.moveTo(startX, yPos);
-            ctx.lineTo(endX, yPos);
-            ctx.strokeStyle = "red";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            ctx.font = "15px sans-serif";
-            ctx.fillStyle = "red";
-            let textWidth = ctx.measureText(label).width;
-            let textX = endX + 2;
-            ctx.fillText(label, textX, yPos);
-          }
-          continue;
-        }
-        if (label === "左境") {
-          const startX = originX;
-          const endX = originX - (3 * scale);
-          ctx.beginPath();
-          ctx.moveTo(startX, yPos);
-          ctx.lineTo(endX, yPos);
-          ctx.strokeStyle = "red";
-          ctx.lineWidth = 2;
-          ctx.stroke();
-          ctx.font = "15px sans-serif";
-          ctx.fillStyle = "red";
-          let textWidth = ctx.measureText(label).width;
-          let textX = endX - textWidth - 2;
-          ctx.fillText(label, textX, yPos);
-          continue;
-        }
-        if (label === "右境") {
-          if (!isNaN(commonOffset)) {
-            const startX = originX + (commonOffset * scale);
-            const endX = originX + ((commonOffset + 3) * scale);
-            ctx.beginPath();
-            ctx.moveTo(startX, yPos);
-            ctx.lineTo(endX, yPos);
-            ctx.strokeStyle = "red";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            ctx.font = "15px sans-serif";
-            ctx.fillStyle = "red";
-            let textWidth = ctx.measureText(label).width;
-            let textX = endX + 2;
-            ctx.fillText(label, textX, yPos);
-          }
-          continue;
-        }
-        let xVal;
-        if (label === "右桝") {
-          xVal = !isNaN(commonOffset) ? commonOffset : roadWidth;
-        } else if (label === "左枡") {
-          xVal = 0;
-        } else {
-          let xStr = tableState[i][2].trim();
-          xVal = (xStr === "") ? roadWidth : parseFloat(xStr);
-          if (xVal < 0) xVal = roadWidth - Math.abs(xVal);
-        }
-        if (isNaN(xVal)) continue;
-        const diamVal = parseFloat(tableState[i][4]);
-        const xPos = originX + (xVal * scale);
-        const color = colors[i % colors.length];
-        const pointRadius = 0.1 * scale;
-        ctx.beginPath();
-        ctx.arc(xPos, yPos, pointRadius, 0, 2 * Math.PI);
-        ctx.fillStyle = color;
-        ctx.fill();
-        if (!isNaN(diamVal) && diamVal > 0) {
-          const circleRadius = (diamVal / 2) * scale;
-          ctx.beginPath();
-          ctx.arc(xPos, yPos, circleRadius, 0, 2 * Math.PI);
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-        }
-        let displayText = label;
-        const comment = tableState[i][3].trim();
-        if (comment) displayText += " (" + comment + ")";
-        ctx.font = "15px sans-serif";
-        ctx.fillStyle = color;
-        let textWidth = ctx.measureText(displayText).width;
-        let textX = (xPos >= roadCenterX) ? xPos + pointRadius + 2 : xPos - pointRadius - 2 - textWidth;
-        ctx.fillText(displayText, textX, yPos);
-      }
-      container.scrollTop = 0;
-    }
+function leftBox(i){  return {x:LX, y:ROW_TOP + i*ROW_PITCH, w:COL_W, h:COL_H}; }
+function rightBox(i){ return {x:RX, y:ROW_TOP + i*ROW_PITCH, w:COL_W, h:COL_H}; }
 
-    /* 挿入可能ボタンの設定 */
-    for (let i = 0; i < 32; i++){
-      const btn = document.getElementById("btn" + i);
-      if (btn){
-        btn.innerText = buttonConfig[i] || "仮ラベル";
-        btn.addEventListener("click", () => { insertText(btn.innerText); });
-      }
-    }
+/* ---------- controls ---------- */
+var CONTROLS = [
+  /* left column */
+  {key:'L2',   name:'L2ボタン',            b:leftBox(0), chip:'L2', a:[440,244], dir:'L', t:'#b-l2'},
+  {key:'L1',   name:'L1ボタン',            b:leftBox(1), chip:'L1', a:[428,279], dir:'L', t:'#b-l1'},
+  {key:'↑',    name:'十字キー 上',          b:leftBox(2), chip:'↑',  a:[463,352], dir:'L', t:'#d-up'},
+  {key:'←',    name:'十字キー 左',          b:leftBox(3), chip:'←',  a:[442,380], dir:'L', t:'#d-left'},
+  {key:'→',    name:'十字キー 右',          b:leftBox(4), chip:'→',  a:[498,380], dir:'L', t:'#d-right'},
+  {key:'↓',    name:'十字キー 下',          b:leftBox(5), chip:'↓',  a:[463,408], dir:'L', t:'#d-down'},
+  {key:'Lスティック', name:'左スティック（傾け）', b:leftBox(6), chip:'LS', a:[518,452], dir:'L', t:'#s-l'},
+  {key:'L3',   name:'左スティック 押し込み',  b:leftBox(7), chip:'L3', a:[524,494], dir:'L', t:'#s-l'},
+  /* right column */
+  {key:'R2',   name:'R2ボタン',            b:rightBox(0), chip:'R2', a:[760,244], dir:'R', t:'#b-r2'},
+  {key:'R1',   name:'R1ボタン',            b:rightBox(1), chip:'R1', a:[772,279], dir:'R', t:'#b-r1'},
+  {key:'△',    name:'△ボタン',             b:rightBox(2), chip:'△',  a:[740,334], dir:'R', t:'#f-tri'},
+  {key:'○',    name:'○ボタン',             b:rightBox(3), chip:'○',  a:[780,374], dir:'R', t:'#f-cir'},
+  {key:'□',    name:'□ボタン',             b:rightBox(4), chip:'□',  a:[696,398], dir:'R', t:'#f-squ',
+                path:'M 890 407 C 800 478 706 470 694 400'},
+  {key:'×',    name:'×ボタン',             b:rightBox(5), chip:'×',  a:[742,426], dir:'R', t:'#f-cro'},
+  {key:'Rスティック', name:'右スティック（傾け）', b:rightBox(6), chip:'RS', a:[682,452], dir:'R', t:'#s-r'},
+  {key:'R3',   name:'右スティック 押し込み',  b:rightBox(7), chip:'R3', a:[676,494], dir:'R', t:'#s-r'},
+  /* center top */
+  {key:'SELECT', name:'SELECTボタン', b:{x:352,y:CEN_Y,w:CEN_W,h:COL_H}, chip:'SEL', a:[544,346], dir:'VR', t:'#b-sel'},
+  {key:'ANALOG', name:'ANALOGボタン', b:{x:520,y:CEN_Y,w:CEN_W,h:COL_H}, chip:'AN',  a:[600,382], dir:'V',  t:'#b-ana'},
+  {key:'START',  name:'STARTボタン',  b:{x:688,y:CEN_Y,w:CEN_W,h:COL_H}, chip:'ST',  a:[656,346], dir:'VL', t:'#b-sta'}
+];
 
-    /* テンキー、四則演算、十字キーのイベント */
-    document.querySelectorAll("#operatorButtons button").forEach(btn => {
-      btn.addEventListener("click", () => { appendCellText(btn.innerText); });
+var TITLE = {key:'__title__'}, SUBTITLE = {key:'__sub__'};
+
+var state = { '__title__':'コントローラー操作割当', '__sub__':'' };
+
+/* ---------- text measuring / wrapping ---------- */
+var mc = document.createElement('canvas').getContext('2d');
+function measure(txt, px, bold){
+  mc.font = (bold?'700 ':'') + px + 'px "Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic","Meiryo","Noto Sans JP",sans-serif';
+  return mc.measureText(txt).width;
+}
+function wrap(txt, px, maxW, maxLines){
+  var lines = [], cur = '';
+  for (var i=0;i<txt.length;i++){
+    var ch = txt[i];
+    if (ch === '\n'){ lines.push(cur); cur=''; if(lines.length>=maxLines) break; continue; }
+    if (measure(cur+ch, px) > maxW && cur !== ''){
+      lines.push(cur); cur = ch;
+      if (lines.length >= maxLines) break;
+    } else { cur += ch; }
+  }
+  if (lines.length < maxLines) lines.push(cur);
+  lines = lines.slice(0, maxLines);
+  // ellipsis if overflow
+  var consumed = lines.join('').length;
+  var plain = txt.replace(/\n/g,'');
+  if (consumed < plain.length){
+    var last = lines[lines.length-1];
+    while (last.length && measure(last+'…', px) > maxW) last = last.slice(0,-1);
+    lines[lines.length-1] = last + '…';
+  }
+  return lines.filter(function(l,i){ return l !== '' || i===0; });
+}
+
+/* ---------- svg helpers ---------- */
+var NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs){
+  var n = document.createElementNS(NS, tag);
+  for (var k in attrs) if (attrs[k] !== undefined && attrs[k] !== null) n.setAttribute(k, attrs[k]);
+  return n;
+}
+
+/* ---------- build labels ---------- */
+CONTROLS.forEach(function(c, idx){
+  var b = c.b;
+  var ax = c.a[0], ay = c.a[1];
+  var bx, by = b.y + b.h/2, c1, c2, d;
+  if (c.dir === 'L'){ bx = b.x + b.w; }
+  else if (c.dir === 'R'){ bx = b.x; }
+  else if (c.dir === 'VL'){ bx = b.x; }
+  else if (c.dir === 'VR'){ bx = b.x + b.w; }
+  else { bx = b.x + b.w/2; by = b.y + b.h; }
+
+  if (c.dir === 'V'){
+    c1 = [bx, by + (ay-by)*0.55];
+    c2 = [ax, by + (ay-by)*0.45];
+  } else if (c.dir === 'VL' || c.dir === 'VR'){
+    c1 = [bx + (c.dir === 'VL' ? -46 : 46), by];
+    c2 = [ax, by + (ay-by)*0.55];
+  } else {
+    c1 = [bx + (ax-bx)*0.55, by];
+    c2 = [bx + (ax-bx)*0.45, ay];
+  }
+  d = c.path || ('M '+bx+' '+by+' C '+c1[0]+' '+c1[1]+' '+c2[0]+' '+c2[1]+' '+ax+' '+ay);
+  gLeads.appendChild(el('path', {'class':'lead', d:d}));
+  gLeads.appendChild(el('circle', {'class':'dot', cx:ax, cy:ay, r:3}));
+
+  var g = el('g', {'data-key': c.key});
+  var rect = el('rect', {'class':'box', x:b.x, y:b.y, width:b.w, height:b.h, rx:11});
+  g.appendChild(rect);
+
+  var vert = (c.dir === 'V' || c.dir === 'VL' || c.dir === 'VR');
+  var chipW = c.chip.length > 2 ? 46 : 38;
+  var tx, vt, nt, ct;
+  if (vert){
+    chipW = 40;
+    g.appendChild(el('rect', {'class':'chip', x:b.x+11, y:b.y+8, width:chipW, height:24, rx:7}));
+    ct = el('text', {'class':'chipT', x:b.x+11+chipW/2, y:b.y+21, style:'font-size:13px'});
+    ct.textContent = c.chip;
+    g.appendChild(ct);
+    nt = el('text', {'class':'nameT', x:b.x+11+chipW+9, y:b.y+24});
+    nt.textContent = c.name;
+    g.appendChild(nt);
+    tx = b.x + 13;
+    vt = el('text', {'class':'valT', x:tx, y:b.y+50});
+    g.appendChild(vt);
+    c._y1 = b.y+50; c._y2 = b.y+44;
+  } else {
+    g.appendChild(el('rect', {'class':'chip', x:b.x+11, y:b.y+(b.h-32)/2, width:chipW, height:32, rx:8}));
+    ct = el('text', {'class':'chipT', x:b.x+11+chipW/2, y:b.y+b.h/2+1});
+    ct.textContent = c.chip;
+    g.appendChild(ct);
+    tx = b.x + 11 + chipW + 12;
+    nt = el('text', {'class':'nameT', x:tx, y:b.y+22});
+    nt.textContent = c.name;
+    g.appendChild(nt);
+    vt = el('text', {'class':'valT', x:tx, y:b.y+44});
+    g.appendChild(vt);
+    c._y1 = b.y+45; c._y2 = b.y+38;
+  }
+
+  var hit = el('rect', {'class':'hitbox', x:b.x, y:b.y, width:b.w, height:b.h, rx:11});
+  g.appendChild(hit);
+
+  c._rect = rect; c._val = vt; c._textX = tx;
+  c._textW = b.x + b.w - (vert ? 13 : 14) - tx; c._i = idx;
+
+  hit.addEventListener('click', function(){ startEdit(c); });
+  hit.addEventListener('mouseenter', function(){ hl(c, true); });
+  hit.addEventListener('mouseleave', function(){ hl(c, false); });
+
+  gLabels.appendChild(g);
+
+  // clicking the control on the pad focuses its box
+  var target = svg.querySelector(c.t);
+  if (target){
+    target.style.cursor = 'pointer';
+    target.addEventListener('click', function(){ startEdit(c); });
+  }
+});
+
+function hl(c, on){
+  var t = svg.querySelector(c.t);
+  if (t) t.classList.toggle('on', on);
+  c._rect.classList.toggle('on', on);
+}
+function clearHl(){
+  Array.prototype.forEach.call(svg.querySelectorAll('.on'), function(n){ n.classList.remove('on'); });
+}
+
+/* title / subtitle clickable */
+var ttlText = document.getElementById('ttlText');
+var subText = document.getElementById('subText');
+ttlText.style.cursor = 'pointer';
+subText.style.cursor = 'pointer';
+ttlText.addEventListener('click', function(){ startEdit(TITLE); });
+subText.addEventListener('click', function(){ startEdit(SUBTITLE); });
+
+/* ---------- render ---------- */
+function render(){
+  CONTROLS.forEach(function(c){
+    var v = (state[c.key] || '').trim();
+    var t = c._val;
+    while (t.firstChild) t.removeChild(t.firstChild);
+    t.setAttribute('class', v ? 'valT' : 'valT empty');
+    c._rect.classList.toggle('filled', !!v);
+    var lines = v ? wrap(v, 16, c._textW, 2) : ['（未設定）'];
+    var y0 = lines.length > 1 ? c._y2 : c._y1;
+    lines.forEach(function(ln, i){
+      var ts = el('tspan', {x:c._textX, y: y0 + i*19});
+      ts.textContent = ln;
+      t.appendChild(ts);
     });
-    document.querySelectorAll("#numpad button").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const value = btn.innerText;
-        if (value === "⌫") {
-          const currentText = layers[currentLayer].tableState[layers[currentLayer].currentRow][layers[currentLayer].currentCol];
-          updateCellText(currentText.slice(0, -1));
-        } else {
-          appendCellText(value);
-        }
-      });
-    });
-    document.getElementById("arrow-up").addEventListener("click", () => moveFocus(-1, 0));
-    document.getElementById("arrow-down").addEventListener("click", () => moveFocus(1, 0));
-    document.getElementById("arrow-left").addEventListener("click", () => moveFocus(0, -1));
-    document.getElementById("arrow-right").addEventListener("click", () => moveFocus(0, 1));
-    function moveFocus(dRow, dCol) {
-      let newRow = layers[currentLayer].currentRow + dRow;
-      let newCol = layers[currentLayer].currentCol + dCol;
-      if (newRow < 0) newRow = 0;
-      if (newRow >= ROW_COUNT) newRow = ROW_COUNT - 1;
-      if (newCol < 0) newCol = 0;
-      if (newCol >= COL_COUNT) newCol = COL_COUNT - 1;
-      setSelectedCell(newRow, newCol);
-    }
+  });
+  var tv = (state['__title__']||'').trim();
+  ttlText.textContent = tv || 'タイトルを入力';
+  ttlText.setAttribute('class', tv ? 'ttl' : 'ttl empty');
+  var sv = (state['__sub__']||'').trim();
+  subText.textContent = sv || '（サブタイトル）';
+  subText.setAttribute('class', 'sub');
+  subText.style.opacity = sv ? 1 : .45;
+  syncBulk();
+}
 
-    /* 図操作エリアのイベント */
-    document.getElementById("exportButton").addEventListener("click", exportToExcelAllLayers);
-    document.getElementById("pageFullscreenButton").addEventListener("click", () => {
-      if (!document.fullscreenElement){
-        document.documentElement.requestFullscreen();
-      } else {
-        document.exitFullscreen();
-      }
-    });
-    document.getElementById("toggleButtonArea").addEventListener("click", () => {
-      const btnArea = document.getElementById("button-input-area");
-      const topArea = document.getElementById("top-area");
-      const imageViewer = document.getElementById("image-viewer-area");
-      if (btnArea.style.display === "none") {
-        btnArea.style.display = "flex";
-        imageViewer.style.display = "block";
-        topArea.style.height = "20vh";
-      } else {
-        btnArea.style.display = "none";
-        imageViewer.style.display = "none";
-        topArea.style.height = (window.innerHeight - 40) + "px";
-      }
-    });
+/* ---------- inline editing ---------- */
+var editing = null;
+function startEdit(c){
+  commit();
+  editing = c;
+  var box, fs;
+  if (c === TITLE){ box = ttlText.getBoundingClientRect(); fs = 24; }
+  else if (c === SUBTITLE){ box = subText.getBoundingClientRect(); fs = 14; }
+  else { box = c._rect.getBoundingClientRect(); fs = 15; }
+  var host = stage.getBoundingClientRect();
+  var pad = 0;
+  var left = box.left - host.left, top = box.top - host.top, w = box.width, h = box.height;
+  if (c === TITLE || c === SUBTITLE){ left = host.width*0.25; w = host.width*0.5; h = Math.max(h, 40); top -= 6; }
+  editor.style.display = 'block';
+  editor.style.left = (left + pad) + 'px';
+  editor.style.top  = (top + pad) + 'px';
+  editor.style.width = (w - pad*2) + 'px';
+  editor.style.height = (h - pad*2) + 'px';
+  editor.style.fontSize = fs + 'px';
+  editor.style.textAlign = (c === TITLE || c === SUBTITLE) ? 'center' : 'left';
+  editor.placeholder = (c === TITLE) ? 'タイトル' : (c === SUBTITLE) ? 'サブタイトル' : (c.name + ' に割り当てる操作');
+  editor.value = state[c.key] || '';
+  editor.focus();
+  editor.select();
+  if (c.t) hl(c, true);
+}
+function commit(){
+  if (!editing) return;
+  state[editing.key] = editor.value.replace(/\s+$/,'');
+  if (editing.t) hl(editing, false);
+  editing = null;
+  editor.style.display = 'none';
+  editor.value = '';
+  render();
+}
+function cancel(){
+  if (!editing) return;
+  if (editing.t) hl(editing, false);
+  editing = null;
+  editor.style.display = 'none';
+  editor.value = '';
+}
+editor.addEventListener('blur', commit);
+editor.addEventListener('keydown', function(e){
+  if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); commit(); }
+  else if (e.key === 'Escape'){ e.preventDefault(); cancel(); }
+  else if (e.key === 'Tab'){
+    e.preventDefault();
+    var cur = editing;
+    var next;
+    if (cur === TITLE) next = SUBTITLE;
+    else if (cur === SUBTITLE) next = CONTROLS[0];
+    else next = CONTROLS[(cur._i + (e.shiftKey ? CONTROLS.length-1 : 1)) % CONTROLS.length];
+    commit();
+    startEdit(next);
+  }
+});
 
-    /* 画像閲覧エリアのMAXボタン（修正済み） */
-    let imageViewerMax = false;
-    document.getElementById("maxButton").addEventListener("click", () => {
-      const imageViewer = document.getElementById("image-viewer-area");
-      if (!imageViewerMax) {
-        imageViewer.style.height = "50vh";
-        imageViewerMax = true;
-        document.getElementById("maxButton").innerText = "MIN";
-      } else {
-        imageViewer.style.height = "3vh";
-        imageViewerMax = false;
-        document.getElementById("maxButton").innerText = "MAX";
-      }
-    });
+/* ---------- bulk text ---------- */
+var bulk = document.getElementById('bulk');
+function syncBulk(){
+  if (document.activeElement === bulk) return;
+  var out = ['# タイトル: ' + (state['__title__']||''), '# サブタイトル: ' + (state['__sub__']||''), ''];
+  CONTROLS.forEach(function(c){ out.push(c.key + ': ' + (state[c.key]||'')); });
+  bulk.value = out.join('\n');
+}
+document.getElementById('btnApply').addEventListener('click', function(){
+  var map = {};
+  CONTROLS.forEach(function(c){ map[c.key] = c; });
+  bulk.value.split('\n').forEach(function(line){
+    var m = line.match(/^\s*(?:#\s*)?([^:：]+)[:：](.*)$/);
+    if (!m) return;
+    var k = m[1].trim(), v = m[2].trim();
+    if (k === 'タイトル') state['__title__'] = v;
+    else if (k === 'サブタイトル') state['__sub__'] = v;
+    else if (map[k]) state[k] = v;
+  });
+  render();
+});
+document.getElementById('btnCopy').addEventListener('click', function(){
+  bulk.select();
+  try { document.execCommand('copy'); } catch(err){}
+  if (navigator.clipboard) navigator.clipboard.writeText(bulk.value).catch(function(){});
+  var b = this, o = b.textContent; b.textContent = 'コピーしました'; setTimeout(function(){ b.textContent = o; }, 1200);
+});
 
-    document.getElementById("layerUp").addEventListener("click", () => {
-      if (currentLayer < layers.length - 1){
-        currentLayer++;
-        loadLayerState(currentLayer);
-        renderTable();
-        updateCanvas();
-        updateLayerDisplay();
-      }
-    });
-    document.getElementById("layerDown").addEventListener("click", () => {
-      if (currentLayer > 0){
-        currentLayer--;
-        loadLayerState(currentLayer);
-        renderTable();
-        updateCanvas();
-        updateLayerDisplay();
-      }
-    });
-    function updateLayerDisplay(){
-      document.getElementById("currentLayerDisplay").innerText = (currentLayer + 1);
-    }
-    function exportToExcelAllLayers() {
-      const totalRows = 1001;
-      const totalCols = 10;
-      let sheetData = [];
-      for (let r = 0; r < totalRows; r++){
-        sheetData[r] = new Array(totalCols).fill("");
-      }
-      sheetData[0] = ["名称", "距離", "X座標", "コメント", "直径", "歩道(L)", "L側溝", "幅員", "R側溝", "歩道(R)"];
-      let layer1 = layers[0].tableState;
-      let lastRow = 0;
-      for (let r = 0; r < ROW_COUNT; r++){
-        for (let c = 0; c < 5; c++){
-          sheetData[r + 1][c] = layer1[r][c];
-        }
-        if (layer1[r][0] !== "") { lastRow = r; }
-      }
-      sheetData[lastRow + 2][0] = "***";
-      let appendRow = lastRow + 3;
-      for (let layerIndex = 1; layerIndex < layers.length; layerIndex++){
-        let tableState = layers[layerIndex].tableState;
-        let lastRowInLayer = 0;
-        for (let r = 0; r < ROW_COUNT; r++){
-          for (let c = 0; c < 5; c++){
-            sheetData[appendRow + r][c] = tableState[r][c];
-          }
-          if (tableState[r][0] !== "") { lastRowInLayer = r; }
-        }
-        sheetData[appendRow + lastRowInLayer + 1][0] = "***";
-        appendRow += lastRowInLayer + 2;
-      }
-      for (let layerIndex = 0; layerIndex < layers.length; layerIndex++){
-        let crossSection = layers[layerIndex].tableState[1];
-        let targetRow = layerIndex + 2;
-        for (let c = 5; c < 10; c++){
-          sheetData[targetRow][c] = crossSection[c];
-        }
-      }
-      const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-      let defaultFilename = localStorage.getItem("exportFilename") || "export";
-      let inputFilename = prompt("保存するファイル名を入力してください（拡張子は自動で付与されます）", defaultFilename);
-      if (inputFilename === null) return;
-      if (inputFilename.toLowerCase().endsWith(".xlsx")){
-        inputFilename = inputFilename.slice(0, -5);
-      }
-      localStorage.setItem("exportFilename", inputFilename);
-      const finalFilename = inputFilename + ".xlsx";
-      XLSX.writeFile(workbook, finalFilename);
-    }
+/* ---------- toolbar ---------- */
+document.getElementById('btnClear').addEventListener('click', function(){
+  if (!confirm('入力内容をすべて消去します。よろしいですか？')) return;
+  CONTROLS.forEach(function(c){ state[c.key] = ''; });
+  render();
+});
+document.getElementById('btnSample').addEventListener('click', function(){
+  var s = {
+    '△':'メニューを開く','○':'決定 / 実行','×':'キャンセル / 戻る','□':'モード切替',
+    '↑':'カーソル上','↓':'カーソル下','←':'前の項目','→':'次の項目',
+    'L1':'ズームアウト','R1':'ズームイン','L2':'低速モード','R2':'高速モード',
+    'Lスティック':'本体の移動（前後左右）','Rスティック':'カメラ回転','L3':'原点に戻す','R3':'視点リセット',
+    'SELECT':'設定画面','START':'一時停止 / 再開','ANALOG':'アナログ切替'
+  };
+  for (var k in s) state[k] = s[k];
+  state['__title__'] = state['__title__'] || 'コントローラー操作割当';
+  state['__sub__'] = state['__sub__'] || '2026-07-27  作成者：';
+  render();
+});
+document.getElementById('btnTheme').addEventListener('click', function(){
+  var dark = document.documentElement.getAttribute('data-ui') === 'dark';
+  document.documentElement.setAttribute('data-ui', dark ? 'light' : 'dark');
+  svg.classList.toggle('dark', !dark);
+});
 
-    /* 自由記述入力ボックスの反映 */
-    document.getElementById("freeInput").addEventListener("input", function() {
-      updateCellText(this.value);
-    });
+/* ---------- PNG export ---------- */
+document.getElementById('btnPng').addEventListener('click', function(){
+  commit(); clearHl();
+  var scale = 2, W = 1200, H = 720;
+  var clone = svg.cloneNode(true);
+  clone.setAttribute('xmlns', NS);
+  clone.setAttribute('width', W);
+  clone.setAttribute('height', H);
+  Array.prototype.forEach.call(clone.querySelectorAll('.hitbox,.hit'), function(n){ n.parentNode.removeChild(n); });
+  var src = new XMLSerializer().serializeToString(clone);
+  var blob = new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n' + src], {type:'image/svg+xml;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var img = new Image();
+  img.onload = function(){
+    var cv = document.createElement('canvas');
+    cv.width = W*scale; cv.height = H*scale;
+    var ctx = cv.getContext('2d');
+    ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    URL.revokeObjectURL(url);
+    cv.toBlob(function(b){
+      var a = document.createElement('a');
+      var name = (state['__title__']||'ps2-keymap').replace(/[\\/:*?"<>|\s]+/g,'_');
+      a.href = URL.createObjectURL(b);
+      a.download = name + '.png';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+    }, 'image/png');
+  };
+  img.onerror = function(){ alert('PNGの書き出しに失敗しました。'); URL.revokeObjectURL(url); };
+  img.src = url;
+});
 
-    /* プルダウン選択式入力処理（5個） */
-    let drumItems = loadConfig("drumConfig", [
-      "左境", "左枡", "車止", "支線", "標", "電柱", "右桝", "右境",
-      "下", "D", "S", "SS", "消", "F", "SV", "W",
-      "E", "T", "メジ", "杭", "都", "他", "市", "民",
-      "終", "GR", "植樹", "ﾐﾗｰ", "角", "基準点", "G", "空"
-    ]);
-    for (let i = 0; i < 5; i++){
-      const dropdown = document.getElementById("dropdown" + i);
-      drumItems.forEach(item => {
-        const option = document.createElement("option");
-        option.value = item;
-        option.text = item;
-        dropdown.appendChild(option);
-      });
-      document.getElementById("sendDropdown" + i).addEventListener("click", () => {
-        setSelectedCell(layers[currentLayer].currentRow, layers[currentLayer].currentCol);
-        updateCellText(dropdown.value);
-      });
-    }
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape') cancel();
+});
+window.addEventListener('resize', function(){ if (editing){ var c = editing; cancel(); startEdit(c); } });
 
-    window.onload = function(){
-      for (let i = 0; i < layers.length; i++){
-        loadLayerState(i);
-      }
-      renderTable();
-      updateCanvas();
-      updateLayerDisplay();
-      loadSavedImages();
-    };
-
-    /* 画像閲覧機能 */
-    function loadSavedImages() {
-      const savedData = localStorage.getItem('savedImages');
-      if (savedData) {
-        const imageDataArray = JSON.parse(savedData);
-        const preview = document.getElementById('preview');
-        preview.innerHTML = '';
-        imageDataArray.forEach(src => {
-          const img = document.createElement('img');
-          img.src = src;
-          img.addEventListener('click', function() {
-            openModal(src);
-          });
-          preview.appendChild(img);
-        });
-      }
-    }
-    function openModal(src) {
-      const modal = document.getElementById('modal');
-      const modalImage = document.getElementById('modalImage');
-      modalImage.src = src;
-      modal.style.display = 'flex';
-    }
-    function closeModal() {
-      document.getElementById('modal').style.display = 'none';
-    }
-    document.getElementById('fileInput').addEventListener('change', function(event) {
-      const files = event.target.files;
-      const preview = document.getElementById('preview');
-      preview.innerHTML = '';
-      let imageDataArray = [];
-      let filesProcessed = 0;
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const dataUrl = e.target.result;
-          imageDataArray.push(dataUrl);
-          const img = document.createElement('img');
-          img.src = dataUrl;
-          img.addEventListener('click', function() {
-            openModal(dataUrl);
-          });
-          preview.appendChild(img);
-          filesProcessed++;
-          if (filesProcessed === files.length) {
-            localStorage.setItem('savedImages', JSON.stringify(imageDataArray));
-          }
-        }
-        reader.readAsDataURL(file);
-      }
-    });
-    document.getElementById('modal').addEventListener('click', function() {
-      closeModal();
-    });
-    window.addEventListener('load', function() {
-      loadSavedImages();
-    });
-
-    /* 全画面表示時のスクロールロック解除 */
-    document.addEventListener("fullscreenchange", function() {
-      document.body.style.overflow = "auto";
-    });
-  </script>
+render();
+})();
+</script>
 </body>
 </html>
